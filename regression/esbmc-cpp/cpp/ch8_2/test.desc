@@ -1,0 +1,4 @@
+KNOWNBUG
+main.cpp
+Array1.cpp --unwind 10 --no-unwinding-assertionsk --timeout 900
+^VERIFICATION SUCCESSFUL$

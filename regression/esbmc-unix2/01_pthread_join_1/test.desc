@@ -1,0 +1,4 @@
+CORE
+pjoin.c
+--context-bound 2
+^VERIFICATION SUCCESSFUL$

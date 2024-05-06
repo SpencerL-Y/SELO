@@ -1,0 +1,4 @@
+KNOWNBUG
+main.cpp
+String1.cpp --unwind 10 --no-unwinding-assertionsk --timeout 900
+^VERIFICATION SUCCESSFUL$

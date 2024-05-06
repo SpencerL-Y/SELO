@@ -1,0 +1,17 @@
+# clion
+cmake-*
+.idea
+
+# Visual Studio (and Code)
+out
+.vs
+.vscode
+CMakeSettings.json
+build
+
+# others
+__pycache__
+.DS_Store
+tags
+.cache
+release

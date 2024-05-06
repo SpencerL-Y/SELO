@@ -1,0 +1,5 @@
+CORE
+MyContract_satisfiability_VERIFIER.solast
+--function func_sat --sol MyContract_satisfiability_VERIFIER.sol
+.*line 28 function func_sat$
+^VERIFICATION FAILED$
