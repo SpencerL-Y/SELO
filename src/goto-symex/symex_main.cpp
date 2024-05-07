@@ -140,7 +140,7 @@ goto_symext::symex_resultt goto_symext::get_symex_result()
 
 void goto_symext:: symex_step(reachability_treet &art)
 {
-  log_status("    goto_symext symex_step");
+  // log_status("    goto_symext symex_step");
   assert(!cur_state->call_stack.empty());
 
   const goto_programt::instructiont &instruction = *cur_state->source.pc;

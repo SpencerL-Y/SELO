@@ -201,8 +201,8 @@ void execution_statet::symex_step(reachability_treet &art)
   statet &state = get_active_state();
   const goto_programt::instructiont &instruction = *state.source.pc;
   last_insn = &instruction;
-  log_status("#### current symex_step instruction:");
-  instruction.dump();
+  // log_status("#### current symex_step instruction:");
+  // instruction.dump();
 
   merge_gotos();
   if (break_insn != 0 && break_insn == instruction.location_number)
