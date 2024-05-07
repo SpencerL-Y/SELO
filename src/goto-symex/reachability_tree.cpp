@@ -523,7 +523,7 @@ bool reachability_treet::check_thread_viable(unsigned int tid, bool quiet) const
 
 goto_symext::symex_resultt reachability_treet::get_next_formula()
 {
-  this->permanent_context.dump();
+  // this->permanent_context.dump();
   assert(execution_states.size() > 0 && "Must setup RT before exploring");
 
   while (!is_has_complete_formula())

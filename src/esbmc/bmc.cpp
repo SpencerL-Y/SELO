@@ -154,9 +154,6 @@ void bmct::generate_smt_from_equation(
 
   log_status("Encoding remaining VCC(s) using {}", logic);
   log_status("Equations: ");
-  for(auto ssa_step : eq.SSA_steps) {
-    ssa_step.dump();
-  }
   fine_timet encode_start = current_time();
   eq.convert(smt_conv);
   fine_timet encode_stop = current_time();
