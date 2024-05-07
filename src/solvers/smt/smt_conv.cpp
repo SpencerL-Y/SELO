@@ -237,7 +237,7 @@ smt_astt smt_convt::convert_ast(const expr2tc &expr)
 {
   log_status("convert_ast");
   log_status("original: ");
-  expr.get()->dump();
+  log_status("expr: {}",  expr.get()->pretty());
   smt_cachet::const_iterator cache_result = smt_cache.find(expr);
   if (cache_result != smt_cache.end())
     return (cache_result->ast);
