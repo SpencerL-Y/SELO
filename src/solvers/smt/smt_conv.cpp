@@ -217,6 +217,7 @@ smt_astt smt_convt::imply_ast(smt_astt a, smt_astt b)
 
 smt_astt smt_convt::convert_assign(const expr2tc &expr)
 {
+  log_status("convert_assign");
   const equality2t &eq = to_equality2t(expr);
   smt_astt side1 = convert_ast(eq.side_1); // LHS
   smt_astt side2 = convert_ast(eq.side_2); // RHS
@@ -234,6 +235,7 @@ smt_astt smt_convt::convert_assign(const expr2tc &expr)
 
 smt_astt smt_convt::convert_ast(const expr2tc &expr)
 {
+  log_status("convert_ast");
   smt_cachet::const_iterator cache_result = smt_cache.find(expr);
   if (cache_result != smt_cache.end())
     return (cache_result->ast);
@@ -250,6 +252,7 @@ smt_astt smt_convt::convert_ast(const expr2tc &expr)
   */
   if (is_vector_type(expr))
   {
+    log_status("is_vector_type");
     if (is_neg2t(expr))
     {
       return convert_ast(
