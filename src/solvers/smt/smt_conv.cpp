@@ -236,6 +236,8 @@ smt_astt smt_convt::convert_assign(const expr2tc &expr)
 smt_astt smt_convt::convert_ast(const expr2tc &expr)
 {
   log_status("convert_ast");
+  log_status("original: ");
+  expr.get()->dump();
   smt_cachet::const_iterator cache_result = smt_cache.find(expr);
   if (cache_result != smt_cache.end())
     return (cache_result->ast);
@@ -321,8 +323,10 @@ smt_astt smt_convt::convert_ast(const expr2tc &expr)
   case expr2t::constant_floatbv_id:
   case expr2t::constant_bool_id:
   case expr2t::symbol_id:
+  {
     a = convert_terminal(expr);
     break;
+  }
   case expr2t::constant_string_id:
   {
     const constant_string2t &str = to_constant_string2t(expr);
@@ -1241,7 +1245,8 @@ smt_astt smt_convt::convert_ast(const expr2tc &expr)
 
   struct smt_cache_entryt entry = {expr, a, ctx_level};
   smt_cache.insert(entry);
-
+  log_status("converted: ");
+  a->dump();
   return a;
 }
 
