@@ -141,6 +141,11 @@ void symex_target_equationt::convert(smt_convt &smt_conv)
 
   if (!assertions.empty())
     smt_conv.assert_ast(smt_conv.make_n_ary_or(assertions));
+  log_status("final convert result =============  ");
+
+  smt_conv.dump_smt();
+  log_status("==================================  ");
+
 }
 
 void symex_target_equationt::convert_internal_step(
