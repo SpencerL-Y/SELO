@@ -170,7 +170,7 @@ void symex_target_equationt::convert_internal_step(
     std::ostringstream oss;
     step.output(ns, oss);
     log_status("{}", oss.str());
-    log_status("-------------------------------");
+    log_status("-------------- split -----------------");
   }
   log_status("convert step guard ast: ");
   step.guard_ast = smt_conv.convert_ast(step.guard);
@@ -240,6 +240,8 @@ void symex_target_equationt::convert_internal_step(
     assumpt_ast = smt_conv.mk_and(assumpt_ast, step.cond_ast);
     step.cond_ast->dump();
   }
+
+    log_status("-------------- over -----------------");
 }
 
 void symex_target_equationt::output(std::ostream &out) const
