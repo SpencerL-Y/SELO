@@ -156,10 +156,10 @@ void symex_target_equationt::convert_internal_step(
 
   if (step.ignore)
   {
-    log_status("convert internal step ignored ------ ");
     std::ostringstream oss;
     step.output(ns, oss);
     log_status("{}", oss.str());
+    log_status("convert internal step ignored ------ ");
     step.cond_ast = true_val;
     step.guard_ast = false_val;
     return;
