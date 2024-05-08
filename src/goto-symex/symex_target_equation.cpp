@@ -149,13 +149,17 @@ void symex_target_equationt::convert_internal_step(
   smt_convt::ast_vec &assertions,
   SSA_stept &step)
 {
-  log_status("convert internal step: ");
+  log_status("------ convert internal step ------ ");
   static unsigned output_count = 0; // Temporary hack; should become scoped.
   smt_astt true_val = smt_conv.convert_ast(gen_true_expr());
   smt_astt false_val = smt_conv.convert_ast(gen_false_expr());
 
   if (step.ignore)
   {
+    log_status("convert internal step ignored ------ ");
+    std::ostringstream oss;
+    step.output(ns, oss);
+    log_status("{}", oss.str());
     step.cond_ast = true_val;
     step.guard_ast = false_val;
     return;
@@ -166,6 +170,7 @@ void symex_target_equationt::convert_internal_step(
     std::ostringstream oss;
     step.output(ns, oss);
     log_status("{}", oss.str());
+    log_status("-------------------------------");
   }
   log_status("convert step guard ast: ");
   step.guard_ast = smt_conv.convert_ast(step.guard);
