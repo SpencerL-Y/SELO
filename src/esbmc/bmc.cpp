@@ -640,6 +640,7 @@ smt_convt::resultt bmct::run_thread(std::shared_ptr<symex_target_equationt> &eq)
     {
       runtime_solver =
         std::unique_ptr<smt_convt>(create_solver("", ns, options));
+      log_status("smt_convt created");
     }
 
     if (
