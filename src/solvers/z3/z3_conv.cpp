@@ -923,6 +923,7 @@ smt_astt z3_convt::mk_array_symbol(
 
 smt_astt z3_convt::mk_smt_symbol(const std::string &name, const smt_sort *s)
 {
+  log_status("make_smt_symbol: {}", name);
   return new_ast(
     z3_ctx.constant(name.c_str(), to_solver_smt_sort<z3::sort>(s)->s), s);
 }

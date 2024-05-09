@@ -85,6 +85,7 @@ smt_convt::smt_convt(const namespacet &_ns, const optionst &_options)
     names.emplace_back("pointer_cap_info");
   }
 
+  // TODO: SLHV
   pointer_struct = struct_type2tc(members, names, names, "pointer_struct");
 
   pointer_logic.emplace_back();
