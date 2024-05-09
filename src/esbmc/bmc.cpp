@@ -141,6 +141,7 @@ void bmct::generate_smt_from_equation(
   smt_convt &smt_conv,
   symex_target_equationt &eq)
 {
+  log_status("generate smt from equation");
   std::string logic;
 
   if (!options.get_bool_option("int-encoding"))
@@ -164,6 +165,7 @@ void bmct::generate_smt_from_equation(
 smt_convt::resultt
 bmct::run_decision_procedure(smt_convt &smt_conv, symex_target_equationt &eq)
 {
+  log_status("run decision procedure");
   generate_smt_from_equation(smt_conv, eq);
 
   if (
