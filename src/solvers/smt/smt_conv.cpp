@@ -321,6 +321,8 @@ smt_astt smt_convt::convert_ast(const expr2tc &expr)
   case expr2t::symbol_id:
   {
     a = convert_terminal(expr);
+    log_status("convert_terminal result: ");
+    a->dump();
     break;
   }
   case expr2t::constant_string_id:
@@ -1379,6 +1381,8 @@ static std::string fixed_point(const std::string &v, unsigned width)
 
 smt_astt smt_convt::convert_terminal(const expr2tc &expr)
 {
+  log_status("convert terminal: ");
+  expr.get()->dump();
   switch (expr->expr_id)
   {
   case expr2t::constant_int_id:
