@@ -161,6 +161,7 @@ smt_convt *create_solver(
   else
     ctx->set_fp_conv(fp_api);
 
+  // TODO: SLHV
   ctx->smt_post_init();
   return ctx;
 }
