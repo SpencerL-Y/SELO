@@ -5,6 +5,7 @@
 #include <solvers/smt/smt_array.h>
 #include <solvers/smt/tuple/smt_tuple_node.h>
 #include <solvers/smt/tuple/smt_tuple_sym.h>
+#include <solvers/z3-slhv/z3_slhv_conv.h>
 
 #include <unordered_map>
 
@@ -16,7 +17,6 @@ solver_creator create_new_cvc_solver;
 solver_creator create_new_mathsat_solver;
 solver_creator create_new_yices_solver;
 solver_creator create_new_bitwuzla_solver;
-solver_creator create_new_z3_slhv_solver;
 
 static const std::unordered_map<std::string, solver_creator *> esbmc_solvers = {
 #ifdef SMTLIB
@@ -43,10 +43,9 @@ static const std::unordered_map<std::string, solver_creator *> esbmc_solvers = {
 #ifdef BITWUZLA
   {"bitwuzla", create_new_bitwuzla_solver}
 #endif
-#ifdef Z3_SLHV
-  {"z3-slhv", create_new_z3_slhv_solver}
-#endif
 };
+
+
 
 static const std::string all_solvers[] = {
   "smtlib",
@@ -56,8 +55,7 @@ static const std::string all_solvers[] = {
   "cvc",
   "mathsat",
   "yices",
-  "bitwuzla",
-  "z3-slhv"};
+  "bitwuzla"};
 
 static std::string pick_default_solver()
 {
@@ -124,14 +122,13 @@ smt_convt *create_solver(
   array_iface *array_api = nullptr;
   fp_convt *fp_api = nullptr;
 
+
   solver_creator &factory = pick_solver(solver_name, options);
   smt_convt *ctx = factory(options, ns, &tuple_api, &array_api, &fp_api);
-
   bool node_flat = options.get_bool_option("tuple-node-flattener");
   bool sym_flat = options.get_bool_option("tuple-sym-flattener");
   bool array_flat = options.get_bool_option("array-flattener");
   bool fp_to_bv = options.get_bool_option("fp2bv");
-
   // Pick a tuple flattener to use. If the solver has native support, and no
   // options were given, use that by default
   if (tuple_api != nullptr && !node_flat && !sym_flat)
@@ -145,7 +142,6 @@ smt_convt *create_solver(
   // Default: node flattener
   else
     ctx->set_tuple_iface(new smt_tuple_node_flattener(ctx, ns));
-
   // Pick an array flattener to use. Again, pick the solver native one by
   // default, or the one specified, or if none of the above then use the built
   // in arrays -> to BV flattener.
@@ -155,13 +151,11 @@ smt_convt *create_solver(
     ctx->set_array_iface(new array_convt(ctx));
   else
     ctx->set_array_iface(new array_convt(ctx));
-
   if (fp_api == nullptr || fp_to_bv)
     ctx->set_fp_conv(new fp_convt(ctx));
   else
     ctx->set_fp_conv(fp_api);
-
-  // TODO: SLHV
   ctx->smt_post_init();
   return ctx;
+  
 }

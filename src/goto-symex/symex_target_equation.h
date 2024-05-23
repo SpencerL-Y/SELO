@@ -10,6 +10,7 @@
 #include <list>
 #include <map>
 #include <solvers/smt/smt_conv.h>
+#include <solvers/z3-slhv/z3_slhv_conv.h>
 #include <util/config.h>
 #include <irep2/irep2.h>
 #include <util/namespace.h>
@@ -72,6 +73,8 @@ public:
     const sourcet &source) override;
 
   virtual void convert(smt_convt &smt_conv);
+  std::string convert2slhv(z3_slhv_convt& slhv_convt);
+  
   void convert_internal_step(
     smt_convt &smt_conv,
     smt_astt &assumpt_ast,

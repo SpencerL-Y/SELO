@@ -11,10 +11,13 @@ class z3_slhv_smt_ast : public solver_smt_ast<z3::expr>
 {
 public:
   using solver_smt_ast<z3::expr>::solver_smt_ast;
-  ~z3_smt_ast() override = default;
+  ~z3_slhv_smt_ast() override = default;
 
   smt_astt
-  update(smt_convt *ctx, smt_astt value, unsigned int idx, expr2tc idx_expr)
+  update(smt_convt *ctx,
+    smt_astt value,
+    unsigned int idx,
+    expr2tc idx_expr)
     const override;
 
   smt_astt project(smt_convt *ctx, unsigned int elem) const override;
@@ -30,12 +33,15 @@ public:
     z3_slhv_convt(const namespacet &ns, const optionst &options);
     ~z3_slhv_convt() override;
 public:
+    // interface for translation
+    // TODO slhv: move to the api later, currently we use the smt-lib2 string translation
+    // interfaces of smt_convt need implementation
     void push_ctx() override;
     void pop_ctx() override;
 
     void assert_ast(smt_astt a) override;
-    resultt dec_solver() override;
-    std::string solver_text() override;
+    resultt dec_solve() override;
+    const std::string solver_text() override;
 
     smt_astt mk_smt_int(const BigInt &theint) override;
     smt_astt mk_smt_real(const std::string &str) override;
@@ -49,10 +55,10 @@ public:
     smt_astt mk_ite(smt_astt cond, smt_astt t, smt_astt f) override;
     bool get_bool(smt_astt a) override;
     BigInt get_bv(smt_astt a, bool is_signed) override;
-    smt_astt overflow_arith(const expr2tc *&expr) override;
+    smt_astt overflow_arith(const expr2tc &expr) override;
     
     void dump_smt() override;
     
-}
+};
 
 #endif
