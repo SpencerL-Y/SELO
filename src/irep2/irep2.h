@@ -40,6 +40,8 @@
 // clang-format off
 #define ESBMC_LIST_OF_EXPRS                                                    \
   BOOST_PP_LIST_CONS(constant_int,                                             \
+  BOOST_PP_LIST_CONS(constant_intloc,                                          \
+  BOOST_PP_LIST_CONS(constant_intheap,                                          \
   BOOST_PP_LIST_CONS(constant_fixedbv,                                         \
   BOOST_PP_LIST_CONS(constant_floatbv,                                         \
   BOOST_PP_LIST_CONS(constant_bool,                                            \
@@ -101,6 +103,8 @@
   BOOST_PP_LIST_CONS(with,                                                     \
   BOOST_PP_LIST_CONS(member,                                                   \
   BOOST_PP_LIST_CONS(index,                                                    \
+  BOOST_PP_LIST_CONS(points_to,                                                    \
+  BOOST_PP_LIST_CONS(uplus,                                                    \
   BOOST_PP_LIST_CONS(isnan,                                                    \
   BOOST_PP_LIST_CONS(overflow,                                                 \
   BOOST_PP_LIST_CONS(overflow_cast,                                            \
@@ -141,7 +145,7 @@
   BOOST_PP_LIST_CONS(signbit,                                                  \
   BOOST_PP_LIST_CONS(concat,                                                   \
   BOOST_PP_LIST_CONS(extract,                                                  \
-  BOOST_PP_LIST_NIL))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
+  BOOST_PP_LIST_NIL))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
 
 #define ESBMC_LIST_OF_TYPES                                                    \
   BOOST_PP_LIST_CONS(bool,                                                     \
@@ -158,8 +162,10 @@
   BOOST_PP_LIST_CONS(fixedbv,                                                  \
   BOOST_PP_LIST_CONS(string,                                                   \
   BOOST_PP_LIST_CONS(cpp_name,                                                 \
-  BOOST_PP_LIST_NIL))))))))))))))
-// clang-format on
+  BOOST_PP_LIST_CONS(intheap,                                                  \
+  BOOST_PP_LIST_CONS(intloc,                                                  \
+  BOOST_PP_LIST_NIL))))))))))))))))
+// clang-format ondata
 
 // Even crazier forward decs,
 namespace esbmct
@@ -424,6 +430,8 @@ public:
     fixedbv_id,
     floatbv_id,
     cpp_name_id,
+    intheap_id,
+    intloc_id,
     end_type_id
   };
 

@@ -2,6 +2,8 @@
 
 type_typedefs_empty(bool_type, type2t);
 type_typedefs_empty(empty_type, type2t);
+type_typedefs_empty(intheap_type, type2t);
+type_typedefs_empty(intloc_type, type2t);
 type_typedefs1(symbol_type, symbol_type_data);
 type_typedefs5(struct_type, struct_union_data);
 type_typedefs5(union_type, struct_union_data);

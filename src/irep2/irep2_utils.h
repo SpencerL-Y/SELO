@@ -271,6 +271,17 @@ inline expr2tc gen_slong(signed long val)
   return constant_int2tc(get_int_type(config.ansi_c.word_size), BigInt(val));
 }
 
+
+inline expr2tc gen_emp() 
+{
+  return constant_intheap2tc(get_intheap_type(), true);
+}
+
+inline expr2tc gen_intloc_constant(unsigned long val)
+{
+  return constant_intloc2tc(get_intloc_type(), BigInt(val));
+}
+
 inline const type2tc &get_array_subtype(const type2tc &type)
 {
   return to_array_type(type).subtype;
@@ -289,6 +300,7 @@ inline const type2tc &get_base_array_subtype(const type2tc &type)
 
   return subtype;
 }
+
 
 inline bool simplify(expr2tc &expr)
 {

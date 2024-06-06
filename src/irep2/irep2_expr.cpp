@@ -11,6 +11,8 @@
 
 static const char *expr_names[] = {
   "constant_int",
+  "constant_intloc",
+  "constant_intheap",
   "constant_fixedbv",
   "constant_floatbv",
   "constant_bool",
@@ -72,6 +74,8 @@ static const char *expr_names[] = {
   "with",
   "member",
   "index",
+  "points_to",
+  "uplus",
   "isnan",
   "overflow",
   "overflow_cast",

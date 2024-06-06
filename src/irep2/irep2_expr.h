@@ -48,6 +48,48 @@ public:
   typedef esbmct::expr2t_traits<value_field> traits;
 };
 
+
+
+class constant_intloc_data : public constant2t 
+{
+
+public:
+  constant_intloc_data(const type2tc &t, expr2t::expr_ids id, const BigInt &bint)
+    : constant2t(t, id), value(bint)
+  {
+  }
+  constant_intloc_data(const constant_intloc_data &ref) = default;
+
+  BigInt value;
+
+  // Type mangling:
+  typedef esbmct::
+    field_traits<BigInt, constant_intloc_data, &constant_intloc_data::value>
+      value_field;
+  typedef esbmct::expr2t_traits<value_field> traits;
+};
+
+
+class constant_intheap_data : public constant2t 
+{
+
+public:
+  constant_intheap_data(const type2tc &t, expr2t::expr_ids id, const bool e)
+    : constant2t(t, id), is_emp(e)
+  {
+  }
+  constant_intheap_data(const constant_intheap_data &ref) = default;
+
+  bool is_emp;
+
+  // Type mangling:
+  typedef esbmct::
+    field_traits<bool, constant_intheap_data, &constant_intheap_data::is_emp>
+      value_field;
+  typedef esbmct::expr2t_traits<value_field> traits;
+};
+
+
 class constant_fixedbv_data : public constant2t
 {
 public:
@@ -857,6 +899,63 @@ public:
   typedef esbmct::expr2t_traits<source_value_field, index_field> traits;
 };
 
+class points_to_data : public expr2t 
+{
+public:
+  points_to_data(
+    const type2tc &t,
+    datatype_ops::expr_ids id,
+    const expr2tc &addrloc,
+    const expr2tc &content,
+    bool is_loc) : expr2t(t, id), addr(addrloc), content(content), is_loc_content(is_loc) {
+
+    }
+  points_to_data(const points_to_data& ref) = default;
+
+
+  expr2tc addr;
+  expr2tc content;
+  bool is_loc_content;
+
+  // Type mangling:
+  typedef esbmct::field_traits<expr2tc, points_to_data, &points_to_data::addr>
+    addr_field;
+  typedef esbmct::field_traits<expr2tc, points_to_data, &points_to_data::content>
+    content_field;
+  typedef esbmct::field_traits<bool, points_to_data, &points_to_data::is_loc_content>
+    is_loc_content_field;
+  typedef esbmct::expr2t_traits<addr_field, content_field, is_loc_content_field> traits;
+
+};
+
+
+class uplus_data : public expr2t
+{
+public:
+
+  uplus_data(
+    const type2tc &t,
+    datatype_ops::expr_ids id,
+    std::vector<expr2tc> members, 
+    unsigned int m_num) : expr2t(t, id), uplus_members(std::move(members)), member_num(m_num) 
+    {
+
+    }
+  uplus_data(const uplus_data& ref) = default;
+
+
+  std::vector<expr2tc> uplus_members;
+  unsigned int member_num;
+
+  // Type mangling:
+  typedef esbmct::field_traits<std::vector<expr2tc>, uplus_data, &uplus_data::uplus_members>
+    uplus_members_field;
+  typedef esbmct::field_traits<unsigned int, uplus_data, &uplus_data::member_num>
+    member_num_field;
+  typedef esbmct::expr2t_traits<uplus_members_field, member_num_field> traits;
+
+};
+
 class string_ops : public expr2t
 {
 public:
@@ -1423,6 +1522,8 @@ public:
 // magic because the mapping between top level expr class and it's data holding
 // object isn't regular: the data class depends on /what/ the expression /is/.
 irep_typedefs(constant_int, constant_int_data);
+irep_typedefs(constant_intloc, constant_intloc_data);
+irep_typedefs(constant_intheap, constant_intheap_data);
 irep_typedefs(constant_fixedbv, constant_fixedbv_data);
 irep_typedefs(constant_floatbv, constant_floatbv_data);
 irep_typedefs(constant_struct, constant_datatype_data);
@@ -1481,6 +1582,8 @@ irep_typedefs(byte_update, byte_update_data);
 irep_typedefs(with, with_data);
 irep_typedefs(member, member_data);
 irep_typedefs(index, index_data);
+irep_typedefs(points_to, points_to_data);
+irep_typedefs(uplus, uplus_data);
 irep_typedefs(isnan, bool_1op);
 irep_typedefs(overflow, overflow_ops);
 irep_typedefs(overflow_cast, overflow_cast_data);
@@ -1549,6 +1652,28 @@ public:
   /** Accessor for fetching machine-word integer of this constant */
   long as_long() const;
 
+  static std::string field_names[esbmct::num_type_fields];
+};
+
+class constant_intloc2t : public constant_intloc_expr_methods
+{
+  public:
+  constant_intloc2t(const type2tc &type, const BigInt &input)
+    : constant_intloc_expr_methods(type, constant_intloc_id, input)
+  {
+  }
+  unsigned long as_ulong() const;
+  static std::string field_names[esbmct::num_type_fields];
+};
+
+class constant_intheap2t : public constant_intheap_expr_methods
+{
+  public:
+  constant_intheap2t(const type2tc &type, bool is_emp)
+    : constant_intheap_expr_methods(type, constant_intheap_id, is_emp)
+  {
+  }
+  bool get_is_emp() const;
   static std::string field_names[esbmct::num_type_fields];
 };
 
@@ -2913,6 +3038,34 @@ public:
   expr2tc do_simplify() const override;
 
   static std::string field_names[esbmct::num_type_fields];
+};
+
+class points_to2t : public points_to_expr_methods
+{
+public:
+  points_to2t(const type2tc &type, const expr2tc addr, const expr2tc& content, bool is_loc) : points_to_expr_methods(type, points_to_id, addr, content, is_loc) {
+
+  }
+  points_to2t(const points_to2t &ref) = default;
+
+
+  static std::string field_names[esbmct::num_type_fields];
+
+};
+
+
+class uplus2t : public uplus_expr_methods
+{
+public:
+  uplus2t(const type2tc &type, 
+  std::vector<expr2tc> uplus_members) : uplus_expr_methods(type, uplus_id, std::move(uplus_members), uplus_members.size()) {
+
+  }
+  uplus2t(const uplus2t &ref) = default;
+
+  
+  static std::string field_names[esbmct::num_type_fields];
+
 };
 
 /** Is operand not-a-number. Used to implement C library isnan function for

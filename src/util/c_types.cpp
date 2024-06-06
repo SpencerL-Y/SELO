@@ -393,3 +393,14 @@ type2tc get_empty_type()
   static type2tc empty_type = empty_type2tc();
   return empty_type;
 }
+
+type2tc get_intheap_type() {
+  static type2tc intheap_type = intheap_type2tc();
+  return intheap_type;
+}
+
+type2tc get_intloc_type() {
+  static type2tc intloc_type = intloc_type2tc();
+  return intloc_type;
+}
+

@@ -237,7 +237,6 @@ expr2tc goto_symext::symex_mem(
 
   expr2tc ptr_obj = pointer_object2tc(pointer_type2(), ptr_rhs);
   track_new_pointer(ptr_obj, new_type);
-  ptr_obj->dump();
   dynamic_memory.emplace_back(
     rhs_copy, alloc_guard, !is_malloc, symbol.name.as_string());
 

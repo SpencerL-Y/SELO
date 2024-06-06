@@ -9,6 +9,10 @@ std::string bool_type2t::field_names[esbmct::num_type_fields] =
   {"", "", "", "", ""};
 std::string empty_type2t::field_names[esbmct::num_type_fields] =
   {"", "", "", "", ""};
+std::string intloc_type2t::field_names[esbmct::num_type_fields] =
+  {"", "", "", "", ""};
+std::string intheap_type2t::field_names[esbmct::num_type_fields] =
+  {"", "", "", "", ""};
 std::string symbol_type2t::field_names[esbmct::num_type_fields] =
   {"symbol_name", "", "", "", ""};
 std::string struct_type2t::field_names[esbmct::num_type_fields] =
@@ -38,6 +42,8 @@ std::string cpp_name_type2t::field_names[esbmct::num_type_fields] =
 
 std::string constant_int2t::field_names[esbmct::num_type_fields] =
   {"value", "", "", "", ""};
+std::string constant_intloc2t::field_names[esbmct::num_type_fields] = {"value" , "", "", "", ""};
+std::string constant_intheap2t::field_names[esbmct::num_type_fields] = {"is_emp" , "", "", "", ""};
 std::string constant_fixedbv2t::field_names[esbmct::num_type_fields] =
   {"value", "", "", "", ""};
 std::string constant_floatbv2t::field_names[esbmct::num_type_fields] =

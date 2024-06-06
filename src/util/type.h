@@ -100,6 +100,8 @@ public:
   static irep_idt t_reference;
   static irep_idt t_bv;
   static irep_idt t_vector;
+  static irep_idt t_intheap;
+  static irep_idt t_intloc;
 
   static irep_idt t_intcap;
   static irep_idt t_uintcap;

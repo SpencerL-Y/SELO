@@ -27,6 +27,8 @@ static const char *type_names[] = {
   "signedbv",
   "fixedbv",
   "floatbv",
+  "intheap",
+  "intloc",
   "cpp_name"};
 // If this fires, you've added/removed a type id, and need to update the list
 // above (which is ordered according to the enum list)
@@ -178,6 +180,14 @@ unsigned int pointer_type2t::get_width() const
 }
 
 unsigned int empty_type2t::get_width() const
+{
+  throw symbolic_type_excp();
+}
+unsigned int intheap_type2t::get_width() const
+{
+  throw symbolic_type_excp();
+}
+unsigned int intloc_type2t::get_width() const
 {
   throw symbolic_type_excp();
 }

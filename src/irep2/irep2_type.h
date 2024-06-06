@@ -21,6 +21,8 @@ class pointer_type2t;
 class fixedbv_type2t;
 class floatbv_type2t;
 class cpp_name_type2t;
+class intheap_type2t;
+class intloc_type2t;
 
 // We also require in advance, the actual classes that store type data.
 
@@ -201,6 +203,7 @@ public:
       traits;
 };
 
+
 class pointer_data : public type2t
 {
 public:
@@ -286,6 +289,7 @@ public:
   typedef esbmct::type2t_traits<name_field, template_args_field> traits;
 };
 
+
 // Then give them a typedef name
 
 #define irep_typedefs(basename, superclass)                                    \
@@ -315,6 +319,8 @@ irep_typedefs(fixedbv, fixedbv_data);
 irep_typedefs(floatbv, floatbv_data);
 irep_typedefs(cpp_name, cpp_name_data);
 irep_typedefs(vector, array_data);
+irep_typedefs(intheap, type2t);
+irep_typedefs(intloc, type2t);
 #undef irep_typedefs
 
 /** Boolean type.
@@ -344,6 +350,30 @@ public:
   {
   }
   empty_type2t(const empty_type2t &ref) = default;
+  unsigned int get_width() const override;
+
+  static std::string field_names[esbmct::num_type_fields];
+};
+
+class intheap_type2t : public intheap_type_methods
+{
+public:
+  intheap_type2t() : intheap_type_methods(intheap_id)
+  {
+  }
+  intheap_type2t(const intheap_type2t &ref) = default;
+  unsigned int get_width() const override;
+
+  static std::string field_names[esbmct::num_type_fields];
+};
+
+class intloc_type2t : public intloc_type_methods
+{
+public:
+  intloc_type2t() : intloc_type_methods(intloc_id)
+  {
+  }
+  intloc_type2t(const intloc_type2t &ref) = default;
   unsigned int get_width() const override;
 
   static std::string field_names[esbmct::num_type_fields];
@@ -713,6 +743,8 @@ public:
 
 type_macros(bool);
 type_macros(empty);
+type_macros(intheap);
+type_macros(intloc);
 type_macros(symbol);
 type_macros(struct);
 type_macros(union);

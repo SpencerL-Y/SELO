@@ -169,15 +169,11 @@ void goto_symext::symex_assign(
   {
     symex_printf(lhs, rhs);
   }
-  // log_status("ZZZZZZZZZZ assign lhs after dereference and replace: ");
-  // lhs->dump();
-  // log_status("ZZZZZZZZZZ assign rhs after dereference and replace: ");
-  // rhs->dump();
   if (is_sideeffect2t(rhs))
   {
     // check what symex_mem represent
 
-    log_status("is side effect rhs: ");
+    log_status("is side effect rhs ");
     const sideeffect2t &effect = to_sideeffect2t(rhs);
     // effect.dump();
     switch (effect.kind)
@@ -235,46 +231,57 @@ void goto_symext::symex_assign_rec(
 {
   if (is_symbol2t(lhs))
   {
+    log_status("symex_assign_symbol");
     symex_assign_symbol(lhs, full_lhs, rhs, full_rhs, guard, hidden);
   }
   else if (is_index2t(lhs))
   {
+    log_status("symex_assign_array");
     symex_assign_array(lhs, full_lhs, rhs, full_rhs, guard, hidden);
   }
   else if (is_member2t(lhs))
   {
+    log_status("symex_assign_member");
     symex_assign_member(lhs, full_lhs, rhs, full_rhs, guard, hidden);
   }
   else if (is_if2t(lhs))
   {
+    log_status("symex_assign_if");
     symex_assign_if(lhs, full_lhs, rhs, full_rhs, guard, hidden);
   }
   else if (is_typecast2t(lhs) || is_bitcast2t(lhs))
   {
+    log_status("symex_assign_typecast");
     symex_assign_typecast(lhs, full_lhs, rhs, full_rhs, guard, hidden);
   }
   else if (is_constant_string2t(lhs) || is_null_object2t(lhs))
   {
+    log_status("is_constant_string2t(lhs) || is_null_object2t(lhs)");
     // ignore
   }
   else if (is_byte_extract2t(lhs))
   {
+    log_status("symex_assign_byte_extract");
     symex_assign_byte_extract(lhs, full_lhs, rhs, full_rhs, guard, hidden);
   }
   else if (is_concat2t(lhs))
   {
+    log_status("symex_assign_concat");
     symex_assign_concat(lhs, full_lhs, rhs, full_rhs, guard, hidden);
   }
   else if (is_constant_struct2t(lhs))
   {
+    log_status("symex_assign_structure");
     symex_assign_structure(lhs, full_lhs, rhs, full_rhs, guard, hidden);
   }
   else if (is_extract2t(lhs))
   {
+    log_status("symex_assign_extract");
     symex_assign_extract(lhs, full_lhs, rhs, full_rhs, guard, hidden);
   }
   else if (is_bitand2t(lhs))
   {
+    log_status("symex_assign_bitfield");
     symex_assign_bitfield(lhs, full_lhs, rhs, full_rhs, guard, hidden);
   }
   else
