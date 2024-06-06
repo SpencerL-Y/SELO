@@ -46,8 +46,9 @@ void goto_symext::symex_other(const expr2tc code)
 
 void goto_symext::symex_decl(const expr2tc code)
 {
+  log_status("symex decl");
   assert(is_code_decl2t(code));
-
+  code->dump();
   expr2tc code2 = code;
   replace_dynamic_allocation(code2);
   replace_nondet(code2);

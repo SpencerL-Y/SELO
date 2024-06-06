@@ -131,6 +131,8 @@ void symex_target_equationt::renumber(
     debug_print_step(SSA_step);
 }
 
+
+
 void symex_target_equationt::convert(smt_convt &smt_conv)
 {
   smt_convt::ast_vec assertions;
@@ -144,6 +146,21 @@ void symex_target_equationt::convert(smt_convt &smt_conv)
   log_status("final convert result =============  ");
 
   smt_conv.dump_smt();
+  log_status("==================================  ");
+
+}
+
+void symex_target_equationt::convert2slhv(z3_slhv_convt& slhv_convt) {
+  smt_convt::ast_vec assertions;
+  smt_astt assumpt_ast = slhv_convt.convert_ast_slhv(gen_true_expr());
+  for (auto &SSA_step : SSA_steps)
+    convert_internal_step_slhv(slhv_convt, assumpt_ast, assertions, SSA_step);
+
+  if (!assertions.empty())
+    slhv_convt.assert_ast(slhv_convt.make_n_ary_or(assertions));
+  log_status("final convert result =============  ");
+
+  slhv_convt.dump_smt();
   log_status("==================================  ");
 
 }
@@ -165,6 +182,8 @@ void symex_target_equationt::convert_internal_step(
     step.output(ns, oss);
     log_status("{}", oss.str());
     log_status("convert internal step ignored ------ ");
+
+    log_status("-------------- over -----------------");
     step.cond_ast = true_val;
     step.guard_ast = false_val;
     return;
@@ -172,10 +191,11 @@ void symex_target_equationt::convert_internal_step(
 
   if (ssa_trace)
   {
+    log_status("-------------- ssa trace -----------------");
     std::ostringstream oss;
     step.output(ns, oss);
     log_status("{}", oss.str());
-    log_status("-------------- split -----------------");
+    log_status("-------------- ssa trace end -----------------");
   }
   log_status("convert step guard ast: ");
   step.guard_ast = smt_conv.convert_ast(step.guard);
@@ -248,6 +268,114 @@ void symex_target_equationt::convert_internal_step(
 
     log_status("-------------- over -----------------");
 }
+
+
+void symex_target_equationt::convert_internal_step_slhv(
+    z3_slhv_convt& slhv_convt,
+    smt_astt& assumpt_ast,
+    smt_convt::ast_vec& assertions,
+    SSA_stept &step
+  ) {
+
+  log_status("------ convert internal step slhv ------ ");
+  static unsigned output_count = 0; // Temporary hack; should become scoped.
+  smt_astt true_val = slhv_convt.convert_ast_slhv(gen_true_expr());
+  smt_astt false_val = slhv_convt.convert_ast_slhv(gen_false_expr());
+
+  if (step.ignore)
+  {
+    std::ostringstream oss;
+    step.output(ns, oss);
+    log_status("{}", oss.str());
+    log_status("convert internal step ignored ------ ");
+
+    log_status("-------------- over -----------------");
+    step.cond_ast = true_val;
+    step.guard_ast = false_val;
+    return;
+  }
+
+  if (ssa_trace)
+  {
+    log_status("-------------- ssa trace -----------------");
+    std::ostringstream oss;
+    step.output(ns, oss);
+    log_status("{}", oss.str());
+    log_status("-------------- ssa trace end-----------------");
+  }
+  log_status("------------- convert step guard ast: ");
+  step.guard_ast = slhv_convt.convert_ast_slhv(step.guard);
+
+  if (step.is_assume() || step.is_assert())
+  {
+    log_status("----- step is_assume || step is_assert");
+    expr2tc tmp(step.cond);
+    step.cond_ast = slhv_convt.convert_ast_slhv(tmp);
+    if (ssa_smt_trace)
+    {
+      step.cond_ast->dump();
+    }
+  }
+  else if (step.is_assignment())
+  {
+    log_status(" ----- step is_assignment");
+    smt_astt assign = slhv_convt.convert_assign_slhv(step.cond);
+    if (ssa_smt_trace)
+    {
+      assign->dump();
+    }
+
+    log_status("-------------- over -----------------");
+  }
+  else if (step.is_output())
+  {
+    log_status(" ----- step is_output");
+    // for (std::list<expr2tc>::const_iterator o_it = step.output_args.begin();
+    //      o_it != step.output_args.end();
+    //      o_it++)
+    // {
+    //   const expr2tc &tmp = *o_it;
+    //   if (is_constant_expr(tmp) || is_constant_string2t(tmp))
+    //     step.converted_output_args.push_back(tmp);
+    //   else
+    //   {
+    //     expr2tc sym =
+    //       symbol2tc(tmp->type, "symex::output::" + i2string(output_count++));
+    //     expr2tc eq = equality2tc(sym, tmp);
+    //     smt_astt assign = smt_conv.convert_assign(eq);
+    //     if (ssa_smt_trace)
+    //       assign->dump();
+    //     step.converted_output_args.push_back(sym);
+    //   }
+    // }
+  }
+  else if (step.is_renumber())
+  {
+    log_status(" ----- step is_renumber");
+    // smt_conv.renumber_symbol_address(step.guard, step.lhs, step.rhs);
+  }
+  else if (!step.is_skip())
+  {
+    assert(0 && "Unexpected SSA step type in conversion");
+  }
+
+  if (step.is_assert())
+  {
+    log_status(" ----- step is_assert");
+    step.cond_ast = slhv_convt.imply_ast(assumpt_ast, step.cond_ast);
+    assertions.push_back(slhv_convt.invert_ast(step.cond_ast));
+    slhv_convt.invert_ast(step.cond_ast)->dump();
+  }
+  else if (step.is_assume())
+  {
+    log_status(" ----- step is_assume");
+    assumpt_ast = slhv_convt.mk_and(assumpt_ast, step.cond_ast);
+    step.cond_ast->dump();
+  }
+
+    log_status("-------------- over -----------------");
+}
+
 
 void symex_target_equationt::output(std::ostream &out) const
 {

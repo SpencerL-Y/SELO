@@ -73,7 +73,7 @@ protected:
   void
   generate_smt_from_equation(smt_convt &smt_conv, symex_target_equationt &eq);
 
-  std::string generate_slhv_smt_from_equation(z3_slhv_convt& slhv_solver, symex_target_equationt &eq);
+  std::string generate_slhv_smt_from_equation(z3_slhv_convt& slhv_converter, symex_target_equationt &eq);
 };
 
 #endif

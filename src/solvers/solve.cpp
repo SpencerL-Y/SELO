@@ -81,6 +81,7 @@ static std::string pick_default_solver()
 static solver_creator &
 pick_solver(std::string &solver_name, const optionst &options)
 {
+  log_status("pick solver");
   if (solver_name == "")
   {
     // Pick one based on options.
@@ -118,6 +119,7 @@ smt_convt *create_solver(
   const namespacet &ns,
   const optionst &options)
 {
+  log_status("create solver");
   tuple_iface *tuple_api = nullptr;
   array_iface *array_api = nullptr;
   fp_convt *fp_api = nullptr;

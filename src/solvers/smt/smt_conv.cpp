@@ -235,6 +235,9 @@ smt_astt smt_convt::convert_assign(const expr2tc &expr)
 
 smt_astt smt_convt::convert_ast(const expr2tc &expr)
 {
+  log_status("== convert ast ");
+  expr->dump();
+  log_status("====");
   smt_cachet::const_iterator cache_result = smt_cache.find(expr);
   if (cache_result != smt_cache.end())
     return (cache_result->ast);
@@ -1243,6 +1246,10 @@ smt_astt smt_convt::convert_ast(const expr2tc &expr)
 
   struct smt_cache_entryt entry = {expr, a, ctx_level};
   smt_cache.insert(entry);
+
+  log_status("==== converted reuslt: ");
+  a->dump();
+  log_status("====");
   return a;
 }
 

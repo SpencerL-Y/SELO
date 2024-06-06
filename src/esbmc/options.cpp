@@ -216,6 +216,7 @@ const struct group_opt_templ all_cmd_options[] = {
    {{"list-solvers", NULL, "list available solvers and exit"},
     {"boolector", NULL, "use Boolector (default),"},
     {"z3", NULL, "use Z3"},
+    {"z3-slhv", NULL, "use Z3-slhv"},
     {"z3-debug", NULL, "extracts Z3 dump and SMT2 formula"},
     {"z3-debug-dump-file",
      boost::program_options::value<std::string>()->value_name("z3.log"),

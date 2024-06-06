@@ -20,6 +20,9 @@ enum smt_sort_kind
   SMT_SORT_FPBV,
   SMT_SORT_BVFP_RM,
   SMT_SORT_FPBV_RM,
+  // SLHV sorts
+  SMT_SORT_INTHEAP,
+  SMT_SORT_INTLOC
 };
 
 /** A class for storing an SMT sort.

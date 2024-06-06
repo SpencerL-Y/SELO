@@ -43,6 +43,7 @@ smt_convt *create_new_z3_solver(
   *tuple_api = static_cast<tuple_iface *>(conv);
   *array_api = static_cast<array_iface *>(conv);
   *fp_api = static_cast<fp_convt *>(conv);
+  log_status("z3 solver created");
   return conv;
 }
 

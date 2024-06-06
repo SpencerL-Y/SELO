@@ -110,12 +110,16 @@ expr2tc goto_symext::symex_mem(
   const expr2tc &lhs,
   const sideeffect2t &code)
 {
+  log_status("symex_mem start: ");
   if (is_nil_expr(lhs))
     return expr2tc(); // ignore
 
   // size
   type2tc type = code.alloctype;
   expr2tc size = code.size;
+  log_status("alloc size: ");
+  size->dump();
+  // TODO slhv: need to do the constant propagation here 
   bool size_is_one = false;
 
   if (is_nil_type(type))
@@ -129,6 +133,7 @@ expr2tc goto_symext::symex_mem(
     BigInt i;
     if (is_constant_int2t(size))
     {
+      log_status("is constant");
       uint64_t v = to_constant_int2t(size).value.to_uint64();
       if (v == 1)
         size_is_one = true;
@@ -141,6 +146,7 @@ expr2tc goto_symext::symex_mem(
   dynamic_counter++;
 
   // value
+  // TODO slhv: change to heap var declaration 
   symbolt symbol;
 
   symbol.name = "dynamic_" + i2string(dynamic_counter) +
@@ -226,12 +232,12 @@ expr2tc goto_symext::symex_mem(
 
   cur_state->rename(rhs);
   expr2tc rhs_copy(rhs);
-
+  log_status("symex assign in symex_mem");
   symex_assign(code_assign2tc(lhs, rhs), true);
 
   expr2tc ptr_obj = pointer_object2tc(pointer_type2(), ptr_rhs);
   track_new_pointer(ptr_obj, new_type);
-
+  ptr_obj->dump();
   dynamic_memory.emplace_back(
     rhs_copy, alloc_guard, !is_malloc, symbol.name.as_string());
 

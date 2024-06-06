@@ -134,8 +134,10 @@ void goto_symext::symex_assign(
   const bool hidden,
   const guardt &guard)
 {
-  const code_assign2t &code = to_code_assign2t(code_assign);
+  log_status("xxxxxxxxxxxx symex assign: ");
 
+  const code_assign2t &code = to_code_assign2t(code_assign);
+  code.dump();
   // Sanity check: if the target has zero size, then we've ended up assigning
   // to/from either a C++ POD class with no fields or an empty C struct or
   // union. The rest of the model checker isn't rated for dealing with this
@@ -153,7 +155,6 @@ void goto_symext::symex_assign(
   expr2tc original_lhs = code.target;
   expr2tc lhs = code.target;
   expr2tc rhs = code.source;
-
   replace_nondet(lhs);
   replace_nondet(rhs);
 
@@ -168,10 +169,17 @@ void goto_symext::symex_assign(
   {
     symex_printf(lhs, rhs);
   }
-
+  // log_status("ZZZZZZZZZZ assign lhs after dereference and replace: ");
+  // lhs->dump();
+  // log_status("ZZZZZZZZZZ assign rhs after dereference and replace: ");
+  // rhs->dump();
   if (is_sideeffect2t(rhs))
   {
+    // check what symex_mem represent
+
+    log_status("is side effect rhs: ");
     const sideeffect2t &effect = to_sideeffect2t(rhs);
+    // effect.dump();
     switch (effect.kind)
     {
     case sideeffect2t::cpp_new:

@@ -13,8 +13,7 @@ public:
   using solver_smt_ast<z3::expr>::solver_smt_ast;
   ~z3_slhv_smt_ast() override = default;
 
-  smt_astt
-  update(smt_convt *ctx,
+  smt_astt update(smt_convt *ctx,
     smt_astt value,
     unsigned int idx,
     expr2tc idx_expr)
@@ -43,6 +42,7 @@ public:
     resultt dec_solve() override;
     const std::string solver_text() override;
 
+    // terminal making 
     smt_astt mk_smt_int(const BigInt &theint) override;
     smt_astt mk_smt_real(const std::string &str) override;
     smt_astt mk_smt_bv(const BigInt &theint, smt_sortt s) override;
@@ -52,13 +52,53 @@ public:
     smt_astt mk_sign_ext(smt_astt a, unsigned int topwidth) override;
     smt_astt mk_zero_ext(smt_astt a, unsigned int topwidth) override;
     smt_astt mk_concat(smt_astt a, smt_astt b) override;
+    // logical connection making 
     smt_astt mk_ite(smt_astt cond, smt_astt t, smt_astt f) override;
+    smt_astt mk_or(smt_astt a, smt_astt b) override;
+    smt_astt mk_and(smt_astt a, smt_astt b) override;
+    smt_astt mk_implies(smt_astt a, smt_astt b) override;
+    smt_astt mk_not(smt_astt a) override;
+
+    // numeral assertions
+    smt_astt mk_lt(smt_astt a, smt_astt b) override;
+    smt_astt mk_le(smt_astt a, smt_astt b) override;
+    smt_astt mk_gt(smt_astt a, smt_astt b) override;
+    smt_astt mk_ge(smt_astt a, smt_astt b) override;
+    smt_astt mk_eq(smt_astt a, smt_astt b) override;
+    smt_astt mk_neq(smt_astt a, smt_astt b) override;
+    // numeral terms
+    smt_astt mk_add(smt_astt a, smt_astt b) override;
+
+    // heap terms
+    smt_astt mk_pt(smt_astt a, smt_astt b);
+    smt_astt mk_uplus(smt_astt a, smt_astt b);
+    smt_astt mk_emp();
+    // loc terms
+    smt_astt mk_locadd(smt_astt loc, smt_astt i);
+    smt_astt mk_nil();
+
+
+    // value obtaining from solver, not supported here
     bool get_bool(smt_astt a) override;
     BigInt get_bv(smt_astt a, bool is_signed) override;
-    smt_astt overflow_arith(const expr2tc &expr) override;
-    
     void dump_smt() override;
-    
+
+    // sort making 
+    smt_sortt mk_bool_sort() override;
+    smt_sortt mk_int_sort() override;
+    smt_sortt mk_intloc_sort();
+    smt_sortt mk_intheap_sort();
+
+
+    // ast converting
+    smt_astt convert_ast_slhv(const expr2tc &expr);
+    smt_sortt convert_sort_slhv(const type2tc &type);
+    smt_astt convert_assign_slhv(const expr2tc &expr);
+
+
+
+    std::vector<smt_astt> assertions;    
+    z3::context z3_ctx;
 };
 
 #endif
