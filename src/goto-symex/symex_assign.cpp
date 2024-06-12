@@ -66,6 +66,7 @@ goto_symext::goto_symext(
   valid_ptr_arr_name = "c:@__ESBMC_alloc";
   alloc_size_arr_name = "c:@__ESBMC_alloc_size";
   dyn_info_arr_name = "c:@__ESBMC_is_dynamic";
+  alloc_size_heap_name = "c:@__ESBMC_heap_alloc_size";
 
   symbolt sym;
   sym.id = "symex_throw::thrown_obj";
@@ -167,20 +168,22 @@ void goto_symext::symex_assign(
   // printf expression that has lhs
   if (is_code_printf2t(rhs))
   {
-    symex_printf(lhs, rhs);
+    log_error("does not support code printf in assign");
+    // symex_printf(lhs, rhs);
   }
   if (is_sideeffect2t(rhs))
   {
     // check what symex_mem represent
 
-    log_status("is side effect rhs ");
+    log_status("is side effect rhs::::::::::::::::: ");
     const sideeffect2t &effect = to_sideeffect2t(rhs);
-    // effect.dump();
+    effect.dump();
     switch (effect.kind)
     {
     case sideeffect2t::cpp_new:
     case sideeffect2t::cpp_new_arr:
-      symex_cpp_new(lhs, effect);
+      log_error("does not support va_arg cpp new");
+      // symex_cpp_new(lhs, effect);
       break;
     case sideeffect2t::realloc:
       symex_realloc(lhs, effect);
@@ -192,7 +195,8 @@ void goto_symext::symex_assign(
       symex_alloca(lhs, effect);
       break;
     case sideeffect2t::va_arg:
-      symex_va_arg(lhs, effect);
+      log_error("does not support va_arg sideeffect");
+      // symex_va_arg(lhs, effect);
       break;
     case sideeffect2t::printf2:
       // do nothing here

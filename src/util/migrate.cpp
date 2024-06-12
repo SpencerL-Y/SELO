@@ -145,6 +145,12 @@ static type2tc migrate_type0(const typet &type)
 
   if (type.id() == typet::t_empty)
     return get_empty_type();
+  
+  if (type.id() == typet::t_intheap)
+    return get_intheap_type();
+
+  if (type.id() == typet::t_intloc)
+    return get_intloc_type();
 
   if (type.id() == typet::t_symbol)
     return symbol_type2tc(type.identifier());
@@ -1827,6 +1833,10 @@ typet migrate_type_back(const type2tc &ref)
     return bool_typet();
   case type2t::empty_id:
     return empty_typet();
+  case type2t::intheap_id:
+    return intheap_typet();
+  case type2t::intloc_id:
+    return intloc_typet();
   case type2t::symbol_id:
   {
     const symbol_type2t &ref2 = to_symbol_type(ref);
@@ -2578,6 +2588,47 @@ exprt migrate_expr_back(const expr2tc &ref)
     index.copy_to_operands(
       migrate_expr_back(ref2.source_value), migrate_expr_back(ref2.index));
     return index;
+  }
+  case expr2t::uplus_id:
+  {
+    const uplus2t & ref2 = to_uplus2t(ref);
+    typet thetype = migrate_type_back(ref->type);
+    exprt uplus("uplus", thetype);
+    for(expr2tc op2 : ref2.uplus_members) {
+      uplus.copy_to_operands(migrate_expr_back(op2));
+    }
+    return uplus;
+  }
+  case expr2t::locadd_id:
+  {
+    const locadd2t &ref2 = to_locadd2t(ref);
+    typet thetype = migrate_type_back(ref->type);
+    exprt locadd("locadd", thetype);
+    locadd.copy_to_operands(migrate_expr_back(ref2.base_addr));
+    locadd.copy_to_operands(migrate_expr_back(ref2.added_num));
+    return locadd;
+  }
+  case expr2t::heap_update_id:
+  {
+    const heap_update2t &ref2 = to_heap_update2t(ref);
+    typet thetype = migrate_type_back(ref->type);
+    exprt heap_update("heap_update", thetype);
+    heap_update.copy_to_operands(migrate_expr_back(ref2.src_heap));
+    heap_update.copy_to_operands(migrate_expr_back(ref2.start_addr));
+    heap_update.copy_to_operands(migrate_expr_back(ref2.updated_val));
+    heap_update.set("byte_len", irep_idt(std::to_string(ref2.byte_len)));
+    return heap_update;
+  }
+  case expr2t::points_to_id:
+  {
+    const points_to2t &ref2 = to_points_to2t(ref);
+    typet thetype = migrate_type_back(ref->type);
+    exprt pt("points_to", thetype);
+    pt.copy_to_operands(
+      migrate_expr_back(ref2.addr),
+      migrate_expr_back(ref2.content)
+    );
+    return pt;
   }
   case expr2t::isnan_id:
   {

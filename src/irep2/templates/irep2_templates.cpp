@@ -160,6 +160,14 @@ std::string member2t::field_names[esbmct::num_type_fields] =
   {"source_value", "member_name", "", "", ""};
 std::string index2t::field_names[esbmct::num_type_fields] =
   {"source_value", "index", "", "", ""};
+std::string uplus2t::field_names[esbmct::num_type_fields] = 
+{"uplus_members", "uplus_num", "", "", ""};
+std::string points_to2t::field_names[esbmct::num_type_fields] = 
+{"addr", "content", "is_loc", "", ""};
+std::string locadd2t::field_names[esbmct::num_type_fields] = 
+{"baseaddr", "added_num", "", "", ""};
+std::string heap_update2t::field_names[esbmct::num_type_fields] = 
+{"src_heap", "start_addr", "updated_val", "byte_len", ""};
 std::string isnan2t::field_names[esbmct::num_type_fields] =
   {"value", "", "", "", ""};
 std::string overflow2t::field_names[esbmct::num_type_fields] =

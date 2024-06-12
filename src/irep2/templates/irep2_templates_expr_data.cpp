@@ -1,6 +1,7 @@
 #include <irep2/irep2_templates_expr.h>
 
 expr_typedefs1(constant_int, constant_int_data);
+expr_typedefs1(constant_intloc, constant_intloc_data);
 expr_typedefs1(constant_fixedbv, constant_fixedbv_data);
 expr_typedefs1(constant_floatbv, constant_floatbv_data);
 expr_typedefs1(constant_struct, constant_datatype_data);
@@ -27,6 +28,10 @@ expr_typedefs4(byte_update, byte_update_data);
 expr_typedefs3(with, with_data);
 expr_typedefs2(member, member_data);
 expr_typedefs2(index, index_data);
+expr_typedefs3(points_to, points_to_data);
+expr_typedefs2(uplus, uplus_data);
+expr_typedefs2(locadd, locadd_data);
+expr_typedefs4(heap_update, heap_update_data);
 expr_typedefs2(overflow_cast, overflow_cast_data);
 expr_typedefs3(dynamic_object, dynamic_object_data);
 expr_typedefs2(dereference, dereference_data);

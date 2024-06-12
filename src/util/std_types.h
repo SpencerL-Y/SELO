@@ -24,6 +24,28 @@ public:
   }
 };
 
+
+class intheap_typet : public typet 
+{
+public:
+  intheap_typet()
+  {
+    id(t_intheap);
+  }
+};
+
+
+class intloc_typet : public typet 
+{
+public:
+  intloc_typet()
+  {
+    id(t_intloc);
+  }
+};
+
+
+
 class symbol_typet : public typet
 {
 public:

@@ -76,6 +76,8 @@ static const char *expr_names[] = {
   "index",
   "points_to",
   "uplus",
+  "locadd",
+  "heap_update",
   "isnan",
   "overflow",
   "overflow_cast",

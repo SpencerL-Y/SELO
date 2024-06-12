@@ -956,6 +956,63 @@ public:
 
 };
 
+class locadd_data : public expr2t 
+{
+public:
+  locadd_data(
+    const type2tc &t,
+    datatype_ops::expr_ids id,
+    expr2tc base_addr,
+    expr2tc added) : expr2t(t, id), base_addr(base_addr), added_num(added)
+  {
+
+  }
+  expr2tc base_addr;
+  expr2tc added_num;
+
+  // Type mangling:
+  typedef esbmct::field_traits<expr2tc, locadd_data, &locadd_data::base_addr>
+    locadd_base_addr_field;
+  typedef esbmct::field_traits<expr2tc, locadd_data, &locadd_data::added_num>
+    locadd_added_num_field;
+  typedef esbmct::expr2t_traits<locadd_base_addr_field, locadd_added_num_field> traits;
+
+};
+
+class heap_update_data : public expr2t
+{
+public:
+  heap_update_data(
+    const type2tc &t,
+    datatype_ops::expr_ids id,
+    expr2tc source_val,
+    expr2tc start_addr,
+    expr2tc updated_val,
+    unsigned int byte_len
+  ) : expr2t(t, id), src_heap(source_val), start_addr(start_addr), updated_val(updated_val), byte_len(byte_len){}
+
+  expr2tc src_heap;
+  expr2tc start_addr;
+  expr2tc updated_val;
+  unsigned int byte_len;
+
+
+  // Type mangling:
+  typedef esbmct::field_traits<expr2tc, heap_update_data, &heap_update_data::src_heap>
+    heap_update_data_src_heap_field;
+  typedef esbmct::field_traits<expr2tc, heap_update_data, &heap_update_data::start_addr>
+    heap_update_data_start_addr_field;
+  typedef esbmct::field_traits<expr2tc, heap_update_data, &heap_update_data::updated_val> 
+    heap_update_data_updated_val_field;
+  typedef esbmct::field_traits<unsigned int, heap_update_data, &heap_update_data::byte_len> 
+    heap_update_data_byte_len_field;
+  typedef esbmct::expr2t_traits
+  <
+  heap_update_data_src_heap_field,  heap_update_data_start_addr_field, heap_update_data_updated_val_field, heap_update_data_byte_len_field
+  > traits;
+
+};
+
 class string_ops : public expr2t
 {
 public:
@@ -1584,6 +1641,8 @@ irep_typedefs(member, member_data);
 irep_typedefs(index, index_data);
 irep_typedefs(points_to, points_to_data);
 irep_typedefs(uplus, uplus_data);
+irep_typedefs(locadd, locadd_data);
+irep_typedefs(heap_update, heap_update_data);
 irep_typedefs(isnan, bool_1op);
 irep_typedefs(overflow, overflow_ops);
 irep_typedefs(overflow_cast, overflow_cast_data);
@@ -3066,6 +3125,26 @@ public:
   
   static std::string field_names[esbmct::num_type_fields];
 
+};
+
+class locadd2t : public locadd_expr_methods
+{
+public:
+  locadd2t(const type2tc &type, expr2tc base_addr, expr2tc added) : locadd_expr_methods(type, locadd_id, base_addr, added) {}
+  locadd2t(const locadd2t &ref) = default;
+
+
+
+  static std::string field_names[esbmct::num_type_fields];
+};
+
+class heap_update2t : public heap_update_expr_methods
+{
+  public: 
+    heap_update2t(const type2tc &type, expr2tc source_heap, expr2tc start_addr, expr2tc updated_val, unsigned int byte_len) : heap_update_expr_methods(type, heap_update_id, source_heap, start_addr, updated_val, byte_len){}
+    heap_update2t(const heap_update2t &ref) = default;
+
+    static std::string field_names[esbmct::num_type_fields];
 };
 
 /** Is operand not-a-number. Used to implement C library isnan function for

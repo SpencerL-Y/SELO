@@ -2,7 +2,7 @@
 
 int main(){
     // int whatever;
-    int * data = malloc(sizeof(int));
+    int * data = malloc(2*sizeof(int));
     // // *(data + 1) = whatever;
     // int n = *data;
     // if(n > 0) {
