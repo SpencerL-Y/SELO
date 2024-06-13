@@ -66,6 +66,9 @@ void goto_symex_statet::initialize(
 
 bool goto_symex_statet::constant_propagation(const expr2tc &expr) const
 {
+  if(is_intheap_type(expr)) {
+    return false;
+  }
   if (is_array_type(expr))
   {
     array_type2t arr = to_array_type(expr->type);

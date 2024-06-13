@@ -250,7 +250,7 @@ expr2tc goto_symext::symex_mem(
 
     // value
     symbolt symbol;
-    symbol.name = "dynamic_heaplet_"+ i2string(dynamic_counter);
+    symbol.name = "dynamic_heap_"+ i2string(dynamic_counter);
     
     symbol.id = std::string("symex_dynamic::") + (!is_malloc ?    "alloca::" : "") +
                 id2string(symbol.name);

@@ -471,7 +471,13 @@ expr2tc dereferencet::dereference(
   value_setst::valuest points_to_set;
 
   dereference_callback.get_value_set(src, points_to_set);
-
+  log_status("---- value set for ");
+  src->dump();
+  log_status("---- value set: {} items", points_to_set.size());
+  for(expr2tc e : points_to_set) {
+    e->dump();
+    log_status("----");
+  }
   // now build big case split
   // only "good" objects
 

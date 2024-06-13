@@ -159,7 +159,7 @@ void goto_symext::symex_assign(
   replace_nondet(lhs);
   replace_nondet(rhs);
 
-  intrinsic_races_check_dereference(lhs);
+  // intrinsic_races_check_dereference(lhs);
   dereference(lhs, dereferencet::WRITE);
   dereference(rhs, dereferencet::READ);
   replace_dynamic_allocation(lhs);
@@ -237,7 +237,7 @@ void goto_symext::symex_assign_rec(
   {
     log_status("symex_assign_symbol");
     symex_assign_symbol(lhs, full_lhs, rhs, full_rhs, guard, hidden);
-  }
+  } 
   else if (is_index2t(lhs))
   {
     log_status("symex_assign_array");
@@ -317,6 +317,10 @@ void goto_symext::symex_assign_symbol(
   }
 
   expr2tc renamed_lhs = lhs;
+  log_status("ranamed lhs: ");
+  renamed_lhs->dump();
+  log_status("renamed rhs: ");
+  rhs->dump();
   cur_state->rename_type(renamed_lhs);
   cur_state->assignment(renamed_lhs, rhs);
 
