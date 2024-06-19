@@ -212,8 +212,11 @@ void value_sett::get_value_set_rec(
   const type2tc &original_type,
   bool under_deref) const
 {
+  log_status("get value set rec for: ");
+  expr->dump();
   if (is_unknown2t(expr) || is_invalid2t(expr))
   {
+    log_status("is unknown expr or invalid expr");
     // Unknown / invalid exprs mean we just point at something unknown (and
     // potentially invalid).
     insert(dest, unknown2tc(original_type), BigInt(0));
@@ -298,6 +301,7 @@ void value_sett::get_value_set_rec(
     // of things it refers to, rather than the value set (of things it points
     // to).
     const address_of2t &addrof = to_address_of2t(expr);
+    log_status("get address of reference set");
     get_reference_set(addrof.ptr_obj, dest);
     return;
   }
@@ -357,6 +361,7 @@ void value_sett::get_value_set_rec(
 
   if (is_typecast2t(expr))
   {
+    log_status("get typecast value set");
     // Push straight through typecasts.
     const typecast2t &cast = to_typecast2t(expr);
     get_value_set_rec(cast.from, dest, suffix, original_type);
@@ -514,6 +519,7 @@ void value_sett::get_value_set_rec(
 
   if (is_symbol2t(expr))
   {
+    log_status("get value for symbol");
     // This is a symbol, and if it's a pointer then this expression might
     // evalutate to what it points at. So, return this symbols value set.
     const symbol2t &sym = to_symbol2t(expr);
@@ -531,9 +537,18 @@ void value_sett::get_value_set_rec(
       return;
     }
 
+    // SLHV: 
+    if (is_intloc_type(expr)) {
+      expr2tc new_loc_object = pointer_object2tc(get_intloc_type(), expr);
+      insert(dest, new_loc_object, BigInt(0));
+      return;
+    }
+
     // Look up this symbol, with the given suffix to distinguish any arrays or
     // members we've picked out of it at a higher level.
     valuest::const_iterator v_it = values.find(sym.get_symbol_name() + suffix);
+    log_status("ssssss symbol lookup name: {}", sym.get_symbol_name() + suffix);
+
 
     if (sym.rlevel == symbol2t::renaming_level::level1_global)
       assert(sym.level1_num == 0);
@@ -732,6 +747,7 @@ void value_sett::get_value_set_rec(
     get_expr_id(expr),
     get_type_id(expr->type));
   expr2tc tmp = unknown2tc(original_type);
+  expr->dump();
   insert(dest, tmp, BigInt(0));
 }
 
@@ -797,6 +813,7 @@ void value_sett::get_reference_set_rec(const expr2tc &expr, object_mapt &dest)
     if (is_symbol2t(expr))
     {
       const symbolt *sym = ns.lookup(to_symbol2t(expr).thename);
+      log_status("get reference set rec is_symbol: {}", to_symbol2t(expr).thename);
       assert(sym);
       const irept &a = sym->type.find("alignment");
       if (a.is_not_nil())
@@ -825,6 +842,7 @@ void value_sett::get_reference_set_rec(const expr2tc &expr, object_mapt &dest)
 
   if (is_index2t(expr))
   {
+    log_status("get reference set is_index");
     // This index may be dereferencing a pointer. So, get the reference set of
     // the source value, and store a reference to all those things.
     const index2t &index = to_index2t(expr);
@@ -860,6 +878,8 @@ void value_sett::get_reference_set_rec(const expr2tc &expr, object_mapt &dest)
     for (const auto &a_it : array_references)
     {
       expr2tc object = object_numbering[a_it.first];
+      log_status("print object");
+      object->dump();
 
       if (is_unknown2t(object))
       {
@@ -1024,6 +1044,7 @@ void value_sett::assign(
 
   if (is_if2t(rhs))
   {
+    log_status("value set assign: rhs is_if2t");
     // If the rhs could be either side of this if, perform the assigment of
     // either side. In case it refers to itself, assign to a temporary first,
     // then assign back.
@@ -1048,6 +1069,7 @@ void value_sett::assign(
 
   if (is_struct_type(lhs_type) || is_union_type(lhs_type))
   {
+    log_status("value set assign: lhs struct or union");
     if (lhs_type->type_id == rhs->type->type_id)
     {
       /* either both union or both struct */
@@ -1109,6 +1131,7 @@ void value_sett::assign(
 
   if (is_array_type(lhs_type))
   {
+    log_status("value set assign: lhs is_array_type");
     const array_type2t &arr_type = to_array_type(lhs_type);
     expr2tc unknown = unknown2tc(
       arr_type.array_size ? arr_type.array_size->type : index_type2());
@@ -1157,6 +1180,7 @@ void value_sett::assign(
 
   // basic type
   object_mapt values_rhs;
+  log_status("get rhs value set");
   get_value_set(rhs, values_rhs);
   assign_rec(lhs, values_rhs, "", add_to_sets);
 }

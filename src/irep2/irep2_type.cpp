@@ -27,9 +27,9 @@ static const char *type_names[] = {
   "signedbv",
   "fixedbv",
   "floatbv",
+  "cpp_name",
   "intheap",
-  "intloc",
-  "cpp_name"};
+  "intloc"};
 // If this fires, you've added/removed a type id, and need to update the list
 // above (which is ordered according to the enum list)
 static_assert(

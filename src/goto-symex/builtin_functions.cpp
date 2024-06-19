@@ -330,15 +330,19 @@ expr2tc goto_symext::symex_mem(
       log_status("multi byte points_to");
       need_heap_assignment = true;
     }
+    expr2tc origin_base_addr( alloc_base_addr);
     cur_state->rename(alloc_base_addr);
     expr2tc alloc_base_addr_copy(alloc_base_addr);
     if(need_heap_assignment) {
       log_status("symex assign in symex_mem: allocated_heap = heaplet");
       symex_assign(code_assign2tc(allocated_heap, heaplet));
     }
+    log_status("create valueset base addr symbol and assign");
+    expr2tc base_value_symbol = symbol2tc(get_intloc_type(), to_symbol2t(origin_base_addr).get_symbol_name());
+    symex_assign(code_assign2tc(origin_base_addr, typecast2tc(alloc_base_addr->type, base_value_symbol)));
 
     // TODO: modify the pointer tracker here
-    expr2tc ptr_obj = pointer_object2tc(pointer_type2(), alloc_base_addr);
+    expr2tc ptr_obj = pointer_object2tc(get_intloc_type(), alloc_base_addr);
     track_new_pointer(ptr_obj, get_intheap_type(), size_simplified);
     dynamic_memory.emplace_back(
       alloc_base_addr_copy,
@@ -385,6 +389,7 @@ void goto_symext::track_new_pointer(
     symex_assign(code_assign2tc(sz_index_expr, object_size_exp), true);
   } else {
     type2tc allocsize_heap_type = get_intheap_type();
+    allocsize_heap_type->dump();
     expr2tc allocsize_symbol = symbol2tc(allocsize_heap_type, alloc_size_heap_name);
     // TODO SLHV: add non-constant size later
     assert(is_constant_int2t(size));
