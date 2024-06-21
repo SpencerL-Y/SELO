@@ -17,7 +17,8 @@ unsigned namespacet::get_max(const std::string &prefix) const
 
 const symbolt *namespacet::lookup(const irep_idt &name) const
 {
-  return context->find_symbol(name);
+  auto result = context->find_symbol(name);
+  return result;
 }
 
 void namespacet::follow_symbol(irept &irep) const

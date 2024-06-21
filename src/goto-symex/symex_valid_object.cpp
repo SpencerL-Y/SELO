@@ -25,8 +25,7 @@ void goto_symext::replace_dynamic_allocation(expr2tc &expr)
   if (is_nil_expr(expr))
     return;
 
-  log_status("replace dynamic allocation for: ");
-  expr->dump();
+  log_status("replace dynamic allocation");
   expr->Foreach_operand([this](expr2tc &e) { replace_dynamic_allocation(e); });
 
   if (is_valid_object2t(expr) || is_deallocated_obj2t(expr))

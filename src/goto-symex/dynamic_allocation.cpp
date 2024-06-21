@@ -18,15 +18,31 @@ void goto_symext::default_replace_dynamic_allocation(expr2tc &expr)
   {
     /* alloc */
     // replace with CPROVER_alloc[POINTER_OBJECT(...)]
-    const valid_object2t &obj = to_valid_object2t(expr);
+    bool use_old_encoding = !options.get_bool_option("z3-slhv");
+    if(use_old_encoding) {
+      const valid_object2t &obj = to_valid_object2t(expr);
 
-    expr2tc obj_expr = pointer_object2tc(pointer_type2(), obj.value);
+      expr2tc obj_expr = pointer_object2tc(pointer_type2(), obj.value);
 
-    expr2tc alloc_arr_2;
-    migrate_expr(symbol_expr(*ns.lookup(valid_ptr_arr_name)), alloc_arr_2);
+      expr2tc alloc_arr_2;
+      migrate_expr(symbol_expr(*ns.lookup(valid_ptr_arr_name)), alloc_arr_2);
 
-    expr2tc index_expr = index2tc(get_bool_type(), alloc_arr_2, obj_expr);
-    expr = index_expr;
+      expr2tc index_expr = index2tc(get_bool_type(), alloc_arr_2, obj_expr);
+      expr = index_expr;
+
+    } else {
+      log_status("replace valid_object");
+      const valid_object2t &obj = to_valid_object2t(expr);
+      assert(is_pointer_with_region2t(obj.value));
+      const pointer_with_region2t& valid_inner = to_pointer_with_region2t(obj.value);
+      expr2tc alloc_size_heap_2;
+      log_status("before migrate");
+      migrate_expr(symbol_expr(*ns.lookup(alloc_size_heap_name)), alloc_size_heap_2);
+      log_status("migrate over");
+      expr2tc heap_contains = heap_contains2tc(get_bool_type(), alloc_size_heap_2, valid_inner.loc_ptr, 1);
+      expr = heap_contains;
+
+    }
   }
   else if (is_invalid_pointer2t(expr))
   {

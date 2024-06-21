@@ -111,6 +111,7 @@ goto_symext &goto_symext::operator=(const goto_symext &sym)
   valid_ptr_arr_name = sym.valid_ptr_arr_name;
   alloc_size_arr_name = sym.alloc_size_arr_name;
   dyn_info_arr_name = sym.dyn_info_arr_name;
+  alloc_size_heap_name = sym.alloc_size_heap_name;
 
   dynamic_memory = sym.dynamic_memory;
 
@@ -138,6 +139,33 @@ void goto_symext::symex_assign(
   log_status("xxxxxxxxxxxx symex assign: ");
 
   const code_assign2t &code = to_code_assign2t(code_assign);
+  expr2tc assign_target = code.target;
+  expr2tc assign_source = code.source;
+  bool use_old_encoding = !options.get_bool_option("z3-slhv");
+  if(!use_old_encoding) {
+    if(is_symbol2t(assign_target) &&
+       is_array_type(assign_target->type) && 
+       (to_symbol2t(assign_target).get_symbol_name().compare(valid_ptr_arr_name.as_string()) == 0 ||
+        to_symbol2t(assign_target).get_symbol_name().compare(dyn_info_arr_name.as_string()) == 0 ||
+        to_symbol2t(assign_target).get_symbol_name().compare(alloc_size_arr_name.as_string()) == 0)) {
+          if(
+              (to_symbol2t(assign_target).get_symbol_name().compare(alloc_size_arr_name.as_string()) == 0) && 
+              is_constant_array_of2t(assign_source)) {
+            // construct the initialization code of allocsize heap in slhv
+            // and do the symbolic execution for it
+            symbolt allocsize_heap;
+            allocsize_heap.name = alloc_size_heap_name;
+            allocsize_heap.id = alloc_size_heap_name;
+            allocsize_heap.lvalue = true;
+            allocsize_heap.type = typet(typet::t_intheap);
+            new_context.add(allocsize_heap);
+            expr2tc new_lhs = symbol2tc(get_intheap_type(),   allocsize_heap.id);
+            expr2tc new_rhs = constant_intheap2tc(get_intheap_type(), true);
+            symex_assign(code_assign2tc(new_lhs, new_rhs));
+          } 
+          return;
+        }
+  }
   code.dump();
   // Sanity check: if the target has zero size, then we've ended up assigning
   // to/from either a C++ POD class with no fields or an empty C struct or
