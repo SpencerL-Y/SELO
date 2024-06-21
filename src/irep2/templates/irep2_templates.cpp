@@ -166,8 +166,12 @@ std::string points_to2t::field_names[esbmct::num_type_fields] =
 {"addr", "content", "is_loc", "", ""};
 std::string locadd2t::field_names[esbmct::num_type_fields] = 
 {"baseaddr", "added_num", "", "", ""};
+std::string pointer_with_region2t::field_names[esbmct::num_type_fields] = 
+{"loc_ptr", "region", "", "", ""};
 std::string heap_update2t::field_names[esbmct::num_type_fields] = 
 {"src_heap", "start_addr", "updated_val", "byte_len", ""};
+std::string heap_contains2t::field_names[esbmct::num_type_fields] = 
+{"heapvar", "start_loc", "byte_len", "", ""};
 std::string isnan2t::field_names[esbmct::num_type_fields] =
   {"value", "", "", "", ""};
 std::string overflow2t::field_names[esbmct::num_type_fields] =

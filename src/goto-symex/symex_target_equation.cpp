@@ -11,10 +11,11 @@
 
 void symex_target_equationt::debug_print_step(const SSA_stept &step) const
 {
-  log_status("HERERE");
+  log_status("[ssa debug print]");
   std::ostringstream oss;
   step.output(ns, oss);
   log_debug("ssa", "{}", oss.str());
+  log_status("[ssa debug print end]");
 }
 
 void symex_target_equationt::assignment(

@@ -537,12 +537,6 @@ void value_sett::get_value_set_rec(
       return;
     }
 
-    // SLHV: 
-    if (is_intloc_type(expr)) {
-      expr2tc new_loc_object = pointer_object2tc(get_intloc_type(), expr);
-      insert(dest, new_loc_object, BigInt(0));
-      return;
-    }
 
     // Look up this symbol, with the given suffix to distinguish any arrays or
     // members we've picked out of it at a higher level.
@@ -567,6 +561,14 @@ void value_sett::get_value_set_rec(
       make_union(dest, v_it->second.object_map);
       return;
     }
+  }
+  // SLHV:
+  if(is_pointer_with_region2t(expr)) {
+    log_status("get value rec: is pointer with region2t");
+    assert(is_intloc_type(expr));
+    expr2tc new_loc_object = expr;
+    insert(dest, new_loc_object, BigInt(0));
+    return;
   }
 
   if (is_add2t(expr) || is_sub2t(expr))

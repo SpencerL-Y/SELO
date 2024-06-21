@@ -979,6 +979,29 @@ public:
 
 };
 
+class pointer_with_region_data : public expr2t 
+{
+public:
+  pointer_with_region_data(
+    const type2tc &t,
+    datatype_ops::expr_ids id,
+    expr2tc loc_ptr,
+    expr2tc region_heap
+  ) : expr2t(t, id), loc_ptr(loc_ptr), region(region_heap){
+
+  }
+  expr2tc loc_ptr;
+  expr2tc region;
+
+
+  // Type mangling:
+  typedef esbmct::field_traits<expr2tc, pointer_with_region_data, &pointer_with_region_data::loc_ptr>
+    pointer_with_region_loc_ptr_field;
+  typedef esbmct::field_traits<expr2tc, pointer_with_region_data, &pointer_with_region_data::region>
+    pointer_with_region_region_field;
+  typedef esbmct::expr2t_traits<pointer_with_region_loc_ptr_field, pointer_with_region_region_field> traits;
+};
+
 class heap_update_data : public expr2t
 {
 public:
@@ -1009,6 +1032,35 @@ public:
   typedef esbmct::expr2t_traits
   <
   heap_update_data_src_heap_field,  heap_update_data_start_addr_field, heap_update_data_updated_val_field, heap_update_data_byte_len_field
+  > traits;
+
+};
+
+class heap_contains_data : public expr2t {
+public:
+  heap_contains_data(
+    const type2tc &t,
+    datatype_ops::expr_ids id,
+    expr2tc hvar,
+    expr2tc start_loc,
+    unsigned int blk_byte_len
+  ) : expr2t(t, id), heapvar(hvar), start_loc(start_loc), byte_len(blk_byte_len){}
+
+  expr2tc heapvar;
+  expr2tc start_loc;
+  unsigned int byte_len;
+
+  //Type mangling:
+  typedef esbmct::field_traits<expr2tc, heap_contains_data, &heap_contains_data::heapvar>
+    heap_contains_data_heapvar_field;
+  typedef esbmct::field_traits<expr2tc, heap_contains_data, &heap_contains_data::start_loc>
+    heap_contains_data_start_loc_field;
+  typedef esbmct::field_traits<unsigned int, heap_contains_data, &heap_contains_data::byte_len>
+    heap_contains_data_byte_len_field;
+
+  typedef esbmct::expr2t_traits
+  <
+  heap_contains_data_heapvar_field,  heap_contains_data_start_loc_field, heap_contains_data_byte_len_field
   > traits;
 
 };
@@ -1642,7 +1694,9 @@ irep_typedefs(index, index_data);
 irep_typedefs(points_to, points_to_data);
 irep_typedefs(uplus, uplus_data);
 irep_typedefs(locadd, locadd_data);
+irep_typedefs(pointer_with_region, pointer_with_region_data);
 irep_typedefs(heap_update, heap_update_data);
+irep_typedefs(heap_contains, heap_contains_data);
 irep_typedefs(isnan, bool_1op);
 irep_typedefs(overflow, overflow_ops);
 irep_typedefs(overflow_cast, overflow_cast_data);
@@ -3138,6 +3192,14 @@ public:
   static std::string field_names[esbmct::num_type_fields];
 };
 
+class pointer_with_region2t : public pointer_with_region_expr_methods
+{
+public:
+  pointer_with_region2t(const type2tc &type, expr2tc loc_ptr, expr2tc region_heap): pointer_with_region_expr_methods(type, pointer_with_region_id, loc_ptr, region_heap) {}
+
+  static std::string field_names[esbmct::num_type_fields];
+};
+
 class heap_update2t : public heap_update_expr_methods
 {
   public: 
@@ -3145,6 +3207,15 @@ class heap_update2t : public heap_update_expr_methods
     heap_update2t(const heap_update2t &ref) = default;
 
     static std::string field_names[esbmct::num_type_fields];
+};
+
+class heap_contains2t : public heap_contains_expr_methods
+{
+public:
+  heap_contains2t(const type2tc &type, expr2tc hvar, expr2tc start_loc, unsigned int byte_len) : heap_contains_expr_methods(type, heap_contains_id, hvar, start_loc, byte_len) {}
+  heap_contains2t(const heap_contains2t &ref) = default;
+
+  static std::string field_names[esbmct::num_type_fields];
 };
 
 /** Is operand not-a-number. Used to implement C library isnan function for

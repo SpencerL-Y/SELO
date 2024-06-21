@@ -145,8 +145,6 @@ expr2tc goto_symext::symex_mem(
   unsigned int &dynamic_counter = get_dynamic_counter();
   dynamic_counter++;
 
-  // value
-  // TODO slhv: change to heap var declaration 
   bool is_old_encoding = !options.get_bool_option("z3-slhv");
   if (is_old_encoding) {
     symbolt symbol;
@@ -339,9 +337,10 @@ expr2tc goto_symext::symex_mem(
     }
     log_status("create valueset base addr symbol and assign");
     expr2tc base_value_symbol = symbol2tc(get_intloc_type(), to_symbol2t(origin_base_addr).get_symbol_name());
-    symex_assign(code_assign2tc(origin_base_addr, typecast2tc(alloc_base_addr->type, base_value_symbol)));
+    expr2tc base_pointer_region_object = pointer_with_region2tc(get_intloc_type(), base_value_symbol, allocated_heap);
+    symex_assign(code_assign2tc(origin_base_addr, typecast2tc(origin_base_addr->type, base_pointer_region_object)));
 
-    // TODO: modify the pointer tracker here
+    // TODO: modify the pointer object here, maybe to wrap the intloc symbol directly
     expr2tc ptr_obj = pointer_object2tc(get_intloc_type(), alloc_base_addr);
     track_new_pointer(ptr_obj, get_intheap_type(), size_simplified);
     dynamic_memory.emplace_back(

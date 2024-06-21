@@ -137,6 +137,10 @@ const expr2tc &dereferencet::get_symbol(const expr2tc &expr)
   return expr;
 }
 
+const expr2tc &get_heap_symbol(const expr2tc &object) {
+
+}
+
 /************************* Expression decomposing code ************************/
 
 void dereferencet::dereference_expr(expr2tc &expr, guardt &guard, modet mode)
@@ -158,6 +162,8 @@ void dereferencet::dereference_expr(expr2tc &expr, guardt &guard, modet mode)
 
   case expr2t::dereference_id:
   {
+    log_status("dereference expr: dereference id");
+    expr->dump();
     /* Interpret an actual dereference expression. First dereferences the
      * pointer expression, then dereferences the pointer itself, and stores the
      * result in 'expr'. */
@@ -668,108 +674,217 @@ expr2tc dereferencet::build_reference_to(
     // Freeing NULL is completely legit according to C
     return value;
   }
+  
+  bool use_old_encoding = !options.get_bool_option("z3-slhv");
+  if(use_old_encoding) {
+    value = object;
 
-  value = object;
+    // Produce a guard that the dereferenced pointer points at this object.
+    type2tc ptr_type = pointer_type2tc(object->type);
+    expr2tc obj_ptr = address_of2tc(ptr_type, object);
+    pointer_guard = same_object2tc(deref_expr, obj_ptr);
+    log_status("generated pointer guard:");
+    pointer_guard->dump();
+    guardt tmp_guard(guard);
+    tmp_guard.add(pointer_guard);
 
-  // Produce a guard that the dereferenced pointer points at this object.
-  type2tc ptr_type = pointer_type2tc(object->type);
-  expr2tc obj_ptr = address_of2tc(ptr_type, object);
-  pointer_guard = same_object2tc(deref_expr, obj_ptr);
-  guardt tmp_guard(guard);
-  tmp_guard.add(pointer_guard);
+    // Check that the object we're accessing is actually alive and valid for this
+    // mode.
+    valid_check(object, tmp_guard, mode);
 
-  // Check that the object we're accessing is actually alive and valid for this
-  // mode.
-  valid_check(object, tmp_guard, mode);
+    // Don't do anything further if we're freeing things
+    if (is_free(mode))
+      return expr2tc();
 
-  // Don't do anything further if we're freeing things
-  if (is_free(mode))
-    return expr2tc();
+    // Value set tracking emits objects with some cruft built on top of them.
+    value = get_base_object(value);
 
-  // Value set tracking emits objects with some cruft built on top of them.
-  value = get_base_object(value);
+    // Final offset computations start here
+    expr2tc final_offset = o.offset;
+  #if 0
+    // FIXME: benchmark this, on tacas.
+    dereference_callback.rename(final_offset);
+  #endif
 
-  // Final offset computations start here
-  expr2tc final_offset = o.offset;
-#if 0
-  // FIXME: benchmark this, on tacas.
-  dereference_callback.rename(final_offset);
-#endif
-
-  // If offset is unknown, or whatever, we have to consider it
-  // nondeterministic, and let the reference builders deal with it.
-  unsigned int alignment = o.alignment;
-  if (!is_constant_int2t(final_offset))
-  {
-    assert(alignment != 0);
-
-    /* The expression being dereferenced doesn't need to be just a symbol: it
-     * might have all kind of things messing with alignment in there. */
-    if (!is_symbol2t(deref_expr))
+    // If offset is unknown, or whatever, we have to consider it
+    // nondeterministic, and let the reference builders deal with it.
+    unsigned int alignment = o.alignment;
+    if (!is_constant_int2t(final_offset))
     {
-      alignment = 1;
+      assert(alignment != 0);
+
+      /* The expression being dereferenced doesn't need to be just a symbol: it
+       * might have all kind of things messing with alignment in there. */
+      if (!is_symbol2t(deref_expr))
+      {
+        alignment = 1;
+      }
+
+      final_offset =
+        pointer_offset2tc(get_int_type(config.ansi_c.address_width), deref_expr);
     }
 
+    type2tc offset_type = bitsize_type2();
+    if (final_offset->type != offset_type)
+      final_offset = typecast2tc(offset_type, final_offset);
+
+    // Converting final_offset from bytes to bits!
     final_offset =
-      pointer_offset2tc(get_int_type(config.ansi_c.address_width), deref_expr);
-  }
+      mul2tc(final_offset->type, final_offset, gen_long(final_offset->type, 8));
 
-  type2tc offset_type = bitsize_type2();
-  if (final_offset->type != offset_type)
-    final_offset = typecast2tc(offset_type, final_offset);
+    // Add any offset introduced lexically at the dereference site, i.e. member
+    // or index exprs, like foo->bar[3]. If bar is of integer type, we translate
+    // that to be a dereference of foo + extra_offset, resulting in an integer.
+    if (!is_nil_expr(lexical_offset))
+      final_offset = add2tc(final_offset->type, final_offset, lexical_offset);
 
-  // Converting final_offset from bytes to bits!
-  final_offset =
-    mul2tc(final_offset->type, final_offset, gen_long(final_offset->type, 8));
-
-  // Add any offset introduced lexically at the dereference site, i.e. member
-  // or index exprs, like foo->bar[3]. If bar is of integer type, we translate
-  // that to be a dereference of foo + extra_offset, resulting in an integer.
-  if (!is_nil_expr(lexical_offset))
-    final_offset = add2tc(final_offset->type, final_offset, lexical_offset);
-
-  // If we're in internal mode, collect all of our data into one struct, insert
-  // it into the list of internal data, and then bail. The caller does not want
-  // to have a reference built at all.
-  if (is_internal(mode))
-  {
-    dereference_callbackt::internal_item internal;
-    internal.object = value;
-    // Converting offset to bytes
-    internal.offset = typecast2tc(
-      signed_size_type2(),
-      div2tc(
-        final_offset->type, final_offset, gen_long(final_offset->type, 8)));
-    internal.guard = pointer_guard;
-    internal_items.push_back(internal);
-    return expr2tc();
-  }
-
-  if (is_code_type(value) || is_code_type(type))
-  {
-    if (!check_code_access(value, final_offset, type, tmp_guard, mode))
+    // If we're in internal mode, collect all of our data into one struct, insert
+    // it into the list of internal data, and then bail. The caller does not want
+    // to have a reference built at all.
+    if (is_internal(mode))
+    {
+      dereference_callbackt::internal_item internal;
+      internal.object = value;
+      // Converting offset to bytes
+      internal.offset = typecast2tc(
+        signed_size_type2(),
+        div2tc(
+          final_offset->type, final_offset, gen_long(final_offset->type, 8)));
+      internal.guard = pointer_guard;
+      internal_items.push_back(internal);
       return expr2tc();
-    /* here, both of them are code */
+    }
+
+    if (is_code_type(value) || is_code_type(type))
+    {
+      if (!check_code_access(value, final_offset, type, tmp_guard, mode))
+        return expr2tc();
+      /* here, both of them are code */
+    }
+    else if (is_array_type(value)) // Encode some access bounds checks.
+    {
+      bounds_check(value, final_offset, type, tmp_guard);
+    }
+    else
+    {
+      check_data_obj_access(value, final_offset, type, tmp_guard, mode);
+    }
+
+    simplify(final_offset);
+
+    // Converting alignment to bits here
+    alignment *= 8;
+
+    // Call reference building methods. For the given data object in value,
+    // an expression of type type will be constructed that reads from it.
+    build_reference_rec(value, final_offset, type, tmp_guard, mode, alignment);
+
+    return value;
+  } else {
+    value = object;
+
+    // Produce a guard that the dereferenced pointer points at this object.
+    type2tc ptr_type = pointer_type2tc(object->type);
+    expr2tc obj_ptr = typecast2tc(ptr_type, object);
+    pointer_guard = same_object2tc(deref_expr, obj_ptr);
+    log_status("generated pointer guard:");
+    pointer_guard->dump();
+    guardt tmp_guard(guard);
+    tmp_guard.add(pointer_guard);
+
+    // Check that the object we're accessing is actually alive and valid for this
+    // mode.
+    valid_check_slhv(object, tmp_guard, mode);
+
+    // Don't do anything further if we're freeing things
+    if (is_free(mode))
+      return expr2tc();
+
+    // Value set tracking emits objects with some cruft built on top of them.
+    value = get_base_object(value);
+
+    // Final offset computations start here
+    expr2tc final_offset = o.offset;
+  #if 0
+    // FIXME: benchmark this, on tacas.
+    dereference_callback.rename(final_offset);
+  #endif
+
+    // If offset is unknown, or whatever, we have to consider it
+    // nondeterministic, and let the reference builders deal with it.
+    unsigned int alignment = o.alignment;
+    if (!is_constant_int2t(final_offset))
+    {
+      assert(alignment != 0);
+
+      /* The expression being dereferenced doesn't need to be just a symbol: it
+       * might have all kind of things messing with alignment in there. */
+      if (!is_symbol2t(deref_expr))
+      {
+        alignment = 1;
+      }
+
+      final_offset =
+        pointer_offset2tc(get_int_type(config.ansi_c.address_width), deref_expr);
+    }
+
+    type2tc offset_type = bitsize_type2();
+    if (final_offset->type != offset_type)
+      final_offset = typecast2tc(offset_type, final_offset);
+
+    // Converting final_offset from bytes to bits!
+    final_offset =
+      mul2tc(final_offset->type, final_offset, gen_long(final_offset->type, 8));
+
+    // Add any offset introduced lexically at the dereference site, i.e. member
+    // or index exprs, like foo->bar[3]. If bar is of integer type, we translate
+    // that to be a dereference of foo + extra_offset, resulting in an integer.
+    if (!is_nil_expr(lexical_offset))
+      final_offset = add2tc(final_offset->type, final_offset, lexical_offset);
+
+    // If we're in internal mode, collect all of our data into one struct, insert
+    // it into the list of internal data, and then bail. The caller does not want
+    // to have a reference built at all.
+    if (is_internal(mode))
+    {
+      dereference_callbackt::internal_item internal;
+      internal.object = value;
+      // Converting offset to bytes
+      internal.offset = typecast2tc(
+        signed_size_type2(),
+        div2tc(
+          final_offset->type, final_offset, gen_long(final_offset->type, 8)));
+      internal.guard = pointer_guard;
+      internal_items.push_back(internal);
+      return expr2tc();
+    }
+
+    if (is_code_type(value) || is_code_type(type))
+    {
+      if (!check_code_access(value, final_offset, type, tmp_guard, mode))
+        return expr2tc();
+      /* here, both of them are code */
+    }
+    else if (is_array_type(value)) // Encode some access bounds checks.
+    {
+      bounds_check(value, final_offset, type, tmp_guard);
+    }
+    else
+    {
+      check_data_obj_access(value, final_offset, type, tmp_guard, mode);
+    }
+
+    simplify(final_offset);
+
+    // Converting alignment to bits here
+    alignment *= 8;
+
+    // Call reference building methods. For the given data object in value,
+    // an expression of type type will be constructed that reads from it.
+    build_reference_rec(value, final_offset, type, tmp_guard, mode, alignment);
+
+    return value;
   }
-  else if (is_array_type(value)) // Encode some access bounds checks.
-  {
-    bounds_check(value, final_offset, type, tmp_guard);
-  }
-  else
-  {
-    check_data_obj_access(value, final_offset, type, tmp_guard, mode);
-  }
-
-  simplify(final_offset);
-
-  // Converting alignment to bits here
-  alignment *= 8;
-
-  // Call reference building methods. For the given data object in value,
-  // an expression of type type will be constructed that reads from it.
-  build_reference_rec(value, final_offset, type, tmp_guard, mode, alignment);
-
-  return value;
 }
 
 void dereferencet::deref_invalid_ptr(
@@ -2125,6 +2240,98 @@ void dereferencet::valid_check(
         return;
       }
     }
+  }
+}
+
+void dereferencet::valid_check_slhv(
+  const expr2tc &object,
+  const guardt &guard,
+  modet mode)
+{
+  const expr2tc &symbol = get_symbol(object);
+
+  if (is_constant_string2t(symbol))
+  {
+    // always valid, but can't write
+
+    if (is_write(mode))
+    {
+      dereference_failure(
+        "pointer dereference", "write access to string constant", guard);
+    }
+  }
+  else if (is_nil_expr(symbol))
+  {
+    // always "valid", shut up
+    return;
+  }
+  else if (is_symbol2t(symbol))
+  {
+    // Hacks, but as dereferencet object isn't persistent, necessary. Fix by
+    // making dereferencet persistent.
+    if (has_prefix(
+          to_symbol2t(symbol).thename.as_string(), "symex::invalid_object"))
+    {
+      // This is an invalid object; if we're in read or write mode, that's an error.
+      if (is_read(mode) || is_write(mode))
+        dereference_failure("pointer dereference", "invalid pointer", guard);
+      return;
+    }
+
+    const symbolt &sym = *ns.lookup(to_symbol2t(symbol).thename);
+    if (has_prefix(sym.id.as_string(), "symex_dynamic::"))
+    {
+      // Assert that it hasn't (nondeterministically) been invalidated.
+      expr2tc addrof = address_of2tc(symbol->type, symbol);
+      expr2tc valid_expr = valid_object2tc(addrof);
+      expr2tc not_valid_expr = not2tc(valid_expr);
+
+      guardt tmp_guard(guard);
+      tmp_guard.add(not_valid_expr);
+
+      std::string foo = is_free(mode) ? "invalidated dynamic object freed"
+                                      : "invalidated dynamic object";
+      dereference_failure("pointer dereference", foo, tmp_guard);
+    }
+    else
+    {
+      // Not dynamic; if we're in free mode, that's an error.
+      if (is_free(mode))
+      {
+        dereference_failure(
+          "pointer dereference", "free() of non-dynamic memory", guard);
+        return;
+      }
+
+      // Otherwise, this is a pointer to some kind of lexical variable, with
+      // either global or function-local scope. Ask symex to determine if
+      // it's live.
+      if (!dereference_callback.is_live_variable(symbol))
+      {
+        // Any access where this guard is true -> failure
+        dereference_failure(
+          "pointer dereference",
+          "accessed expired variable pointer `" +
+            get_pretty_name(to_symbol2t(symbol).thename.as_string()) + "'",
+          guard);
+        return;
+      }
+    }
+  } else if(is_pointer_with_region2t(symbol)) {
+    // slhv
+    log_status("pointer with region dereference failure here");
+    // assert that the pointer we dereference with a specific length lies in the heap variable
+      // TODO: maybe add a special expression type to denote that the pointer_with_region is not valid
+    expr2tc not_valid_pointer_with_region = not2tc(valid_object2tc(symbol));
+    log_status("not valid print:");
+    not_valid_pointer_with_region->dump();
+    guardt tmp_guard(guard);
+    tmp_guard.add(not_valid_pointer_with_region);
+    std::string foo = is_free(mode) ?  "invalid free pointer"
+                                      : "invalid dereference pointer";
+    dereference_failure("pointer dereference", foo, tmp_guard);
+    // TODO: add free
+    return;
   }
 }
 

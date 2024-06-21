@@ -159,10 +159,14 @@ void goto_symext::symex_assign(
   replace_nondet(lhs);
   replace_nondet(rhs);
 
-  // intrinsic_races_check_dereference(lhs);
+  intrinsic_races_check_dereference(lhs);
+  log_status("dereference lhs write");
   dereference(lhs, dereferencet::WRITE);
+  log_status("dereference rhs read");
   dereference(rhs, dereferencet::READ);
+  log_status("replace dynamic allocation lhs");
   replace_dynamic_allocation(lhs);
+  log_status("replace dynamic allocation rhs");
   replace_dynamic_allocation(rhs);
 
   // printf expression that has lhs
