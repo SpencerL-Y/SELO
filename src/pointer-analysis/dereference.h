@@ -438,6 +438,12 @@ private:
     const type2tc &type,
     const guardt &guard,
     modet mode);
+  void check_pointer_with_region_access(
+    const expr2tc &value,
+    const expr2tc &offset,
+    const type2tc &type,
+    const guardt &guard,
+    modet mode);
   void
   check_alignment(BigInt minwidth, const expr2tc &offset, const guardt &guard);
   unsigned int static compute_num_bytes_to_extract(

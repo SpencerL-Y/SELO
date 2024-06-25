@@ -472,6 +472,8 @@ expr2tc dereferencet::dereference(
     src = typecast2tc(pointer_type2tc(get_empty_type()), src);
 
   type2tc type = ns.follow(to_type);
+  log_status("dereference type:");
+  type->dump();
 
   // collect objects dest may point to
   value_setst::valuest points_to_set;
@@ -815,6 +817,9 @@ expr2tc dereferencet::build_reference_to(
     unsigned int alignment = o.alignment;
     if (!is_constant_int2t(final_offset))
     {
+      if(is_pointer_with_region2t(value)) {
+        log_status("ERROR: non constant offset of pointer with region");
+      }
       assert(alignment != 0);
 
       /* The expression being dereferenced doesn't need to be just a symbol: it
@@ -868,6 +873,10 @@ expr2tc dereferencet::build_reference_to(
     else if (is_array_type(value)) // Encode some access bounds checks.
     {
       bounds_check(value, final_offset, type, tmp_guard);
+    }
+    else if (is_pointer_with_region2t(value)) 
+    {
+      check_pointer_with_region_access(value, final_offset, type, tmp_guard, mode);
     }
     else
     {
@@ -2474,6 +2483,7 @@ void dereferencet::check_data_obj_access(
   const guardt &guard,
   modet mode)
 {
+  log_status("check data obj access");
   assert(!is_array_type(value));
   assert(offset->type == bitsize_type2());
 
@@ -2503,6 +2513,29 @@ void dereferencet::check_data_obj_access(
    * check that the access being made is aligned. */
   if (is_scalar_type(type) && !mode.unaligned)
     check_alignment(access_sz, std::move(offset), guard);
+  log_status("check data obj access over");
+}
+
+void dereferencet::check_pointer_with_region_access(
+  const expr2tc &value,
+  const expr2tc &offset,
+  const type2tc &type,
+  const guardt &guard,
+  modet mode) {
+    log_status("check pointer with region access");
+    assert(is_pointer_with_region2t(value));
+    const pointer_with_region2t& pointer_reg = to_pointer_with_region2t(value);
+    expr2tc region = pointer_reg.region;
+    expr2tc pointer_loc = pointer_reg.loc_ptr;
+    unsigned int byte_len = type->get_width()/8;
+    expr2tc bound_check = heap_contains2tc(get_bool_type(), region, pointer_loc, byte_len);
+    if(!options.get_bool_option("no-bounds-check")) {
+      guardt tmp_guard = guard;
+      tmp_guard.add(bound_check);
+      dereference_failure("pointer dereference", "Access of heap out of region", tmp_guard);
+    }
+    // TODO: maybe add alignment check
+    log_status("check pointer with region access over");
 }
 
 void dereferencet::check_alignment(
