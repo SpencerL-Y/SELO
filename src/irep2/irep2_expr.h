@@ -1002,6 +1002,29 @@ public:
   typedef esbmct::expr2t_traits<pointer_with_region_loc_ptr_field, pointer_with_region_region_field> traits;
 };
 
+class heap_load_data : public expr2t {
+public:
+  heap_load_data(
+    const type2tc &t,
+    datatype_ops::expr_ids id,
+    expr2tc h,
+    expr2tc start_addr,
+    unsigned int byte_len
+  ) : expr2t(t, id), heap(h), start_addr(start_addr), byte_len(byte_len){}
+
+  expr2tc heap;
+  expr2tc start_addr;
+  unsigned int byte_len;
+
+
+  typedef esbmct::field_traits<expr2tc, heap_load_data, &heap_load_data::heap> heap_load_data_heap_field;
+  typedef esbmct::field_traits<expr2tc, heap_load_data, &heap_load_data::start_addr> heap_load_data_start_addr_field;
+  typedef esbmct::field_traits<unsigned int, heap_load_data, &heap_load_data::byte_len> heap_load_data_byte_len_field;
+  typedef esbmct::expr2t_traits<heap_load_data_heap_field, heap_load_data_start_addr_field, heap_load_data_byte_len_field> traits;
+
+};
+
+
 class heap_update_data : public expr2t
 {
 public:
@@ -1695,6 +1718,7 @@ irep_typedefs(points_to, points_to_data);
 irep_typedefs(uplus, uplus_data);
 irep_typedefs(locadd, locadd_data);
 irep_typedefs(pointer_with_region, pointer_with_region_data);
+irep_typedefs(heap_load, heap_load_data);
 irep_typedefs(heap_update, heap_update_data);
 irep_typedefs(heap_contains, heap_contains_data);
 irep_typedefs(isnan, bool_1op);
@@ -3198,6 +3222,15 @@ public:
   pointer_with_region2t(const type2tc &type, expr2tc loc_ptr, expr2tc region_heap): pointer_with_region_expr_methods(type, pointer_with_region_id, loc_ptr, region_heap) {}
 
   static std::string field_names[esbmct::num_type_fields];
+};
+
+class heap_load2t : public heap_load_expr_methods
+{
+  public:
+    heap_load2t(const type2tc & type, expr2tc heap, expr2tc start_addr, unsigned int byte_len) : heap_load_expr_methods(type, expr2t::heap_load_id, heap, start_addr, byte_len) {} ;
+    heap_load2t(const heap_load2t& ref) = default;
+
+    static std::string field_names[esbmct::num_type_fields];
 };
 
 class heap_update2t : public heap_update_expr_methods

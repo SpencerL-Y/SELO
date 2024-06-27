@@ -400,13 +400,17 @@ void goto_symext::track_new_pointer(
 
 void goto_symext::symex_free(const expr2tc &expr)
 {
+  log_status("xxxxxxx symex free");
   const auto &code = static_cast<const code_expression_data &>(*expr);
 
   // Trigger 'free'-mode dereference of this pointer. Should generate various
   // dereference failure callbacks.
   expr2tc tmp = code.operand;
+  log_status("tmp before dereference FREE mode: ");
+  tmp->dump();
   dereference(tmp, dereferencet::FREE);
-
+  log_status("tmp after dereference FREE mode:");
+  tmp->dump();
   // Don't rely on the output of dereference in free mode; instead fetch all
   // the internal dereference state for pointed at objects, and creates claims
   // that if pointed at, their offset is zero.
@@ -415,8 +419,9 @@ void goto_symext::symex_free(const expr2tc &expr)
 
   // Create temporary, dummy, dereference
   tmp = dereference2tc(get_uint8_type(), tmp);
+  log_status("tmp before dereference INTERNAL mode: ");
+  tmp->dump();
   dereference(tmp, dereferencet::INTERNAL);
-
   // Only add assertions to check pointer offset if pointer check is enabled
   if (!options.get_bool_option("no-pointer-check"))
   {
@@ -428,6 +433,10 @@ void goto_symext::symex_free(const expr2tc &expr)
 
     for (auto const &item : internal_deref_items)
     {
+      log_status("internal deref item: ");
+      item.object->dump();
+      log_status("offset: ");
+      item.offset->dump();
       guardt g = cur_state->guard;
       g.add(item.guard);
 
@@ -463,15 +472,27 @@ void goto_symext::symex_free(const expr2tc &expr)
     }
   }
 
-  // Clear the alloc bit.
-  type2tc sym_type = array_type2tc(get_bool_type(), expr2tc(), true);
-  expr2tc ptr_obj = pointer_object2tc(pointer_type2(), code.operand);
-  dereference(ptr_obj, dereferencet::READ);
+  bool is_old_encoding = !options.get_bool_option("z3-slhv");
+  if(is_old_encoding){  
+    // Clear the alloc bit.
+    type2tc sym_type = array_type2tc(get_bool_type(), expr2tc(), true);
+    expr2tc ptr_obj = pointer_object2tc(pointer_type2(), code.operand);
+    dereference(ptr_obj, dereferencet::READ);
 
-  expr2tc valid_sym = symbol2tc(sym_type, valid_ptr_arr_name);
-  expr2tc valid_index_expr = index2tc(get_bool_type(), valid_sym, ptr_obj);
-  expr2tc falsity = gen_false_expr();
-  symex_assign(code_assign2tc(valid_index_expr, falsity), true);
+    expr2tc valid_sym = symbol2tc(sym_type, valid_ptr_arr_name);
+    expr2tc valid_index_expr = index2tc(get_bool_type(), valid_sym, ptr_obj);
+    expr2tc falsity = gen_false_expr();
+    symex_assign(code_assign2tc(valid_index_expr, falsity), true);
+  } else {
+
+    // Clear the alloc heapsize.
+    expr2tc ptr_obj = dereference2tc(get_uint8_type(), code.operand);
+    ptr_obj->dump();
+    dereference(ptr_obj, dereferencet::READ);
+    log_status("dereferenced ptr_obj to free");
+    ptr_obj->dump();
+
+  }
 }
 
 void goto_symext::symex_printf(const expr2tc &lhs, expr2tc &rhs)

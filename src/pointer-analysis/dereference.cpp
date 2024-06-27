@@ -635,6 +635,8 @@ expr2tc dereferencet::build_reference_to(
   const expr2tc &lexical_offset,
   expr2tc &pointer_guard)
 {
+  log_status("build reference to for:");
+  what->dump();
   expr2tc value;
   pointer_guard = gen_false_expr();
 
@@ -890,7 +892,7 @@ expr2tc dereferencet::build_reference_to(
 
     // Call reference building methods. For the given data object in value,
     // an expression of type type will be constructed that reads from it.
-    build_reference_rec(value, final_offset, type, tmp_guard, mode, alignment);
+    build_reference_slhv(value, final_offset, type, tmp_guard, mode, alignment);
 
     return value;
   }
@@ -1020,6 +1022,9 @@ void dereferencet::build_reference_rec(
   modet mode,
   unsigned long alignment)
 {
+  log_status("build reference rec: ");
+  log_status("to type: ");
+  type->dump();
   int flags = 0;
   if (is_constant_int2t(offset))
     flags |= flag_is_const_offs;
@@ -1190,6 +1195,34 @@ void dereferencet::build_reference_rec(
     log_error("Unrecognized input to build_reference_rec");
     abort();
   }
+}
+
+
+void dereferencet::build_reference_slhv(
+  expr2tc &value,
+  const expr2tc &offset,
+  const type2tc &type,
+  const guardt &guard,
+  modet mode,
+  unsigned long alignment
+) {
+  log_status("build reference slhv");
+  log_status("to type: ");
+  type->dump();
+  assert(is_pointer_with_region2t(value));
+  int flags = 0;
+  if(is_scalar_type(type)) {
+    int byte_len = type->get_width()/8;
+    assert(byte_len > 0);
+    pointer_with_region2t& pwr = to_pointer_with_region2t(value);
+    expr2tc heap = pwr.region;
+    expr2tc loc_ptr = pwr.loc_ptr;
+    value = heap_load2tc(type, heap, loc_ptr, byte_len);
+  } else {
+    log_error("ERROR: currently not support non-scalar type dereference");
+    abort();
+  }
+
 }
 
 void dereferencet::construct_from_array(
