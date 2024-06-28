@@ -486,11 +486,13 @@ void goto_symext::symex_free(const expr2tc &expr)
   } else {
 
     // Clear the alloc heapsize.
-    expr2tc ptr_obj = dereference2tc(get_uint8_type(), code.operand);
+    // expr2tc ptr_obj = dereference2tc(get_uint8_type(), code.operand);
+    expr2tc ptr_obj = pointer_object2tc(pointer_type2(), code.operand);
     ptr_obj->dump();
     dereference(ptr_obj, dereferencet::READ);
     log_status("dereferenced ptr_obj to free");
     ptr_obj->dump();
+    
 
   }
 }
