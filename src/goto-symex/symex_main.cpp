@@ -1178,7 +1178,7 @@ void goto_symext::add_memory_leak_checks()
         "memcleanup-skip", "memcleanup: not considering auto-dealloc'd");
       continue;
     }
-
+    
     // Assert that the allocated object was freed.
     expr2tc deallocd = deallocated_obj2tc(it.obj);
 
