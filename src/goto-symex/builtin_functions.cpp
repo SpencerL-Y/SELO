@@ -344,7 +344,7 @@ expr2tc goto_symext::symex_mem(
     expr2tc ptr_obj = pointer_object2tc(get_intloc_type(), alloc_base_addr);
     track_new_pointer(ptr_obj, get_intheap_type(), size_simplified);
     dynamic_memory.emplace_back(
-      alloc_base_addr_copy,
+      allocated_heap,
       alloc_guard,
       !is_malloc,
       symbol.name.as_string()
