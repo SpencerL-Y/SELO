@@ -243,6 +243,7 @@ expr2tc goto_symext::symex_mem(
     return to_address_of2t(rhs_addrof).ptr_obj;
     
   } else {
+    log_status("create heap symbol for allocation");
     unsigned int &dynamic_counter = get_dynamic_counter();
     dynamic_counter++;
 
@@ -259,12 +260,18 @@ expr2tc goto_symext::symex_mem(
 
     symbol.type.dynamic(true);
     symbol.mode = "C";
+    log_status("new_context.add(symbol);");
     new_context.add(symbol);
 
     type2tc heap_type = get_intheap_type();
     expr2tc allocated_heap = symbol2tc(heap_type, symbol.id);
     std::vector<expr2tc> pts;
-    expr2tc size_simplified = size.simplify();
+    expr2tc size_simplified;
+    if(!is_constant_int2t(size)) {
+      size_simplified = size.simplify();
+    } else {
+      size_simplified = size;
+    }
     guardt alloc_guard = cur_state->guard;
     // TODO SLHV: add size simplification later
     if(!is_constant_int2t(size_simplified)) {
