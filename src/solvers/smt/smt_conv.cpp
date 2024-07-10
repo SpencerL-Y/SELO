@@ -142,6 +142,8 @@ void smt_convt::smt_post_init()
 {
   boolean_sort = mk_bool_sort();
 
+  if (options.get_bool_option("z3-slhv")) { return; }
+
   init_addr_space_array();
 
   if (int_encoding)
@@ -235,12 +237,14 @@ smt_astt smt_convt::convert_assign(const expr2tc &expr)
 
 smt_astt smt_convt::convert_ast(const expr2tc &expr)
 {
-  log_status("== convert ast ");
+  log_status("------------------------------- convert ast ");
   expr->dump();
-  log_status("====");
+  log_status("-------------------------------");
   smt_cachet::const_iterator cache_result = smt_cache.find(expr);
-  if (cache_result != smt_cache.end())
+  if (cache_result != smt_cache.end()) {
+    log_status("found!!!!!!!!");
     return (cache_result->ast);
+  }
 
   /* Vectors!
    *
@@ -252,7 +256,7 @@ smt_astt smt_convt::convert_ast(const expr2tc &expr)
    * for some reason we would like to run ESBMC without simplifications
    * then we need to apply it here.
   */
-  if (is_vector_type(expr))
+  if (!options.get_bool_option("z3-slhv") && is_vector_type(expr))
   {
     if (is_neg2t(expr))
     {
@@ -317,6 +321,28 @@ smt_astt smt_convt::convert_ast(const expr2tc &expr)
   smt_astt a;
   switch (expr->expr_id)
   {
+  case expr2t::points_to_id: {
+    assert(args.size() == 2);
+    a = mk_pt(args[0], args[1]);
+    break;
+  }
+  case expr2t::uplus_id: {
+    assert(args.size() >= 2);
+    a = args[0];
+    for (int i = 1; i < args.size(); i++) {
+      a = mk_uplus(a, args[i]);
+    }
+    break;
+  }
+  case expr2t::locadd_id: {
+    assert(args.size() == 2);
+    a = mk_locadd(args[0], args[1]);
+    break;
+  }
+
+  case expr2t::constant_intheap_id:
+  case expr2t::constant_intloc_id:
+  case expr2t::pointer_with_region_id:
   case expr2t::constant_int_id:
   case expr2t::constant_fixedbv_id:
   case expr2t::constant_floatbv_id:
@@ -1269,6 +1295,13 @@ smt_sortt smt_convt::convert_sort(const type2tc &type)
   smt_sortt result = nullptr;
   switch (type->type_id)
   {
+  case type2t::intheap_id:
+    result = mk_intheap_sort();
+    break;
+  case type2t::intloc_id:
+    result = mk_intloc_sort();
+    break;
+
   case type2t::bool_id:
     result = boolean_sort;
     break;
@@ -1391,7 +1424,20 @@ smt_astt smt_convt::convert_terminal(const expr2tc &expr)
   log_status("convert terminal: ");
   expr.get()->dump();
   switch (expr->expr_id)
-  {
+  {  
+  case expr2t::constant_intheap_id: {
+    return mk_emp();
+  }
+  case expr2t::constant_intloc_id: {
+    return mk_nil();
+  }
+  case expr2t::pointer_with_region_id: {
+    const pointer_with_region2t& pwr = to_pointer_with_region2t(expr);
+    const symbol2t& nsym = to_symbol2t(pwr.loc_ptr);
+    std::string name = nsym.get_symbol_name();
+    smt_sortt sort = convert_sort(nsym.type);
+    return mk_smt_symbol(name, sort);
+  }
   case expr2t::constant_int_id:
   {
     const constant_int2t &theint = to_constant_int2t(expr);
@@ -3372,5 +3418,37 @@ smt_astt smt_convt::mk_int2real(smt_astt a)
 smt_astt smt_convt::mk_isint(smt_astt a)
 {
   (void)a;
+  abort();
+}
+
+smt_astt smt_convt::mk_emp() { abort(); }
+
+smt_astt smt_convt::mk_nil() { abort(); }
+
+smt_astt smt_convt::mk_pt(smt_astt a, smt_astt b) {
+  (void)a;
+  (void)b;
+  abort();
+}
+
+smt_astt smt_convt::mk_uplus(smt_astt a, smt_astt b) {
+  (void)a;
+  (void)b;
+  abort();
+}
+
+smt_astt smt_convt::mk_locadd(smt_astt a, smt_astt b) {
+  (void)a;
+  (void)b;
+  abort();
+}
+
+smt_sortt smt_convt::mk_intheap_sort() {
+  log_error("Chosen solver doesn't support intheap sorts");
+  abort();
+}
+
+smt_sortt smt_convt::mk_intloc_sort() {
+  log_error("Chosen solver doesn't support inltoc sorts");
   abort();
 }

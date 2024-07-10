@@ -335,6 +335,17 @@ public:
   virtual smt_astt mk_int2real(smt_astt a);
   virtual smt_astt mk_isint(smt_astt a);
 
+  // SLHV mk_operators
+  virtual smt_astt mk_emp();
+  virtual smt_astt mk_nil();
+  virtual smt_astt mk_pt(smt_astt a, smt_astt b);
+  virtual smt_astt mk_uplus(smt_astt a, smt_astt b);
+  virtual smt_astt mk_locadd(smt_astt a, smt_astt b);
+
+  // SLHV mk_sort
+  virtual smt_sortt mk_intheap_sort();
+  virtual smt_sortt mk_intloc_sort();
+
   /** Create an integer or SBV/UBV sort */
   smt_sortt mk_int_bv_sort(std::size_t width)
   {

@@ -5,7 +5,7 @@
 #include <solvers/smt/smt_array.h>
 #include <solvers/smt/tuple/smt_tuple_node.h>
 #include <solvers/smt/tuple/smt_tuple_sym.h>
-#include <solvers/z3-slhv/z3_slhv_conv.h>
+// #include <solvers/z3-slhv/z3_slhv_conv.h>
 
 #include <unordered_map>
 
@@ -17,6 +17,7 @@ solver_creator create_new_cvc_solver;
 solver_creator create_new_mathsat_solver;
 solver_creator create_new_yices_solver;
 solver_creator create_new_bitwuzla_solver;
+solver_creator create_new_z3_slhv_solver;
 
 static const std::unordered_map<std::string, solver_creator *> esbmc_solvers = {
 #ifdef SMTLIB
@@ -41,7 +42,10 @@ static const std::unordered_map<std::string, solver_creator *> esbmc_solvers = {
   {"yices", create_new_yices_solver},
 #endif
 #ifdef BITWUZLA
-  {"bitwuzla", create_new_bitwuzla_solver}
+  {"bitwuzla", create_new_bitwuzla_solver},
+#endif
+#ifdef Z3_SLHV
+  {"z3-slhv", create_new_z3_slhv_solver},
 #endif
 };
 
@@ -55,7 +59,8 @@ static const std::string all_solvers[] = {
   "cvc",
   "mathsat",
   "yices",
-  "bitwuzla"};
+  "bitwuzla",
+  "z3-slhv"};
 
 static std::string pick_default_solver()
 {

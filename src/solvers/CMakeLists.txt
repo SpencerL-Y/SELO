@@ -5,6 +5,7 @@ set (ESBMC_ENABLE_cvc4 0)
 set (ESBMC_ENABLE_mathsat 0)
 set (ESBMC_ENABLE_yices 0)
 set (ESBMC_ENABLE_bitwuzla 0)
+set (ESBMC_ENABLE_z3_slhv 0)
 
 add_subdirectory(prop)
 add_subdirectory(smt)

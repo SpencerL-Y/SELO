@@ -12,7 +12,10 @@ else()
     endif()
 endif()
 
-if(ENABLE_Z3)
+if(ENABLE_Z3_SLHV)
+    if(NOT DEFINED Z3_DIR)
+        message(FATAL_ERROR "Could not find library, please check Z3_DIR")
+    endif()
     find_library(Z3_LIB z3 libz3 HINTS ${Z3_DIR} $ENV{HOME}/z3 PATH_SUFFIXES lib bin)
     find_path(Z3_INCLUDE_DIRS z3.h HINTS ${Z3_DIR} $ENV{HOME}/z3 PATH_SUFFIXES include)
 
@@ -42,7 +45,6 @@ if(ENABLE_Z3)
         message(FATAL_ERROR "Expected version ${Z3_MIN_VERSION} or greater")
     endif()
 
-
     add_library(solverz3slhv z3_slhv_conv.cpp)
     target_include_directories(solverz3slhv
             PRIVATE ${Z3_INCLUDE_DIRS}
@@ -57,4 +59,6 @@ if(ENABLE_Z3)
     # Add to solver link
     target_link_libraries(solvers INTERFACE solverz3slhv)
 
+    set(ESBMC_ENABLE_z3_slhv 1 PARENT_SCOPE)
+    set(ESBMC_AVAILABLE_SOLVERS "${ESBMC_AVAILABLE_SOLVERS} z3-slhv" PARENT_SCOPE)
 endif()

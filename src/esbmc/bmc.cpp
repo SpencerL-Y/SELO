@@ -40,6 +40,7 @@
 #include <util/cache.h>
 #include <atomic>
 #include <goto-symex/witnesses.h>
+#include <iostream>
 
 bmct::bmct(goto_functionst &funcs, optionst &opts, contextt &_context)
   : options(opts), context(_context), ns(context)
@@ -144,8 +145,10 @@ void bmct::generate_smt_from_equation(
   log_status("generate smt from equation");
   std::string logic;
 
-  if (!options.get_bool_option("int-encoding"))
-  {
+  if (options.get_bool_option("z3-slhv")) {
+    logic = "SLHV";
+  }
+  else if (!options.get_bool_option("int-encoding")) {
     logic = "bit-vector";
     logic += (!config.ansi_c.use_fixed_for_float) ? "/floating-point " : " ";
     logic += "arithmetic";
@@ -162,13 +165,13 @@ void bmct::generate_smt_from_equation(
     "Encoding to solver time: {}s", time2string(encode_stop - encode_start));
 }
 
-std::string bmct::generate_slhv_smt_from_equation(z3_slhv_convt& slhv_converter, symex_target_equationt &eq) {
-  log_status("generate slhv formula from equation");
-  std::string result;
-  eq.convert2slhv(slhv_converter);
-  log_status("here");
-  return result;
-}
+// std::string bmct::generate_slhv_smt_from_equation(z3_slhv_convt& slhv_converter, symex_target_equationt &eq) {
+//   log_status("generate slhv formula from equation");
+//   std::string result;
+//   eq.convert2slhv(slhv_converter);
+//   log_status("here");
+//   return result;
+// }
 
 smt_convt::resultt
 bmct::run_decision_procedure(smt_convt &smt_conv, symex_target_equationt &eq)
@@ -648,22 +651,27 @@ smt_convt::resultt bmct::run_thread(std::shared_ptr<symex_target_equationt> &eq)
       return smt_convt::P_UNSATISFIABLE;
     }
 
-    if (!options.get_bool_option("smt-during-symex") && !options.get_bool_option("z3-slhv"))
+    if (!options.get_bool_option("smt-during-symex"))
     {
       runtime_solver =
         std::unique_ptr<smt_convt>(create_solver("", ns, options));
       log_status("smt_convt created");
+      if (options.get_bool_option("z3-slhv")) {
+        // show_vcc(*eq);
+        generate_smt_from_equation(*runtime_solver, *eq);
+        return smt_convt::P_SMTLIB;
+      }
     }
 
-    if (!options.get_bool_option("smt-during-symex") && options.get_bool_option("z3-slhv")) {
+    // if (!options.get_bool_option("smt-during-symex") && options.get_bool_option("z3-slhv")) {
 
-      log_status("enter branch dealing with slhv encoding");
-      z3_slhv_convt* slhv_conv = new z3_slhv_convt(ns, options);
-      slhv_converter = std::unique_ptr<z3_slhv_convt>(slhv_conv);
-      ;
-      std::string smt_str = generate_slhv_smt_from_equation(*slhv_converter, *eq);
-      return smt_convt::P_SMTLIB;
-    }
+    //   log_status("enter branch dealing with slhv encoding");
+    //   z3_slhv_convt* slhv_conv = new z3_slhv_convt(ns, options);
+    //   slhv_converter = std::unique_ptr<z3_slhv_convt>(slhv_conv);
+
+    //   std::string smt_str = generate_slhv_smt_from_equation(*slhv_converter, *eq);
+    //   return smt_convt::P_SMTLIB;
+    // }
 
     if (
       options.get_bool_option("multi-property") &&
