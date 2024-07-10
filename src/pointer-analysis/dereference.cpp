@@ -656,6 +656,7 @@ expr2tc dereferencet::build_reference_to(
 
   const expr2tc &root_object = o.get_root_object();
   const expr2tc &object = o.object;
+  const expr2tc &pwr_object = object_descriptor2tc(o);
 
   if (is_null_object2t(root_object) && !is_free(mode) && !is_internal(mode))
   {
@@ -789,7 +790,7 @@ expr2tc dereferencet::build_reference_to(
 
     // Produce a guard that the dereferenced pointer points at this object.
     type2tc ptr_type = pointer_type2tc(object->type);
-    expr2tc obj_ptr = typecast2tc(ptr_type, object);
+    expr2tc obj_ptr = typecast2tc(ptr_type, pwr_object);
     pointer_guard = same_object2tc(deref_expr, obj_ptr);
     log_status("generated pointer guard:");
     pointer_guard->dump();
@@ -2560,8 +2561,11 @@ void dereferencet::check_pointer_with_region_access(
     const pointer_with_region2t& pointer_reg = to_pointer_with_region2t(value);
     expr2tc region = pointer_reg.region;
     expr2tc pointer_loc = pointer_reg.loc_ptr;
+    expr2tc offset_in_byte = div2tc(get_int32_type(), offset, constant_int2tc(get_int8_type(), BigInt(8)));
+    offset_in_byte = offset_in_byte.simplify();
+    expr2tc start_addr = locadd2tc(get_intloc_type(), pointer_loc, offset_in_byte);
     unsigned int byte_len = type->get_width()/8;
-    expr2tc bound_check = heap_contains2tc(get_bool_type(), region, pointer_loc, byte_len);
+    expr2tc bound_check = heap_contains2tc(get_bool_type(), region, start_addr, byte_len);
     if(!options.get_bool_option("no-bounds-check")) {
       guardt tmp_guard = guard;
       tmp_guard.add(bound_check);
