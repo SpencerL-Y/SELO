@@ -232,6 +232,11 @@ smt_astt smt_convt::convert_assign(const expr2tc &expr)
   smt_cache_entryt e = {eq.side_1, side2, ctx_level};
   smt_cache.insert(e);
 
+  log_status(" ----------------- assignment result ----------------- ");
+  side1->dump();
+  side2->dump();
+  log_status(" ----------------- assignment result ----------------- ");
+
   return side2;
 }
 
@@ -315,6 +320,12 @@ smt_astt smt_convt::convert_ast(const expr2tc &expr)
     unsigned int i = 0;
     expr->foreach_operand(
       [this, &args, &i](const expr2tc &e) { args[i++] = convert_ast(e); });
+    log_status(" -------------- convert args finished ------------ ");
+    for (int i = 0; i < expr->get_num_sub_exprs(); i++) {
+      args[i]->dump();
+    }
+    log_status(" -------------- convert args finished ------------ ");
+
   }
   }
 
@@ -338,6 +349,29 @@ smt_astt smt_convt::convert_ast(const expr2tc &expr)
     assert(args.size() == 2);
     a = mk_locadd(args[0], args[1]);
     break;
+  }
+  case expr2t::heap_update_id: {
+    log_status("heap update");
+    const heap_update2t& heap_upd = to_heap_update2t(expr);
+    smt_astt h = args[0];
+    smt_astt h1 = mk_fresh(mk_intheap_sort(), mk_fresh_name("tmp_heap"));
+    smt_astt adr = args[1];
+    smt_astt val = args[2];
+    smt_astt v1 = mk_fresh(val->sort, mk_fresh_name("tmp_val"));
+    // old heap state
+    smt_astt o_state = mk_eq(h, mk_uplus(mk_pt(adr, v1), h1));
+    assert_ast(o_state);
+    // new heap state
+    a = mk_uplus(mk_pt(adr, val), h1);
+    break;
+  }
+  case expr2t::heap_load_id: {
+    log_status("TODO: heap load");
+    abort();
+  }
+  case expr2t::heap_contains_id: {
+    log_status("TODO: heap contains");
+    abort();
   }
 
   case expr2t::constant_intheap_id:
@@ -721,9 +755,12 @@ smt_astt smt_convt::convert_ast(const expr2tc &expr)
   }
   case expr2t::same_object_id:
   {
+    const same_object2t& so = to_same_object2t(expr);
     // Two projects, then comparison.
-    args[0] = args[0]->project(this, 0);
-    args[1] = args[1]->project(this, 0);
+    if (this->solver_text() != "Z3-slhv") {
+      args[0] = args[0]->project(this, 0);
+      args[1] = args[1]->project(this, 0);
+    }
     a = mk_eq(args[0], args[1]);
     break;
   }
@@ -748,7 +785,7 @@ smt_astt smt_convt::convert_ast(const expr2tc &expr)
       ptr = &to_typecast2t(*ptr).from;
 
     args[0] = convert_ast(*ptr);
-    a = args[0]->project(this, 0);
+    a = this->solver_text() == "Z3-slhv" ? args[0] : args[0]->project(this, 0);
     break;
   }
   case expr2t::pointer_capability_id:

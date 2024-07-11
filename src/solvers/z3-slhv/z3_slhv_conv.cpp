@@ -3,8 +3,7 @@
 #include <solvers/smt/smt_conv.h>
 #include <z3_slhv_conv.h>
 
-
-#define new_ast new_solver_ast<z3_slhv_smt_ast>
+#define new_ast new_solver_ast<z3_smt_ast>
 
 smt_convt *create_new_z3_slhv_solver(
   const optionst &options,
@@ -43,22 +42,22 @@ smt_convt *create_new_z3_slhv_solver(
   return conv;
 }
 
-smt_astt z3_slhv_smt_ast::update(smt_convt *ctx,
-  smt_astt value,
-  unsigned int idx,
-  expr2tc idx_expr)
-  const {
-    log_status("slhv_smt does not support update");
-    return nullptr;
-  }
-smt_astt z3_slhv_smt_ast::project(smt_convt *ctx, unsigned int elem)const  {
-  log_status("slhv_smt does not support project");
-  return nullptr;
-}
-void z3_slhv_smt_ast::dump() const  {
-  std::string print_str = a.to_string();
-  log_status("{}\n sort is {}", print_str, a.get_sort().to_string());
-}
+// smt_astt z3_slhv_smt_ast::update(smt_convt *ctx,
+//   smt_astt value,
+//   unsigned int idx,
+//   expr2tc idx_expr)
+//   const {
+//     log_status("slhv_smt does not support update");
+//     return nullptr;
+//   }
+// smt_astt z3_slhv_smt_ast::project(smt_convt *ctx, unsigned int elem) const  {
+//   log_status("slhv_smt does not support project");
+//   return nullptr;
+// }
+// void z3_slhv_smt_ast::dump() const  {
+//   std::string print_str = a.to_string();
+//   log_status("{}\n sort is {}", print_str, a.get_sort().to_string());
+// }
 
 z3_slhv_convt::z3_slhv_convt(const namespacet &_ns, const optionst& _options) : z3_convt(_ns, _options) {
     // initialize the z3 based slhv converter here
@@ -192,15 +191,15 @@ const std::string z3_slhv_convt::solver_text() {
 // heap terms
 smt_astt z3_slhv_convt::mk_pt(smt_astt a, smt_astt b) {
   z3::expr pt = z3::points_to(
-    to_solver_smt_ast<z3_slhv_smt_ast>(a)->a,
-    to_solver_smt_ast<z3_slhv_smt_ast>(b)->a
+    to_solver_smt_ast<z3_smt_ast>(a)->a,
+    to_solver_smt_ast<z3_smt_ast>(b)->a
   );
   return new_ast(pt, this->mk_intheap_sort());
 }
 smt_astt z3_slhv_convt::mk_uplus(smt_astt a, smt_astt b){
   z3::expr h = z3::uplus(
-    to_solver_smt_ast<z3_slhv_smt_ast>(a)->a,
-    to_solver_smt_ast<z3_slhv_smt_ast>(b)->a
+    to_solver_smt_ast<z3_smt_ast>(a)->a,
+    to_solver_smt_ast<z3_smt_ast>(b)->a
   );
   return new_ast(h, this->mk_intheap_sort());
 }

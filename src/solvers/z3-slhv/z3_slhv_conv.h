@@ -7,22 +7,22 @@
 #include <solvers/z3/z3_conv.h>
 #include <z3++.h>
 
-class z3_slhv_smt_ast : public solver_smt_ast<z3::expr>
-{
-public:
-  using solver_smt_ast<z3::expr>::solver_smt_ast;
-  ~z3_slhv_smt_ast() override = default;
+// class z3_slhv_smt_ast : public solver_smt_ast<z3::expr>
+// {
+// public:
+//   using solver_smt_ast<z3::expr>::solver_smt_ast;
+//   ~z3_slhv_smt_ast() override = default;
 
-  smt_astt update(smt_convt *ctx,
-    smt_astt value,
-    unsigned int idx,
-    expr2tc idx_expr)
-    const override;
+//   smt_astt update(smt_convt *ctx,
+//     smt_astt value,
+//     unsigned int idx,
+//     expr2tc idx_expr)
+//     const override;
 
-  smt_astt project(smt_convt *ctx, unsigned int elem) const override;
+//   smt_astt project(smt_convt *ctx, unsigned int elem) const override;
 
-  void dump() const override;
-};
+//   void dump() const override;
+// };
 
 class z3_slhv_convt : public z3_convt {
 public:
