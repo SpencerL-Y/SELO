@@ -33,7 +33,7 @@ public:
     // TODO slhv: move to the api later, currently we use the smt-lib2 string translation
     // interfaces of smt_convt need implementation
 
-    void assert_ast(smt_astt a) override;
+    // void assert_ast(smt_astt a) override;
     resultt dec_solve() override;
     const std::string solver_text() override;
 
@@ -44,8 +44,7 @@ public:
     smt_astt mk_uplus(smt_astt a, smt_astt b);
     smt_astt mk_subh(smt_astt a, smt_astt b);
     smt_astt mk_disjh(smt_astt a, smt_astt b);
-    smt_astt mk_locadd(smt_astt loc, smt_astt i);
-
+    smt_astt mk_locadd(smt_astt a, smt_astt b);
 
     // value obtaining from solver, not supported here
     bool get_bool(smt_astt a) override;

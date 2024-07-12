@@ -59,9 +59,11 @@ smt_convt *create_new_z3_slhv_solver(
 //   log_status("{}\n sort is {}", print_str, a.get_sort().to_string());
 // }
 
-z3_slhv_convt::z3_slhv_convt(const namespacet &_ns, const optionst& _options) : z3_convt(_ns, _options) {
+z3_slhv_convt::z3_slhv_convt(const namespacet &_ns, const optionst& _options)
+  : z3_convt(_ns, _options) {
     // initialize the z3 based slhv converter here
     int_encoding = true;
+    solver = z3::solver(z3_ctx);
     log_status("z3_slhv_convt created");
 }
 
@@ -75,9 +77,9 @@ z3_slhv_convt::~z3_slhv_convt() { delete_all_asts(); }
 
 // }
 
-void z3_slhv_convt::assert_ast(smt_astt a) {
-  this->assertions.push_back(a);
-}
+// void z3_slhv_convt::assert_ast(smt_astt a) {
+//   this->assertions.push_back(a);
+// }
 
 smt_convt::resultt z3_slhv_convt::dec_solve() {
   return P_SMTLIB;
@@ -190,43 +192,51 @@ const std::string z3_slhv_convt::solver_text() {
 
 // constant and operators
 smt_astt z3_slhv_convt::mk_emp() {
-  z3::expr emp = z3_ctx.emp_const();
-  return new_ast(emp, this->mk_intheap_sort());
+  return new_ast(z3_ctx.emp_const(), this->mk_intheap_sort());
 }
 smt_astt z3_slhv_convt::mk_nil() {
-  z3::expr nil = z3_ctx.nil_const();
-  return new_ast(nil, this->mk_intloc_sort());
+  return new_ast(z3_ctx.nil_const(), this->mk_intloc_sort());
 }
 smt_astt z3_slhv_convt::mk_pt(smt_astt a, smt_astt b) {
-  z3::expr pt = z3::points_to(
-    to_solver_smt_ast<z3_smt_ast>(a)->a,
-    to_solver_smt_ast<z3_smt_ast>(b)->a
-  );
-  return new_ast(pt, this->mk_intheap_sort());
+  return new_ast(
+    z3::points_to(
+      to_solver_smt_ast<z3_smt_ast>(a)->a,
+      to_solver_smt_ast<z3_smt_ast>(b)->a
+    ),
+    this->mk_intheap_sort());
 }
 smt_astt z3_slhv_convt::mk_uplus(smt_astt a, smt_astt b) {
-  z3::expr h = z3::uplus(
-    to_solver_smt_ast<z3_smt_ast>(a)->a,
-    to_solver_smt_ast<z3_smt_ast>(b)->a
-  );
-  return new_ast(h, this->mk_intheap_sort());
+  return new_ast(
+    z3::uplus(
+      to_solver_smt_ast<z3_smt_ast>(a)->a,
+      to_solver_smt_ast<z3_smt_ast>(b)->a
+    ),
+    this->mk_intheap_sort());
 }
 smt_astt z3_slhv_convt::mk_subh(smt_astt a, smt_astt b) {
-  z3::expr sh = z3::subh(
-    to_solver_smt_ast<z3_smt_ast>(a)->a,
-    to_solver_smt_ast<z3_smt_ast>(b)->a
-  );
-  return new_ast(sh, this->boolean_sort);
+  return new_ast(
+    z3::subh(
+      to_solver_smt_ast<z3_smt_ast>(a)->a,
+      to_solver_smt_ast<z3_smt_ast>(b)->a
+    ),
+    this->boolean_sort);
 }
 smt_astt z3_slhv_convt::mk_disjh(smt_astt a, smt_astt b) {
-  z3::expr sh = z3::disjh(
-    to_solver_smt_ast<z3_smt_ast>(a)->a,
-    to_solver_smt_ast<z3_smt_ast>(b)->a
-  );
-  return new_ast(sh, this->boolean_sort);
+  return new_ast(
+    z3::disjh(
+      to_solver_smt_ast<z3_smt_ast>(a)->a,
+      to_solver_smt_ast<z3_smt_ast>(b)->a
+    ),
+    this->boolean_sort);
 }
-smt_astt z3_slhv_convt::mk_locadd(smt_astt loc, smt_astt i) {
-
+smt_astt z3_slhv_convt::mk_locadd(smt_astt a, smt_astt b) {
+  return new_ast(
+    z3::locadd(
+      to_solver_smt_ast<z3_smt_ast>(a)->a,
+      to_solver_smt_ast<z3_smt_ast>(b)->a
+    ),
+    this->mk_intloc_sort()
+  );
 }
 
 bool z3_slhv_convt::get_bool(smt_astt a){
@@ -314,11 +324,11 @@ z3_slhv_convt::convert_slhv_opts(
       const heap_contains2t& heap_ct = to_heap_contains2t(expr);
       assert(heap_ct.byte_len >= 1);
       smt_astt sh = mk_pt(args[1], mk_fresh(mk_int_sort(), mk_fresh_name("tmp_val")));
-      for (int i = 1; false && i < heap_ct.byte_len; i++) {
+      for (int i = 1; i < heap_ct.byte_len; i++) {
         sh = mk_uplus(
           sh,
           mk_pt(
-            mk_add(args[1], mk_smt_int(BigInt(i))),
+            mk_locadd(args[1], mk_smt_int(BigInt(i))),
             // TODO: fix sort
             mk_fresh(mk_int_sort(), mk_fresh_name("tmp_val"))
           )
