@@ -332,51 +332,19 @@ smt_astt smt_convt::convert_ast(const expr2tc &expr)
   smt_astt a;
   switch (expr->expr_id)
   {
-  case expr2t::points_to_id: {
-    assert(args.size() == 2);
-    a = mk_pt(args[0], args[1]);
-    break;
-  }
-  case expr2t::uplus_id: {
-    assert(args.size() >= 2);
-    a = args[0];
-    for (int i = 1; i < args.size(); i++) {
-      a = mk_uplus(a, args[i]);
-    }
-    break;
-  }
-  case expr2t::locadd_id: {
-    assert(args.size() == 2);
-    a = mk_locadd(args[0], args[1]);
-    break;
-  }
-  case expr2t::heap_update_id: {
-    log_status("heap update");
-    const heap_update2t& heap_upd = to_heap_update2t(expr);
-    smt_astt h = args[0];
-    smt_astt h1 = mk_fresh(mk_intheap_sort(), mk_fresh_name("tmp_heap"));
-    smt_astt adr = args[1];
-    smt_astt val = args[2];
-    smt_astt v1 = mk_fresh(val->sort, mk_fresh_name("tmp_val"));
-    // old heap state
-    smt_astt o_state = mk_eq(h, mk_uplus(mk_pt(adr, v1), h1));
-    assert_ast(o_state);
-    // new heap state
-    a = mk_uplus(mk_pt(adr, val), h1);
-    break;
-  }
-  case expr2t::heap_load_id: {
-    log_status("TODO: heap load");
-    abort();
-  }
-  case expr2t::heap_contains_id: {
-    log_status("TODO: heap contains");
-    abort();
-  }
-
   case expr2t::constant_intheap_id:
   case expr2t::constant_intloc_id:
   case expr2t::pointer_with_region_id:
+  case expr2t::points_to_id:
+  case expr2t::uplus_id:
+  case expr2t::locadd_id:
+  case expr2t::heap_update_id:
+  case expr2t::heap_load_id:
+  case expr2t::heap_contains_id: {
+    a = convert_slhv_opts(expr, args); 
+    break;
+  }
+
   case expr2t::constant_int_id:
   case expr2t::constant_fixedbv_id:
   case expr2t::constant_floatbv_id:
@@ -1333,10 +1301,8 @@ smt_sortt smt_convt::convert_sort(const type2tc &type)
   switch (type->type_id)
   {
   case type2t::intheap_id:
-    result = mk_intheap_sort();
-    break;
   case type2t::intloc_id:
-    result = mk_intloc_sort();
+    result = convert_slhv_sorts(type);
     break;
 
   case type2t::bool_id:
@@ -1461,20 +1427,7 @@ smt_astt smt_convt::convert_terminal(const expr2tc &expr)
   log_status("convert terminal: ");
   expr.get()->dump();
   switch (expr->expr_id)
-  {  
-  case expr2t::constant_intheap_id: {
-    return mk_emp();
-  }
-  case expr2t::constant_intloc_id: {
-    return mk_nil();
-  }
-  case expr2t::pointer_with_region_id: {
-    const pointer_with_region2t& pwr = to_pointer_with_region2t(expr);
-    const symbol2t& nsym = to_symbol2t(pwr.loc_ptr);
-    std::string name = nsym.get_symbol_name();
-    smt_sortt sort = convert_sort(nsym.type);
-    return mk_smt_symbol(name, sort);
-  }
+  {
   case expr2t::constant_int_id:
   {
     const constant_int2t &theint = to_constant_int2t(expr);
@@ -3458,34 +3411,15 @@ smt_astt smt_convt::mk_isint(smt_astt a)
   abort();
 }
 
-smt_astt smt_convt::mk_emp() { abort(); }
+/** Heap sorts and operators */
 
-smt_astt smt_convt::mk_nil() { abort(); }
-
-smt_astt smt_convt::mk_pt(smt_astt a, smt_astt b) {
-  (void)a;
-  (void)b;
+smt_sortt smt_convt::convert_slhv_sorts(const type2tc &type) {
+  log_error("Chosen solver doesn't support inltoc sorts");
   abort();
 }
 
-smt_astt smt_convt::mk_uplus(smt_astt a, smt_astt b) {
-  (void)a;
-  (void)b;
-  abort();
-}
-
-smt_astt smt_convt::mk_locadd(smt_astt a, smt_astt b) {
-  (void)a;
-  (void)b;
-  abort();
-}
-
-smt_sortt smt_convt::mk_intheap_sort() {
-  log_error("Chosen solver doesn't support intheap sorts");
-  abort();
-}
-
-smt_sortt smt_convt::mk_intloc_sort() {
+smt_astt smt_convt::convert_slhv_opts(
+  const expr2tc &expr, const std::vector<smt_astt>& args) {
   log_error("Chosen solver doesn't support inltoc sorts");
   abort();
 }
