@@ -655,12 +655,12 @@ smt_convt::resultt bmct::run_thread(std::shared_ptr<symex_target_equationt> &eq)
     {
       runtime_solver =
         std::unique_ptr<smt_convt>(create_solver("", ns, options));
-      log_status("smt_convt created");
-      if (options.get_bool_option("z3-slhv")) {
-        show_vcc(*eq);
-        generate_smt_from_equation(*runtime_solver, *eq);
-        return smt_convt::P_SMTLIB;
-      }
+      // log_status("smt_convt created");
+      // if (options.get_bool_option("z3-slhv")) {
+      //   show_vcc(*eq);
+      //   generate_smt_from_equation(*runtime_solver, *eq);
+      //   return smt_convt::P_SMTLIB;
+      // }
     }
 
     // if (!options.get_bool_option("smt-during-symex") && options.get_bool_option("z3-slhv")) {

@@ -59,9 +59,11 @@ smt_convt *create_new_z3_slhv_solver(
 //   log_status("{}\n sort is {}", print_str, a.get_sort().to_string());
 // }
 
-z3_slhv_convt::z3_slhv_convt(const namespacet &_ns, const optionst& _options) : z3_convt(_ns, _options) {
+z3_slhv_convt::z3_slhv_convt(const namespacet &_ns, const optionst& _options)
+  : z3_convt(_ns, _options) {
     // initialize the z3 based slhv converter here
     int_encoding = true;
+    solver = z3::solver(z3_ctx);
     log_status("z3_slhv_convt created");
 }
 
@@ -75,9 +77,9 @@ z3_slhv_convt::~z3_slhv_convt() { delete_all_asts(); }
 
 // }
 
-void z3_slhv_convt::assert_ast(smt_astt a) {
-  this->assertions.push_back(a);
-}
+// void z3_slhv_convt::assert_ast(smt_astt a) {
+//   this->assertions.push_back(a);
+// }
 
 smt_convt::resultt z3_slhv_convt::dec_solve() {
   return P_SMTLIB;
@@ -188,32 +190,53 @@ const std::string z3_slhv_convt::solver_text() {
 
 // }
 
-// heap terms
-smt_astt z3_slhv_convt::mk_pt(smt_astt a, smt_astt b) {
-  z3::expr pt = z3::points_to(
-    to_solver_smt_ast<z3_smt_ast>(a)->a,
-    to_solver_smt_ast<z3_smt_ast>(b)->a
-  );
-  return new_ast(pt, this->mk_intheap_sort());
-}
-smt_astt z3_slhv_convt::mk_uplus(smt_astt a, smt_astt b){
-  z3::expr h = z3::uplus(
-    to_solver_smt_ast<z3_smt_ast>(a)->a,
-    to_solver_smt_ast<z3_smt_ast>(b)->a
-  );
-  return new_ast(h, this->mk_intheap_sort());
-}
+// constant and operators
 smt_astt z3_slhv_convt::mk_emp() {
-  z3::expr emp = z3_ctx.emp_const();
-  return new_ast(emp, this->mk_intheap_sort());
-}
-// loc terms
-smt_astt z3_slhv_convt::mk_locadd(smt_astt loc, smt_astt i) {
-
+  return new_ast(z3_ctx.emp_const(), this->mk_intheap_sort());
 }
 smt_astt z3_slhv_convt::mk_nil() {
-  z3::expr nil = z3_ctx.nil_const();
-  return new_ast(nil, this->mk_intloc_sort());
+  return new_ast(z3_ctx.nil_const(), this->mk_intloc_sort());
+}
+smt_astt z3_slhv_convt::mk_pt(smt_astt a, smt_astt b) {
+  return new_ast(
+    z3::points_to(
+      to_solver_smt_ast<z3_smt_ast>(a)->a,
+      to_solver_smt_ast<z3_smt_ast>(b)->a
+    ),
+    this->mk_intheap_sort());
+}
+smt_astt z3_slhv_convt::mk_uplus(smt_astt a, smt_astt b) {
+  return new_ast(
+    z3::uplus(
+      to_solver_smt_ast<z3_smt_ast>(a)->a,
+      to_solver_smt_ast<z3_smt_ast>(b)->a
+    ),
+    this->mk_intheap_sort());
+}
+smt_astt z3_slhv_convt::mk_subh(smt_astt a, smt_astt b) {
+  return new_ast(
+    z3::subh(
+      to_solver_smt_ast<z3_smt_ast>(a)->a,
+      to_solver_smt_ast<z3_smt_ast>(b)->a
+    ),
+    this->boolean_sort);
+}
+smt_astt z3_slhv_convt::mk_disjh(smt_astt a, smt_astt b) {
+  return new_ast(
+    z3::disjh(
+      to_solver_smt_ast<z3_smt_ast>(a)->a,
+      to_solver_smt_ast<z3_smt_ast>(b)->a
+    ),
+    this->boolean_sort);
+}
+smt_astt z3_slhv_convt::mk_locadd(smt_astt a, smt_astt b) {
+  return new_ast(
+    z3::locadd(
+      to_solver_smt_ast<z3_smt_ast>(a)->a,
+      to_solver_smt_ast<z3_smt_ast>(b)->a
+    ),
+    this->mk_intloc_sort()
+  );
 }
 
 bool z3_slhv_convt::get_bool(smt_astt a){
@@ -224,14 +247,6 @@ BigInt z3_slhv_convt::get_bv(smt_astt a, bool is_signed){
   log_error("SLHV does not support bv");
   abort();
 }
-
-// smt_sortt z3_slhv_convt::mk_bool_sort() {
-//   return new solver_smt_sort<z3::sort>(SMT_SORT_BOOL, z3_ctx.bool_sort());
-// }
-
-// smt_sortt z3_slhv_convt::mk_int_sort() {
-//   return new solver_smt_sort<z3::sort>(SMT_SORT_INT, z3_ctx.int_sort());
-// }
 
 smt_sortt z3_slhv_convt::mk_intheap_sort() {
   return new solver_smt_sort<z3::sort>(SMT_SORT_INTHEAP, z3_ctx.intheap_sort());
@@ -244,6 +259,88 @@ smt_sortt z3_slhv_convt::mk_intloc_sort() {
 smt_sortt z3_slhv_convt::mk_struct_sort(const type2tc &type) {
   assert(is_intloc_type(type));
   return mk_intloc_sort();
+}
+
+smt_sortt z3_slhv_convt::convert_slhv_sorts(const type2tc &type) {
+  switch (type->type_id) {
+    case type2t::intheap_id: return mk_intheap_sort();
+    case type2t::intloc_id: return mk_intloc_sort();
+    default: {
+      log_error("Unexpected type for SLHV");
+      abort();
+    }
+  }
+}
+
+smt_astt
+z3_slhv_convt::convert_slhv_opts(
+  const expr2tc &expr, const std::vector<smt_astt>& args) {
+  switch (expr->expr_id) {
+    case expr2t::constant_intheap_id: return mk_emp();
+    case expr2t::constant_intloc_id: return mk_nil();
+    case expr2t::pointer_with_region_id: {
+      const pointer_with_region2t& pwr = to_pointer_with_region2t(expr);
+      const symbol2t& nsym = to_symbol2t(pwr.loc_ptr);
+      return mk_smt_symbol(nsym.get_symbol_name(), mk_intloc_sort());
+    }
+    case expr2t::points_to_id: {
+      assert(args.size() == 2);
+      return mk_pt(args[0], args[1]);
+    }
+    case expr2t::uplus_id: {
+      assert(args.size() >= 2);
+      smt_astt h = args[0];
+      for (int i = 1; i < args.size(); i++) {
+        h = mk_uplus(h, args[i]);
+      }
+      return h;
+    }
+    case expr2t::locadd_id: {
+      assert(args.size() == 2);
+      return mk_locadd(args[0], args[1]);
+    }
+    case expr2t::heap_update_id: {
+      const heap_update2t& heap_upd = to_heap_update2t(expr);
+      smt_astt h = args[0];
+      smt_astt h1 = mk_fresh(mk_intheap_sort(), mk_fresh_name("tmp_heap"));
+      smt_astt adr = args[1];
+      smt_astt val = args[2];
+      smt_astt v1 = mk_fresh(val->sort, mk_fresh_name("tmp_val"));
+      // current heap state
+      smt_astt o_state = mk_eq(h, mk_uplus(mk_pt(adr, v1), h1));
+      assert_ast(o_state);
+      // new heap state
+      return mk_uplus(mk_pt(adr, val), h1);
+    }
+    case expr2t::heap_load_id: {
+      const heap_load2t& heap_load = to_heap_load2t(expr);
+      // TODO: fix v1 sort
+      smt_astt v1 = mk_fresh(mk_int_sort(), mk_fresh_name("tmp_val"));
+      //current heap state
+      assert_ast(mk_subh(mk_pt(args[1], v1), args[0]));
+      return v1;
+    }
+    case expr2t::heap_contains_id: {
+      const heap_contains2t& heap_ct = to_heap_contains2t(expr);
+      assert(heap_ct.byte_len >= 1);
+      smt_astt sh = mk_pt(args[1], mk_fresh(mk_int_sort(), mk_fresh_name("tmp_val")));
+      for (int i = 1; i < heap_ct.byte_len; i++) {
+        sh = mk_uplus(
+          sh,
+          mk_pt(
+            mk_locadd(args[1], mk_smt_int(BigInt(i))),
+            // TODO: fix sort
+            mk_fresh(mk_int_sort(), mk_fresh_name("tmp_val"))
+          )
+        );
+      }
+      return mk_subh(sh, args[0]);
+    }
+    default: {
+      log_status("Invalid SLHV operations!!!");
+      abort();
+    }
+  }
 }
 
 // smt_astt z3_slhv_convt::convert_ast_slhv(const expr2tc &expr) {
