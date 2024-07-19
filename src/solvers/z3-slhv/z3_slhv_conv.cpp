@@ -374,8 +374,10 @@ void z3_slhv_convt::print_smt_formulae(std::ostream& dest) {
   dest << "(set-logic SLHV)" << std::endl;
   dest << "(set-info :smt-lib-version 2.6)\n";
   dest << "(set-option :produce-models true)\n";
-  dest << "(declare-fun emp () IntHeap)" << std::endl;
-  dest << "(declare-fun nil () IntLoc)" << std::endl;
+  dest << "(declare-datatype pt_record_0 ((Pt_R_0 (loc IntLoc))))" << std::endl;
+  dest << "(declare-datatype pt_record_1 ((Pt_R_1 (data Int))))" << std::endl;
+  // dest << "(declare-fun emp () IntHeap)" << std::endl;
+  // dest << "(declare-fun nil () IntLoc)" << std::endl;
   dest << "; Asserts from ESMBC starts\n";
   dest << smt_formula; // All VCC conditions in SMTLIB format.
   dest << "; Asserts from ESMBC ends\n";

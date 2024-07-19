@@ -1217,7 +1217,7 @@ void goto_symext::add_memory_leak_checks()
     log_status("memleak encoding");
     for (auto const &it : dynamic_memory){
       log_status("allocated object {}: ",  it.name );
-      expr2tc deallocated = notequal2tc(it.obj, constant_intheap2tc(get_intheap_type(), true));
+      expr2tc deallocated = equality2tc(it.obj, constant_intheap2tc(get_intheap_type(), true));
       expr2tc when = it.alloc_guard.as_expr();
       expr2tc cond = implies2tc(when, deallocated);
       cur_state->rename(cond);
