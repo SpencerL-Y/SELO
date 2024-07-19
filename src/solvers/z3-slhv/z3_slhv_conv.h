@@ -34,7 +34,7 @@ public:
     // interfaces of smt_convt need implementation
 
     // void assert_ast(smt_astt a) override;
-    resultt dec_solve() override;
+    smt_convt::resultt dec_solve() override;
     const std::string solver_text() override;
 
     // constant and operators

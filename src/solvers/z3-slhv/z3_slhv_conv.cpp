@@ -63,7 +63,7 @@ z3_slhv_convt::z3_slhv_convt(const namespacet &_ns, const optionst& _options)
   : z3_convt(_ns, _options) {
     // initialize the z3 based slhv converter here
     int_encoding = true;
-    solver = z3::solver(z3_ctx);
+    solver = z3::solver(z3_ctx, "SLHV");
     log_status("z3_slhv_convt created");
 }
 
@@ -82,7 +82,17 @@ z3_slhv_convt::~z3_slhv_convt() { delete_all_asts(); }
 // }
 
 smt_convt::resultt z3_slhv_convt::dec_solve() {
-  return P_SMTLIB;
+  log_status("z3-slhv debug: before slhv check");
+  z3::check_result result = solver.check();
+  log_status("z3-slhv debug: after check");
+
+  if (result == z3::sat)
+    return P_SATISFIABLE;
+
+  if (result == z3::unsat)
+    return smt_convt::P_UNSATISFIABLE;
+
+  return smt_convt::P_ERROR;
 }
 
 const std::string z3_slhv_convt::solver_text() {
@@ -198,6 +208,7 @@ smt_astt z3_slhv_convt::mk_nil() {
   return new_ast(z3_ctx.nil_const(), this->mk_intloc_sort());
 }
 smt_astt z3_slhv_convt::mk_pt(smt_astt a, smt_astt b) {
+  log_status("here");
   return new_ast(
     z3::points_to(
       to_solver_smt_ast<z3_smt_ast>(a)->a,
