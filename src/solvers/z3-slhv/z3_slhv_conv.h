@@ -59,7 +59,10 @@ public:
     smt_astt
     convert_slhv_opts(const expr2tc &expr, const std::vector<smt_astt>& args) override;
 
+    void dump_smt() override;
+
 private:
+    void print_smt_formulae(std::ostream& dest);
     std::vector<smt_astt> assertions;
 };
 

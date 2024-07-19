@@ -354,6 +354,38 @@ z3_slhv_convt::convert_slhv_opts(
   }
 }
 
+
+void z3_slhv_convt::dump_smt() {
+  const std::string &path = options.get_option("output");
+  if(path == "-") {
+    print_smt_formulae(std::cout);
+  } else {
+    std::ofstream out(path);
+    print_smt_formulae(out);
+  }
+}
+
+void z3_slhv_convt::print_smt_formulae(std::ostream& dest) {
+  auto smt_formula = solver.to_smt2();
+  std::replace(smt_formula.begin(), smt_formula.end(), '\\', '_');
+  Z3_ast_vector __z3_assertions = Z3_solver_get_assertions(z3_ctx, solver);
+  // Add whatever logic is needed.
+  // Add solver specific declarations as well.
+  dest << "(set-logic SLHV)" << std::endl;
+  dest << "(set-info :smt-lib-version 2.6)\n";
+  dest << "(set-option :produce-models true)\n";
+  dest << "(declare-fun emp () IntHeap)" << std::endl;
+  dest << "(declare-fun nil () IntLoc)" << std::endl;
+  dest << "; Asserts from ESMBC starts\n";
+  dest << smt_formula; // All VCC conditions in SMTLIB format.
+  dest << "; Asserts from ESMBC ends\n";
+  dest << "(get-model)\n";
+  dest << "(exit)\n";
+  log_status(
+    "Total number of safety properties: {}",
+    Z3_ast_vector_size(z3_ctx, __z3_assertions));
+}
+
 // smt_astt z3_slhv_convt::convert_ast_slhv(const expr2tc &expr) {
 //   log_status("== convert ast slhv");
 //   expr->dump();
@@ -887,8 +919,4 @@ z3_slhv_convt::convert_slhv_opts(
 
 // void z3_slhv_convt::print_smt_formulae(std::ostream &dest) {
 //   log_status("TODO: slhv print smt");
-// }
-
-// void z3_slhv_convt::dump_smt() {
-//   log_status("TODO: slhv dump smt");
 // }
