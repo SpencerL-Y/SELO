@@ -141,6 +141,21 @@ smt_sortt z3_slhv_convt::mk_struct_sort(const type2tc &type) {
   return mk_intloc_sort();
 }
 
+smt_astt z3_slhv_convt::mk_smt_symbol(const std::string &name, smt_sortt s) {
+  z3::expr e(z3_ctx);
+  switch (s->id) {
+    case SMT_SORT_INTHEAP:
+      e = z3_ctx.hvar_const(name.c_str());
+      break;
+    case SMT_SORT_INTLOC:
+      e = z3_ctx.locvar_const(name.c_str());
+      break;
+    default:
+      e = z3_ctx.constant(name.c_str(), to_solver_smt_sort<z3::sort>(s)->s);
+  }
+  return new_ast(e, s);
+}
+
 smt_sortt z3_slhv_convt::convert_slhv_sorts(const type2tc &type) {
   switch (type->type_id) {
     case type2t::intheap_id: return mk_intheap_sort();
