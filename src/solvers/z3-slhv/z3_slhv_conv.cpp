@@ -119,10 +119,6 @@ smt_astt z3_slhv_convt::mk_locadd(smt_astt a, smt_astt b) {
   );
 }
 
-bool z3_slhv_convt::get_bool(smt_astt a){
-  log_error("Can't get boolean value yet, solver not plugged.");
-  abort();
-}
 BigInt z3_slhv_convt::get_bv(smt_astt a, bool is_signed){
   log_error("SLHV does not support bv");
   abort();

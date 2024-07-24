@@ -27,7 +27,7 @@ public:
     smt_astt mk_locadd(smt_astt a, smt_astt b);
 
     // value obtaining from solver, not supported here
-    bool get_bool(smt_astt a) override;
+    // bool get_bool(smt_astt a) override;
     BigInt get_bv(smt_astt a, bool is_signed) override;
 
     // sort making 
