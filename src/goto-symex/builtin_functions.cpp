@@ -244,8 +244,6 @@ expr2tc goto_symext::symex_mem(
     
   } else {
     log_status("create heap symbol for allocation");
-    unsigned int &dynamic_counter = get_dynamic_counter();
-    dynamic_counter++;
 
     // value
     symbolt symbol;
@@ -256,7 +254,23 @@ expr2tc goto_symext::symex_mem(
     symbol.lvalue = true;
 
     symbol.type = typet(typet::t_intheap);
-    symbol.type.size(migrate_expr_back(size));
+
+    // Size in SLHV is byte level
+    expr2tc bytesize;
+    if (!size_is_one) size = size.simplify();
+    if (is_constant_int2t(size)) {
+      bytesize =
+        constant_int2tc(get_uint32_type(),
+          BigInt(
+            to_constant_int2t(size).value.to_uint64()
+             * type->get_width() / 8
+          )
+        );
+      symbol.type.size(migrate_expr_back(bytesize));
+    } else {
+      log_error("SLHV does not support dynamic array size");
+      abort();
+    }
 
     symbol.type.dynamic(true);
     symbol.mode = "C";
@@ -266,90 +280,62 @@ expr2tc goto_symext::symex_mem(
     type2tc heap_type = get_intheap_type();
     expr2tc allocated_heap = symbol2tc(heap_type, symbol.id);
     std::vector<expr2tc> pts;
-    expr2tc size_simplified;
-    if(!is_constant_int2t(size)) {
-      size_simplified = size.simplify();
-    } else {
-      size_simplified = size;
-    }
+    
     guardt alloc_guard = cur_state->guard;
-    // TODO SLHV: add size simplification later
-    if(!is_constant_int2t(size_simplified)) {
-      log_error("Currently does not support constant size");
-      assert(false);
-    }
-    log_status("dump alloc size: ");
-    size_simplified->dump();
-    constant_int2t constant_size = to_constant_int2t(size_simplified);
-    unsigned usize = constant_size.as_ulong();
-    log_status("Unsiged size: {}", usize);
+
+    unsigned bytes = to_constant_int2t(bytesize).as_ulong();
+    log_status("Unsiged size: {}", bytes);
 
     expr2tc alloc_base_addr = lhs;
     expr2tc heaplet;
-    bool need_heap_assignment = false;
-    if(usize == 0) {
-      log_status("zero size");
-      // We can do nothing
-      expr2tc null_loc = constant_intloc2tc(get_intloc_type(), BigInt(0));
 
-      
-    } else if(usize == 1) {
-      log_status("single byte points_to");
-      need_heap_assignment = true;
-      expr2tc addr = alloc_base_addr;
-      expr2tc fresh_data_symbol =  sideeffect2tc(
-        get_int8_type(),
-        expr2tc(),
-        expr2tc(),
-        std::vector<expr2tc>(),
-        type2tc(),
-        sideeffect2t::nondet);
-      heaplet = points_to2tc(get_intheap_type(), addr, fresh_data_symbol, false);
-    } else {  
-      std::vector<expr2tc> pt_vec;
-      expr2tc first_addr = alloc_base_addr;
-      expr2tc first_fresh_data =  sideeffect2tc(
-        get_int8_type(),
-        expr2tc(),
-        expr2tc(),
-        std::vector<expr2tc>(),
-        type2tc(),
-        sideeffect2t::nondet);
-      expr2tc first_pt = points_to2tc(get_intheap_type(), first_addr, first_fresh_data, false);
-      pt_vec.push_back(first_pt);
-      for(unsigned i = 1; i < usize; i ++) {
-        expr2tc offset = constant_int2tc(int_type2(), BigInt(i));
-        expr2tc addr_i = locadd2tc(get_intloc_type(), first_addr, offset);
-        expr2tc fresh_data_i = sideeffect2tc(
-        get_int8_type(),
-        expr2tc(),
-        expr2tc(),
-        std::vector<expr2tc>(),
-        type2tc(),
-        sideeffect2t::nondet);
-        expr2tc pt_i = points_to2tc(get_intheap_type(), addr_i, fresh_data_i, false);
-        pt_vec.push_back(pt_i);
-      }
-
-      heaplet = uplus2tc(get_intheap_type(), pt_vec);
-      log_status("multi byte points_to");
-      need_heap_assignment = true;
+    std::vector<expr2tc> pt_vec;
+    for(unsigned i = 0; i < bytes; i ++) {
+      expr2tc offset = constant_int2tc(int_type2(), BigInt(i));
+      expr2tc addr_i =
+        i == 0 ? alloc_base_addr : 
+          locadd2tc(get_intloc_type(), alloc_base_addr, offset);
+      expr2tc fresh_data_i =
+        sideeffect2tc(
+          get_int8_type(),
+          expr2tc(),
+          expr2tc(),
+          std::vector<expr2tc>(),
+          type2tc(),
+          sideeffect2t::nondet
+        );
+      expr2tc pt_i = points_to2tc(get_intheap_type(), addr_i, fresh_data_i, false);
+      pt_vec.push_back(pt_i);
     }
-    expr2tc origin_base_addr( alloc_base_addr);
+
+    if (pt_vec.size() > 1) {
+      heaplet = uplus2tc(get_intheap_type(), pt_vec);
+    } else {
+      heaplet = pt_vec[0];
+    }
+    
+    expr2tc origin_base_addr(alloc_base_addr);
     cur_state->rename(alloc_base_addr);
     expr2tc alloc_base_addr_copy(alloc_base_addr);
-    if(need_heap_assignment) {
-      log_status("symex assign in symex_mem: allocated_heap = heaplet");
-      symex_assign(code_assign2tc(allocated_heap, heaplet));
-    }
+
+    log_status("symex assign in symex_mem: allocated_heap = heaplet");
+    symex_assign(code_assign2tc(allocated_heap, heaplet));
+
     log_status("create valueset base addr symbol and assign");
-    expr2tc base_value_symbol = symbol2tc(get_intloc_type(), to_symbol2t(origin_base_addr).get_symbol_name());
-    expr2tc base_pointer_region_object = pointer_with_region2tc(get_intloc_type(), base_value_symbol, allocated_heap);
-    symex_assign(code_assign2tc(origin_base_addr, typecast2tc(origin_base_addr->type, base_pointer_region_object)));
+    expr2tc base_value_symbol =
+      symbol2tc(get_intloc_type(), to_symbol2t(origin_base_addr).get_symbol_name());
+    expr2tc base_pointer_region_object = 
+      pointer_with_region2tc(get_intloc_type(), base_value_symbol, allocated_heap);
+    symex_assign(
+      code_assign2tc(
+        origin_base_addr,
+        typecast2tc(origin_base_addr->type, base_pointer_region_object)
+      )
+    );
 
     // TODO: modify the pointer object here, maybe to wrap the intloc symbol directly
     expr2tc ptr_obj = pointer_object2tc(get_intloc_type(), alloc_base_addr);
-    track_new_pointer(ptr_obj, get_intheap_type(), size_simplified);
+    track_new_pointer(ptr_obj, get_intheap_type(), bytesize);
     dynamic_memory.emplace_back(
       allocated_heap,
       alloc_guard,
@@ -359,8 +345,6 @@ expr2tc goto_symext::symex_mem(
 
     return expr2tc();
   }
-
-  
 }
 
 void goto_symext::track_new_pointer(

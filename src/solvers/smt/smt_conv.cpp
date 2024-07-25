@@ -442,7 +442,9 @@ smt_astt smt_convt::convert_ast(const expr2tc &expr)
       is_pointer_type(expr->type) || is_pointer_type(add.side_1) ||
       is_pointer_type(add.side_2))
     {
-      a = convert_pointer_arith(expr, expr->type);
+      a = this->solver_text() == "Z3-slhv" ?
+        convert_slhv_opts(expr, args) : 
+        convert_pointer_arith(expr, expr->type);
     }
     else if (int_encoding)
     {
@@ -741,7 +743,7 @@ smt_astt smt_convt::convert_ast(const expr2tc &expr)
       ptr = &to_typecast2t(*ptr).from;
 
     args[0] = convert_ast(*ptr);
-    a = args[0]->project(this, 1);
+    a = this->solver_text() == "Z3-slhv" ? args[0] : args[0]->project(this, 0);
     break;
   }
   case expr2t::pointer_object_id:

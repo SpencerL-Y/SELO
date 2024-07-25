@@ -186,8 +186,10 @@ z3_slhv_convt::convert_slhv_opts(
       }
       return h;
     }
+    case expr2t::add_id:
     case expr2t::locadd_id: {
       assert(args.size() == 2);
+      // TODO
       return mk_locadd(args[0], args[1]);
     }
     case expr2t::heap_update_id: {
