@@ -747,6 +747,23 @@ protected:
     expr2tc &full_rhs,
     guardt &guard,
     const bool hidden);
+  
+  /**
+   *  This method is used when we need to assign a value
+   *  to a heap_load, which is obatained via load `byte_len`
+   *  bytes in a heap(SLHV).
+   *  @param lhs Heap(points-to) to assign to
+   *  @param full_lhs The original assignment symbol
+   *  @param rhs Value to assign to lhs
+   *  @param guard Assignment guard.
+   */
+  void symex_assign_heap_laod(
+    const expr2tc &lhs,
+    const expr2tc &full_lhs,
+    expr2tc &rhs,
+    expr2tc &full_rhs,
+    guardt &guard,
+    const bool hidden);
 
   /** Symbolic implementation of malloc. */
   expr2tc symex_malloc(const expr2tc &lhs, const sideeffect2t &code);
