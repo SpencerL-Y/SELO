@@ -245,6 +245,9 @@ expr2tc goto_symext::symex_mem(
   } else {
     log_status("create heap symbol for allocation");
 
+    // TODO: fix the right width of pointee
+    uint32_t pt_bytes = 4;
+
     // value
     symbolt symbol;
     symbol.name = "dynamic_heap_"+ i2string(dynamic_counter);
@@ -292,7 +295,8 @@ expr2tc goto_symext::symex_mem(
     expr2tc heaplet;
 
     std::vector<expr2tc> pt_vec;
-    for(unsigned i = 0; i < bytes; i ++) {
+    uint n = bytes % pt_bytes == 0 ? bytes / pt_bytes : bytes;
+    for(unsigned i = 0; i < n; i ++) {
       expr2tc offset = constant_int2tc(int_type2(), BigInt(i));
       expr2tc addr_i =
         i == 0 ? alloc_base_addr : 
