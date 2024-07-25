@@ -165,14 +165,6 @@ void bmct::generate_smt_from_equation(
     "Encoding to solver time: {}s", time2string(encode_stop - encode_start));
 }
 
-// std::string bmct::generate_slhv_smt_from_equation(z3_slhv_convt& slhv_converter, symex_target_equationt &eq) {
-//   log_status("generate slhv formula from equation");
-//   std::string result;
-//   eq.convert2slhv(slhv_converter);
-//   log_status("here");
-//   return result;
-// }
-
 smt_convt::resultt
 bmct::run_decision_procedure(smt_convt &smt_conv, symex_target_equationt &eq)
 {
@@ -655,6 +647,7 @@ smt_convt::resultt bmct::run_thread(std::shared_ptr<symex_target_equationt> &eq)
     {
       runtime_solver =
         std::unique_ptr<smt_convt>(create_solver("", ns, options));
+      show_vcc(*eq);
       // log_status("smt_convt created");
       // if (options.get_bool_option("z3-slhv")) {
       //   show_vcc(*eq);

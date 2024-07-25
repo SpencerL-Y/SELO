@@ -54,7 +54,19 @@ z3_slhv_convt::~z3_slhv_convt() { delete_all_asts(); }
 
 smt_convt::resultt z3_slhv_convt::dec_solve() {
   log_status("z3-slhv debug: before slhv check");
+
+  const std::string &path = options.get_option("output");
+  if (path != "-")
+  {
+    std::ofstream out(path, std::ios_base::app);
+    out << "SMT formulas for VCCs:\n";
+    for(z3::expr expr : solver.assertions()) {
+      out << expr.to_string() << '\n';
+    }
+  }
+
   z3::check_result result = solver.check();
+
   log_status("z3-slhv debug: after check");
 
   if (result == z3::sat)
