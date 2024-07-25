@@ -257,7 +257,9 @@ expr2tc goto_symext::symex_mem(
 
     // Size in SLHV is byte level
     expr2tc bytesize;
-    if (!size_is_one) size = size.simplify();
+    if (!is_constant_int2t(size)) {
+      size = size.simplify();
+    }
     if (is_constant_int2t(size)) {
       bytesize =
         constant_int2tc(get_uint32_type(),
