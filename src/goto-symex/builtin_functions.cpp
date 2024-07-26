@@ -390,7 +390,7 @@ void goto_symext::track_new_pointer(
     // TODO SLHV: add non-constant size later
     assert(is_constant_int2t(size));
 
-    expr2tc updated_heap = heap_update2tc(allocsize_heap_type, allocsize_symbol, ptr_obj, size, 4);
+    expr2tc updated_heap = heap_append2tc(allocsize_heap_type, allocsize_symbol, ptr_obj, size, 4);
     symex_assign(code_assign2tc(allocsize_symbol, updated_heap), true);
   }
 }
@@ -484,7 +484,7 @@ void goto_symext::symex_free(const expr2tc &expr)
     bool is_definite_free = true;
     for(auto const& item : internal_deref_items) {
       expr2tc deref_object = item.object;
-      assert(is_pointer_with_region2tA(deref_object));
+      assert(is_pointer_with_region2t(deref_object));
       expr2tc simplified_offset = item.offset.simplify();
       log_status("simplified offset: ");
       simplified_offset->dump();

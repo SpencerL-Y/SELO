@@ -173,7 +173,7 @@ std::string heap_load2t::field_names[esbmct::num_type_fields] =
 std::string heap_update2t::field_names[esbmct::num_type_fields] = 
 {"src_heap", "start_addr", "updated_val", "byte_len", ""};
 std::string heap_append2t::field_names[esbmct::num_type_fields] = 
-{"src_heap", "start_addr", "byte_len", "", ""};
+{"src_heap", "start_addr", "create_val", "byte_len",  ""};
 std::string heap_contains2t::field_names[esbmct::num_type_fields] = 
 {"heapvar", "start_loc", "byte_len", "", ""};
 std::string isnan2t::field_names[esbmct::num_type_fields] =

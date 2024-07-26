@@ -1067,11 +1067,13 @@ public:
     datatype_ops::expr_ids id,
     expr2tc original_heap,
     expr2tc start_addr,
+    expr2tc create_val, 
     unsigned int byte_len
-  ) : expr2t(t, id), src_heap(original_heap), start_addr(start_addr), byte_len(byte_len) {}
+  ) : expr2t(t, id), src_heap(original_heap), start_addr(start_addr), create_val(create_val), byte_len(byte_len) {}
 
   expr2tc src_heap;
   expr2tc start_addr;
+  expr2tc create_val;
   unsigned int byte_len;
 
 
@@ -1080,11 +1082,13 @@ public:
     heap_append_data_src_heap_field;
   typedef esbmct::field_traits<expr2tc, heap_append_data, &heap_append_data::start_addr>
     heap_append_data_start_addr_field;
+  typedef esbmct::field_traits<expr2tc, heap_append_data, &heap_append_data::create_val>
+    heap_append_data_create_val_field;
   typedef esbmct::field_traits<unsigned int, heap_append_data, &heap_append_data::byte_len>
     heap_append_data_byte_len_field;
   typedef esbmct::expr2t_traits
   <
-  heap_append_data_src_heap_field,  heap_append_data_start_addr_field, heap_append_data_byte_len_field
+  heap_append_data_src_heap_field,  heap_append_data_start_addr_field, heap_append_data_create_val_field, heap_append_data_byte_len_field
   > traits;
 
 };
@@ -3275,7 +3279,7 @@ class heap_update2t : public heap_update_expr_methods
 
 class heap_append2t : public heap_append_expr_methods {
   public:
-    heap_append2t(const type2tc &type, expr2tc source_heap, expr2tc start_addr, unsigned int byte_len) : heap_append_expr_methods(type, heap_append_id, source_heap, start_addr, byte_len) {}
+    heap_append2t(const type2tc &type, expr2tc source_heap, expr2tc start_addr, expr2tc create_val, unsigned int byte_len) : heap_append_expr_methods(type, heap_append_id, source_heap, start_addr, create_val, byte_len) {}
     heap_append2t(const heap_append2t &ref) = default;
 
     static std::string field_names[esbmct::num_type_fields];
