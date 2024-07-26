@@ -35,6 +35,7 @@ expr_typedefs2(locadd, locadd_data);
 expr_typedefs2(pointer_with_region, pointer_with_region_data);
 expr_typedefs3(heap_load, heap_load_data);
 expr_typedefs4(heap_update, heap_update_data);
+expr_typedefs3(heap_append, heap_append_data);
 expr_typedefs3(heap_contains, heap_contains_data);
 expr_typedefs2(overflow_cast, overflow_cast_data);
 expr_typedefs3(dynamic_object, dynamic_object_data);

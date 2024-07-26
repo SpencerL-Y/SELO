@@ -109,6 +109,7 @@
   BOOST_PP_LIST_CONS(pointer_with_region,                                       \
   BOOST_PP_LIST_CONS(heap_load,                                                 \
   BOOST_PP_LIST_CONS(heap_update,                                              \
+  BOOST_PP_LIST_CONS(heap_append,                                              \
   BOOST_PP_LIST_CONS(heap_contains,                                            \
   BOOST_PP_LIST_CONS(isnan,                                                    \
   BOOST_PP_LIST_CONS(overflow,                                                 \
@@ -150,7 +151,7 @@
   BOOST_PP_LIST_CONS(signbit,                                                  \
   BOOST_PP_LIST_CONS(concat,                                                   \
   BOOST_PP_LIST_CONS(extract,                                                  \
-  BOOST_PP_LIST_NIL)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
+  BOOST_PP_LIST_NIL))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
 
 #define ESBMC_LIST_OF_TYPES                                                    \
   BOOST_PP_LIST_CONS(bool,                                                     \
