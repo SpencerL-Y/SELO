@@ -114,5 +114,4 @@ void goto_symext::default_replace_dynamic_allocation(expr2tc &expr)
     expr2tc index_expr = index2tc(size_type2(), alloc_arr_2, obj_expr);
     expr = index_expr;
   }
-  // TODO: add slhv dynamic allocation test replacement
 }
