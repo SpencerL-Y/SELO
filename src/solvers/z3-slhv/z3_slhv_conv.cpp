@@ -202,6 +202,16 @@ z3_slhv_convt::convert_slhv_opts(
       assert(args.size() == 2);
       return mk_locadd(args[0], args[1]);
     }
+    case expr2t::heap_append_id: {
+      const heap_append2t& heap_app = to_heap_append2t(expr);
+      // TODO : fix width
+      assert(heap_app.byte_len == 4);
+      smt_astt h = args[0];
+      smt_astt adr = args[1];
+      smt_astt val = args[2];
+      // new heap state
+      return mk_uplus(h, mk_pt(adr, val));
+    }
     case expr2t::heap_update_id: {
       const heap_update2t& heap_upd = to_heap_update2t(expr);
       // TODO : fix width

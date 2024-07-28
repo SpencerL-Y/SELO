@@ -158,6 +158,17 @@ protected:
   bool get_symbols(const expr2tc &expr);
 
   /**
+   * Recursively explores the operands of an SLHV expression.
+   * If a symbol is found, then it is added into the #depends
+   * member if `Add` is true, otherwise returns true.
+   *
+   * @param expr expression to extract every symbol
+   * @return true if at least one symbol was found
+   */
+  template <bool Add>
+  bool get_slhv_symbols(const expr2tc& expr);
+
+  /**
    * Remove unneeded assumes from the formula
    *
    * Check if the Assume cond symbol is in the #depends, if

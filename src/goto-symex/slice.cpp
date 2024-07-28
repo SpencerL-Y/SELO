@@ -11,12 +11,16 @@ template <bool Add>
 bool symex_slicet::get_symbols(const expr2tc &expr)
 {
   bool res = false;
-  // Recursively look if any of the operands has a inner symbol
-  expr->foreach_operand([this, &res](const expr2tc &e) {
-    if (!is_nil_expr(e))
-      res |= get_symbols<Add>(e);
-    return res;
-  });
+  if (is_slhv_expr(expr)) {
+    res |= get_slhv_symbols<Add>(expr);
+  } else {
+    // Recursively look if any of the operands has a inner symbol
+    expr->foreach_operand([this, &res](const expr2tc &e) {
+      if (!is_nil_expr(e))
+        res |= get_symbols<Add>(e);
+      return res;
+    });
+  }
 
   if (!is_symbol2t(expr))
     return res;
@@ -27,6 +31,38 @@ bool symex_slicet::get_symbols(const expr2tc &expr)
   else
     res |= no_slice(s) || depends.find(s.get_symbol_name()) != depends.end();
   return res;
+}
+
+template <bool Add>
+bool symex_slicet::get_slhv_symbols(const expr2tc& expr)
+{
+  switch (expr->expr_id) {
+    case expr2t::constant_intheap_id:
+    case expr2t::constant_intloc_id:
+      return false; // TODO: right?
+    case expr2t::points_to_id:
+    case expr2t::uplus_id:
+    case expr2t::locadd_id:
+    case expr2t::heap_contains_id:
+    case expr2t::heap_load_id:
+    case expr2t::heap_append_id:
+    case expr2t::heap_update_id: {
+      bool res = false;
+      expr->foreach_operand([this, &res](const expr2tc &e) {
+        if (!is_nil_expr(e))
+          res |= get_symbols<Add>(e);
+        return res;
+      });
+      return res;
+    }
+    case expr2t::pointer_with_region_id: {
+      const pointer_with_region2t& pwr = to_pointer_with_region2t(expr);
+      return get_symbols<Add>(pwr.loc_ptr);
+    }
+    default:
+      log_error("Wrong SLHV expr");
+      abort();
+  }
 }
 
 void symex_slicet::run_on_assert(symex_target_equationt::SSA_stept &SSA_step)
