@@ -1002,6 +1002,19 @@ public:
   typedef esbmct::expr2t_traits<pointer_with_region_loc_ptr_field, pointer_with_region_region_field> traits;
 };
 
+class heap_free_data : public expr2t {
+public:
+  heap_free_data(
+    const type2tc &t,
+    datatype_ops::expr_ids id,
+    expr2tc pwr
+  ) : expr2t(t, id), pwr(pwr){}
+
+  expr2tc pwr;
+  typedef esbmct::field_traits<expr2tc, heap_free_data, &heap_free_data::pwr> heap_free_data_pwr_field;
+  typedef esbmct::expr2t_traits<heap_free_data_pwr_field> traits;
+};
+
 class heap_load_data : public expr2t {
 public:
   heap_load_data(
@@ -1752,6 +1765,7 @@ irep_typedefs(points_to, points_to_data);
 irep_typedefs(uplus, uplus_data);
 irep_typedefs(locadd, locadd_data);
 irep_typedefs(pointer_with_region, pointer_with_region_data);
+irep_typedefs(heap_free, heap_free_data);
 irep_typedefs(heap_load, heap_load_data);
 irep_typedefs(heap_update, heap_update_data);
 irep_typedefs(heap_append, heap_append_data);
@@ -3255,6 +3269,14 @@ class pointer_with_region2t : public pointer_with_region_expr_methods
 {
 public:
   pointer_with_region2t(const type2tc &type, expr2tc loc_ptr, expr2tc region_heap): pointer_with_region_expr_methods(type, pointer_with_region_id, loc_ptr, region_heap) {}
+
+  static std::string field_names[esbmct::num_type_fields];
+};
+
+class heap_free2t : public heap_free_expr_methods 
+{
+public:
+  heap_free2t(const type2tc &type, expr2tc pwr) : heap_free_expr_methods(type, heap_free_id, pwr) {}
 
   static std::string field_names[esbmct::num_type_fields];
 };

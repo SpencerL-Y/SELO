@@ -78,6 +78,7 @@ static const char *expr_names[] = {
   "uplus",
   "locadd",
   "pointer_with_region",
+  "heap_free",
   "heap_load",
   "heap_update",
   "heap_append",

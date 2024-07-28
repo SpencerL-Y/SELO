@@ -2636,6 +2636,14 @@ exprt migrate_expr_back(const expr2tc &ref)
     pointer_with_region.copy_to_operands(migrate_expr_back(ref2.region));
     return pointer_with_region;
   }
+  case expr2t::heap_free_id:
+  {
+    const heap_free2t &ref2 = to_heap_free2t(ref);
+    typet thetype = migrate_type_back(ref->type);
+    exprt heap_free("heap_free", thetype);
+    heap_free.copy_to_operands(migrate_expr_back(ref2.pwr));
+    return heap_free;
+  }
   case expr2t::heap_load_id:
   {
     const heap_load2t& ref2 = to_heap_load2t(ref);
@@ -2667,17 +2675,6 @@ exprt migrate_expr_back(const expr2tc &ref)
     heap_update.copy_to_operands(migrate_expr_back(ref2.updated_val));
     heap_update.set("byte_len", irep_idt(std::to_string(ref2.byte_len)));
     return heap_update;
-  }
-  case expr2t::heap_append_id:
-  {
-    const heap_append2t &ref2 = to_heap_append2t(ref);
-    typet thetype = migrate_type_back(ref->type);
-    exprt heap_append("heap_append", thetype);
-    heap_append.copy_to_operands(migrate_expr_back(ref2.src_heap));
-    heap_append.copy_to_operands(migrate_expr_back(ref2.start_addr));
-    heap_append.copy_to_operands(migrate_expr_back(ref2.create_val));
-    heap_append.set("byte_len", irep_idt(std::to_string(ref2.byte_len)));
-    return heap_append;
   }
   case expr2t::heap_contains_id:
   {
