@@ -239,20 +239,6 @@ inline bool is_false(const expr2tc &expr)
   return false;
 }
 
-inline bool is_slhv_expr(const expr2tc& expr)
-{
-  return expr->expr_id == expr2t::constant_intheap_id ||
-         expr->expr_id == expr2t::constant_intloc_id ||
-         expr->expr_id == expr2t::pointer_with_region_id ||
-         expr->expr_id == expr2t::points_to_id ||
-         expr->expr_id == expr2t::uplus_id ||
-         expr->expr_id == expr2t::locadd_id ||
-         expr->expr_id == expr2t::heap_contains_id ||
-         expr->expr_id == expr2t::heap_load_id ||
-         expr->expr_id == expr2t::heap_update_id ||
-         expr->expr_id == expr2t::heap_append_id;
-}
-
 inline expr2tc gen_true_expr()
 {
   static expr2tc c = constant_bool2tc(true);

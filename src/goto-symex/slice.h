@@ -101,6 +101,14 @@ public:
     fine_timet algorithm_start = current_time();
     for (auto &step : boost::adaptors::reverse(eq))
       run_on_step(step);
+
+    log_status("show eq system");
+    int ss = 0;
+    for (auto &step : boost::adaptors::reverse(eq)) {
+      log_status("step -{} is ignored? {}", ++ss, step.ignore);
+      step.dump();
+    }
+    
     fine_timet algorithm_stop = current_time();
     log_status(
       "Slicing time: {}s (removed {} assignments)",
@@ -156,17 +164,6 @@ protected:
    */
   template <bool Add>
   bool get_symbols(const expr2tc &expr);
-
-  /**
-   * Recursively explores the operands of an SLHV expression.
-   * If a symbol is found, then it is added into the #depends
-   * member if `Add` is true, otherwise returns true.
-   *
-   * @param expr expression to extract every symbol
-   * @return true if at least one symbol was found
-   */
-  template <bool Add>
-  bool get_slhv_symbols(const expr2tc& expr);
 
   /**
    * Remove unneeded assumes from the formula
