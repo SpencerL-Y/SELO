@@ -41,7 +41,7 @@ void goto_symext::default_replace_dynamic_allocation(expr2tc &expr)
       log_status("migrate over");
       expr2tc heap_contains = heap_contains2tc(get_bool_type(), alloc_size_heap_2, valid_inner.loc_ptr, 1);
       expr = heap_contains;
-
+      
     }
   }
   else if (is_invalid_pointer2t(expr))

@@ -788,9 +788,14 @@ expr2tc dereferencet::build_reference_to(
     value = object;
 
     // Produce a guard that the dereferenced pointer points at this object.
-    type2tc ptr_type = pointer_type2tc(object->type);
-    expr2tc obj_ptr = typecast2tc(ptr_type, object);
-    pointer_guard = same_object2tc(deref_expr, obj_ptr);
+    // type2tc ptr_type = pointer_type2tc(object->type);
+    // expr2tc obj_ptr = typecast2tc(ptr_type, object);
+
+    const pointer_with_region2t& pwr = to_pointer_with_region2t(object);
+    expr2tc region_heap = pwr.region;
+
+    // pointer_guard = same_object2tc(deref_expr, obj_ptr);
+    pointer_guard = heap_contains2tc(get_bool_type(), region_heap, deref_expr, 1);
     log_status("generated pointer guard:");
     pointer_guard->dump();
     guardt tmp_guard(guard);
@@ -2372,7 +2377,6 @@ void dereferencet::valid_check_slhv(
     std::string foo = is_free(mode) ?  "invalid free pointer"
                                       : "invalid dereference pointer";
     dereference_failure("pointer dereference", foo, tmp_guard);
-    // TODO: add free
     return;
   }
 }

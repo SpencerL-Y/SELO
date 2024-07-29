@@ -481,60 +481,25 @@ void goto_symext::symex_free(const expr2tc &expr)
     expr2tc falsity = gen_false_expr();
     symex_assign(code_assign2tc(valid_index_expr, falsity), true);
   } else {
-    bool is_definite_free = true;
+    expr2tc freed_pointer;
+    expr2tc freed_heap;
     for(auto const& item : internal_deref_items) {
-      expr2tc deref_object = item.object;
-      assert(is_pointer_with_region2t(deref_object));
-      expr2tc simplified_offset = item.offset.simplify();
-      log_status("simplified offset: ");
-      simplified_offset->dump();
-      if(is_constant_int2t(simplified_offset)) {
-        const constant_int2t& const_offset = to_constant_int2t(simplified_offset);
-        BigInt val = const_offset.value;
-        int offsetint = val.to_uint64();
-        log_status("equal to 0: {}", offsetint == 0);
-        if(offsetint == 0) {
-          log_status("free target definite");
-          const pointer_with_region2t& pwr = to_pointer_with_region2t(item.object);
-          expr2tc reg = pwr.region;
-          expr2tc emp_heap = constant_intheap2tc(get_intheap_type(), true);
-          symex_assign(code_assign2tc(reg, emp_heap));
-          expr2tc alloc_size_heap_symbol = symbol2tc(get_intheap_type(), alloc_size_heap_name);
-          // clear the alloc size position value
-          expr2tc updated_heap = heap_update2tc(get_intheap_type(), alloc_size_heap_symbol, pwr.loc_ptr, constant_int2tc(get_int32_type(), BigInt(0)), 4);
-          symex_assign(code_assign2tc(alloc_size_heap_symbol, updated_heap));
-          return;
-        }
+      const pointer_with_region2t& pwr = to_pointer_with_region2t(item.object);
+      if(is_nil_expr(freed_pointer)) {
+        freed_pointer = pwr.loc_ptr;
+        freed_heap = pwr.region;
+      } else {
+        freed_pointer = if2tc(freed_pointer->type, item.guard, pwr.loc_ptr, freed_pointer);
+        freed_heap = if2tc(get_intheap_type(), item.guard, pwr.region, freed_heap);
       }
-    }
-    is_definite_free = false;
-    // Clear the alloc heapsize.
-    // expr2tc ptr_obj = dereference2tc(get_uint8_type(), code.operand);
-    if(!is_definite_free) {
+
+      expr2tc emp_heap = constant_intheap2tc(get_intheap_type(), true);
+
+      symex_assign(code_assign2tc(freed_heap, emp_heap));
       expr2tc alloc_size_heap_symbol = symbol2tc(get_intheap_type(), alloc_size_heap_name);
-      expr2tc next_alloc_size_heap = alloc_size_heap_symbol;
-      for (auto const &item : internal_deref_items) {
-        // find which internal deref item is the freed one
-        // if not found, do nothing
-        expr2tc g = item.guard;
-        expr2tc deref_object = item.object;
-        assert(is_pointer_with_region2t(deref_object));
-        const pointer_with_region2t& pwr = to_pointer_with_region2t (deref_object);
-        log_status("loc_ptr: ");
-        pwr.loc_ptr->dump();
-        expr2tc offset = item.offset;
-        expr2tc eq = equality2tc(offset, gen_ulong(0));
-        g = and2tc(eq, g);
-        expr2tc curr_region = pwr.region;
-        log_status("curr region: ");
-        curr_region->dump();
-        code_assign2tc(curr_region, if2tc(get_intheap_type(), g, constant_intheap2tc(get_intheap_type(), true), curr_region));
-        expr2tc updated_heap = heap_update2tc(get_intheap_type(), alloc_size_heap_symbol, pwr.loc_ptr, constant_int2tc(get_int32_type(), BigInt(0)), 4);
-        next_alloc_size_heap = if2tc(get_intheap_type(), g, updated_heap, next_alloc_size_heap);
-      }
-      symex_assign(code_assign2tc(alloc_size_heap_symbol, next_alloc_size_heap));
+      expr2tc heap_deleted = heap_delete2tc(get_intheap_type(), alloc_size_heap_symbol, freed_pointer, 4);
+      symex_assign(code_assign2tc(alloc_size_heap_symbol, heap_deleted));
     }
-    
 
   }
 }
