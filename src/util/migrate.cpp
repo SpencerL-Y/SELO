@@ -2665,6 +2665,16 @@ exprt migrate_expr_back(const expr2tc &ref)
     heap_append.set("byte_len", irep_idt(std::to_string(ref2.byte_len)));
     return heap_append;
   }
+  case expr2t::heap_delete_id:
+  {
+    const heap_delete2t &ref2 = to_heap_delete2t(ref);
+    typet thetype = migrate_type_back(ref->type);
+    exprt heap_delete("heap_delete", thetype);
+    heap_delete.copy_to_operands(migrate_expr_back(ref2.src_heap));
+    heap_delete.copy_to_operands(migrate_expr_back(ref2.del_addr));
+    heap_delete.set("byte_len", irep_idt(std::to_string(ref2.byte_len)));
+    return heap_delete;
+  }
   case expr2t::heap_update_id:
   {
     const heap_update2t &ref2 = to_heap_update2t(ref);

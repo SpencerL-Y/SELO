@@ -1038,6 +1038,7 @@ public:
 };
 
 
+
 class heap_update_data : public expr2t
 {
 public:
@@ -1073,6 +1074,7 @@ public:
 };
 
 
+
 class heap_append_data : public expr2t {
 public:
   heap_append_data(
@@ -1102,6 +1104,36 @@ public:
   typedef esbmct::expr2t_traits
   <
   heap_append_data_src_heap_field,  heap_append_data_start_addr_field, heap_append_data_create_val_field, heap_append_data_byte_len_field
+  > traits;
+
+};
+
+
+class heap_delete_data : public expr2t {
+public:
+  heap_delete_data(
+    const type2tc & t,
+    datatype_ops::expr_ids id,
+    expr2tc original_heap,
+    expr2tc del_addr,
+    unsigned int byte_len
+  ) : expr2t(t, id), src_heap(original_heap), del_addr(del_addr),  byte_len(byte_len) {}
+
+  expr2tc src_heap;
+  expr2tc del_addr;
+  unsigned int byte_len;
+
+
+   // Type mangling:
+  typedef esbmct::field_traits<expr2tc, heap_delete_data, &heap_delete_data::src_heap>
+    heap_delete_data_src_heap_field;
+  typedef esbmct::field_traits<expr2tc, heap_delete_data, &heap_delete_data::del_addr>
+    heap_delete_data_del_addr_field;
+  typedef esbmct::field_traits<unsigned int, heap_delete_data, &heap_delete_data::byte_len>
+    heap_delete_data_byte_len_field;
+  typedef esbmct::expr2t_traits
+  <
+  heap_delete_data_src_heap_field,  heap_delete_data_del_addr_field, heap_delete_data_byte_len_field
   > traits;
 
 };
@@ -1769,6 +1801,7 @@ irep_typedefs(heap_free, heap_free_data);
 irep_typedefs(heap_load, heap_load_data);
 irep_typedefs(heap_update, heap_update_data);
 irep_typedefs(heap_append, heap_append_data);
+irep_typedefs(heap_delete, heap_delete_data);
 irep_typedefs(heap_contains, heap_contains_data);
 irep_typedefs(isnan, bool_1op);
 irep_typedefs(overflow, overflow_ops);
@@ -3299,6 +3332,8 @@ class heap_update2t : public heap_update_expr_methods
     static std::string field_names[esbmct::num_type_fields];
 };
 
+
+
 class heap_append2t : public heap_append_expr_methods {
   public:
     heap_append2t(const type2tc &type, expr2tc source_heap, expr2tc start_addr, expr2tc create_val, unsigned int byte_len) : heap_append_expr_methods(type, heap_append_id, source_heap, start_addr, create_val, byte_len) {}
@@ -3307,6 +3342,13 @@ class heap_append2t : public heap_append_expr_methods {
     static std::string field_names[esbmct::num_type_fields];
 };
 
+class heap_delete2t : public heap_delete_expr_methods {
+  public:
+    heap_delete2t(const type2tc &type, expr2tc source_heap, expr2tc del_addr, unsigned int byte_len) : heap_delete_expr_methods(type, heap_delete_id, source_heap, del_addr, byte_len) {}
+    heap_delete2t(const heap_delete2t &ref) = default;
+
+    static std::string field_names[esbmct::num_type_fields];
+};
 class heap_contains2t : public heap_contains_expr_methods
 {
 public:

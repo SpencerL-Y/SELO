@@ -82,6 +82,7 @@ static const char *expr_names[] = {
   "heap_load",
   "heap_update",
   "heap_append",
+  "heap_delete",
   "heap_contains",
   "isnan",
   "overflow",
