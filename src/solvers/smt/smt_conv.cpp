@@ -341,7 +341,8 @@ smt_astt smt_convt::convert_ast(const expr2tc &expr)
   case expr2t::heap_update_id:
   case expr2t::heap_load_id:
   case expr2t::heap_contains_id:
-  case expr2t::heap_append_id: {
+  case expr2t::heap_append_id:
+  case expr2t::heap_delete_id: {
     a = convert_slhv_opts(expr, args); 
     break;
   }

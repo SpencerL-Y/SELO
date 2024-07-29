@@ -46,7 +46,8 @@ bool symex_slicet::get_slhv_symbols(const expr2tc& expr)
     case expr2t::heap_contains_id:
     case expr2t::heap_load_id:
     case expr2t::heap_append_id:
-    case expr2t::heap_update_id: {
+    case expr2t::heap_update_id:
+    case expr2t::heap_delete_id: {
       bool res = false;
       expr->foreach_operand([this, &res](const expr2tc &e) {
         if (!is_nil_expr(e))
