@@ -791,14 +791,8 @@ expr2tc dereferencet::build_reference_to(
     // type2tc ptr_type = pointer_type2tc(object->type);
     // expr2tc obj_ptr = typecast2tc(ptr_type, object);
 
-    const pointer_with_region2t& pwr = to_pointer_with_region2t(object);
-    const heap_region2t& heap_region = to_heap_region2t(pwr.region);
-    // TODO: fix sorts
-    pointer_guard = and2tc(
-      greaterthanequal2tc(heap_region.start_loc, deref_expr),
-      lessthan2tc(deref_expr, locadd2tc(heap_region.start_loc, heap_region.size))
-    );
-    // heap_contains2tc(get_bool_type(), region_heap, deref_expr, 1);
+    assert(is_pointer_with_region2t(object));
+    pointer_guard = same_object2tc(deref_expr, object);
     guardt tmp_guard(guard);
     tmp_guard.add(pointer_guard);
 
@@ -1228,7 +1222,6 @@ void dereferencet::build_reference_slhv(
     log_error("ERROR: currently not support non-scalar type dereference");
     abort();
   }
-
 }
 
 void dereferencet::construct_from_array(

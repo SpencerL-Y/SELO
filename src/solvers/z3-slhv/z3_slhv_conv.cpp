@@ -277,11 +277,29 @@ z3_slhv_convt::convert_slhv_opts(
     }
     case expr2t::heap_delete_id:
     {
-      const heap_delete2t& heap_del = to_heap_delete2t(expr);
       smt_astt h1 = mk_fresh(mk_intheap_sort(), mk_fresh_name("tmp_heap::"));
       smt_astt v1 = mk_fresh(mk_int_sort(), mk_fresh_name("tmp_val::"));
       assert_ast(mk_eq(args[0], mk_uplus(h1, mk_pt(args[1], v1))));
       return h1;
+    }
+    case expr2t::same_object_id:
+    {
+      const same_object2t& same = to_same_object2t(expr);
+      assert(is_pointer_with_region2t(same.side_2));
+      const pointer_with_region2t& pwr = to_pointer_with_region2t(same.side_2);
+      const heap_region2t& heap_region = to_heap_region2t(pwr.region);
+      assert(is_constant_int2t(heap_region.size));
+      smt_astt start_loc = convert_ast(heap_region.start_loc);
+      smt_astt size = convert_ast(heap_region.size);
+      smt_astt nondet_offset = mk_fresh(mk_int_sort(), mk_fresh_name("tmp_val::")); 
+      return 
+        mk_and(
+          mk_eq(args[0], mk_locadd(start_loc, nondet_offset)),
+          mk_and(
+            mk_le(mk_smt_int(BigInt(0)), nondet_offset),
+            mk_lt(nondet_offset, size)
+          )
+        );
     }
     default: {
       log_status("Invalid SLHV operations!!!");

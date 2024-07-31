@@ -733,8 +733,9 @@ smt_astt smt_convt::convert_ast(const expr2tc &expr)
     if (this->solver_text() != "Z3-slhv") {
       args[0] = args[0]->project(this, 0);
       args[1] = args[1]->project(this, 0);
+    } else {
+      a = convert_slhv_opts(expr, args);
     }
-    a = mk_eq(args[0], args[1]);
     break;
   }
   case expr2t::pointer_offset_id:
