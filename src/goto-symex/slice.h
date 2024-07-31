@@ -101,14 +101,6 @@ public:
     fine_timet algorithm_start = current_time();
     for (auto &step : boost::adaptors::reverse(eq))
       run_on_step(step);
-
-    log_status("show eq system");
-    int ss = 0;
-    for (auto &step : boost::adaptors::reverse(eq)) {
-      log_status("step -{} is ignored? {}", ++ss, step.ignore);
-      step.dump();
-    }
-    
     fine_timet algorithm_stop = current_time();
     log_status(
       "Slicing time: {}s (removed {} assignments)",
