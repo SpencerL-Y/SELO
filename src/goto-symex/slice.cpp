@@ -12,7 +12,9 @@ bool symex_slicet::get_symbols(const expr2tc &expr)
 {
   bool res = false;
   if (is_pointer_with_region2t(expr)) {
-      return get_symbols<Add>(to_pointer_with_region2t(expr).loc_ptr);
+    return get_symbols<Add>(to_pointer_with_region2t(expr).loc_ptr);
+  } else if (is_heap_region2t(expr)) {
+    return get_symbols<Add>(to_heap_region2t(expr).region);
   } else {
     // Recursively look if any of the operands has a inner symbol
     expr->foreach_operand([this, &res](const expr2tc &e) {

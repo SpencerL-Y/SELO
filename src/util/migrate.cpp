@@ -2627,6 +2627,16 @@ exprt migrate_expr_back(const expr2tc &ref)
     locadd.copy_to_operands(migrate_expr_back(ref2.added_num));
     return locadd;
   }
+  case expr2t::heap_region_id:
+  {
+    const heap_region2t &ref2 = to_heap_region2t(ref);
+    typet thetype = migrate_type_back(ref->type);
+    exprt hregion("heap_region", thetype);
+    hregion.copy_to_operands(migrate_expr_back(ref2.region));
+    hregion.copy_to_operands(migrate_expr_back(ref2.start_loc));
+    hregion.copy_to_operands(migrate_expr_back(ref2.size));
+    return hregion;
+  }
   case expr2t::pointer_with_region_id:
   {
     const pointer_with_region2t &ref2 = to_pointer_with_region2t(ref);
@@ -2635,14 +2645,6 @@ exprt migrate_expr_back(const expr2tc &ref)
     pointer_with_region.copy_to_operands(migrate_expr_back(ref2.loc_ptr));
     pointer_with_region.copy_to_operands(migrate_expr_back(ref2.region));
     return pointer_with_region;
-  }
-  case expr2t::heap_free_id:
-  {
-    const heap_free2t &ref2 = to_heap_free2t(ref);
-    typet thetype = migrate_type_back(ref->type);
-    exprt heap_free("heap_free", thetype);
-    heap_free.copy_to_operands(migrate_expr_back(ref2.pwr));
-    return heap_free;
   }
   case expr2t::heap_load_id:
   {

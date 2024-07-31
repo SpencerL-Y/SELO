@@ -106,9 +106,9 @@
   BOOST_PP_LIST_CONS(points_to,                                                \
   BOOST_PP_LIST_CONS(uplus,                                                    \
   BOOST_PP_LIST_CONS(locadd,                                                   \
-  BOOST_PP_LIST_CONS(pointer_with_region,                                       \
-  BOOST_PP_LIST_CONS(heap_free,                                                \
-  BOOST_PP_LIST_CONS(heap_load,                                                 \
+  BOOST_PP_LIST_CONS(heap_region,                                              \
+  BOOST_PP_LIST_CONS(pointer_with_region,                                      \
+  BOOST_PP_LIST_CONS(heap_load,                                                \
   BOOST_PP_LIST_CONS(heap_update,                                              \
   BOOST_PP_LIST_CONS(heap_append,                                              \
   BOOST_PP_LIST_CONS(heap_delete,                                              \

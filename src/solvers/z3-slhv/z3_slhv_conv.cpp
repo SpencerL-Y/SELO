@@ -188,6 +188,11 @@ z3_slhv_convt::convert_slhv_opts(
   switch (expr->expr_id) {
     case expr2t::constant_intheap_id: return mk_emp();
     case expr2t::constant_intloc_id: return mk_nil();
+    case expr2t::heap_region_id:
+    {
+      assert(args.size() == 3);
+      return convert_ast(to_heap_region2t(expr).region);
+    }
     case expr2t::pointer_with_region_id:
     {
       const pointer_with_region2t& pwr = to_pointer_with_region2t(expr);
