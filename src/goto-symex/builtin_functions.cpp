@@ -494,10 +494,11 @@ void goto_symext::symex_free(const expr2tc &expr)
       }
 
       expr2tc emp_heap = constant_intheap2tc(get_intheap_type(), true);
-
+      log_status("symex free freed_heap emp_heap");
       symex_assign(code_assign2tc(freed_heap, emp_heap));
       expr2tc alloc_size_heap_symbol = symbol2tc(get_intheap_type(), alloc_size_heap_name);
       expr2tc heap_deleted = heap_delete2tc(get_intheap_type(), alloc_size_heap_symbol, freed_pointer, 4);
+      log_status("symex free alloc_size_heap heap_delete");
       symex_assign(code_assign2tc(alloc_size_heap_symbol, heap_deleted));
     }
 
