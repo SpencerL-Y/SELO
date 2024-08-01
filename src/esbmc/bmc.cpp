@@ -775,7 +775,7 @@ smt_convt::resultt bmct::multi_property_check(
       // C++20 reached_mul_claims.contains
       is_verified = reached_mul_claims.count(cmt_loc) ? true : false;
     }
-    elseconvert
+    else
     {
       cmt_loc = claim.claim_msg + "\t" + claim.claim_loc;
       is_verified = reached_claims.count(cmt_loc) ? true : false;

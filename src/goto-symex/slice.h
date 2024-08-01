@@ -99,7 +99,6 @@ public:
   {
     sliced = 0;
     fine_timet algorithm_start = current_time();
-    int cnt = 0;
     for (auto &step : boost::adaptors::reverse(eq)) {
       if (step.ignore) continue;
       run_on_step(step);
