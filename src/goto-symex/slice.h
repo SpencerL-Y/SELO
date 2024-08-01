@@ -99,8 +99,11 @@ public:
   {
     sliced = 0;
     fine_timet algorithm_start = current_time();
-    for (auto &step : boost::adaptors::reverse(eq))
+    int cnt = 0;
+    for (auto &step : boost::adaptors::reverse(eq)) {
+      if (step.is_assert() && step.ignore) continue;
       run_on_step(step);
+    }
     fine_timet algorithm_stop = current_time();
     log_status(
       "Slicing time: {}s (removed {} assignments)",
