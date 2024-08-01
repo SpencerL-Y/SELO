@@ -647,7 +647,7 @@ smt_convt::resultt bmct::run_thread(std::shared_ptr<symex_target_equationt> &eq)
     {
       runtime_solver =
         std::unique_ptr<smt_convt>(create_solver("", ns, options));
-      show_vcc(*eq);
+      // show_vcc(*eq);
       // log_status("smt_convt created");
       // if (options.get_bool_option("z3-slhv")) {
       //   show_vcc(*eq);
@@ -750,6 +750,9 @@ smt_convt::resultt bmct::multi_property_check(
                        &is_fail_fast,
                        &fail_fast_limit,
                        &fail_fast_cnt](const size_t &i) {
+
+    log_status("begin to check claim {}", i);
+    
     //"multi-fail-fast n": stop after first n SATs found.
     if (is_fail_fast && fail_fast_cnt >= fail_fast_limit)
       return;
@@ -806,6 +809,12 @@ smt_convt::resultt bmct::multi_property_check(
     // If an assertion instance is verified to be violated
     if (result == smt_convt::P_SATISFIABLE)
     {
+      if (runtime_solver->solver_text() == "Z3-slhv") {
+        final_result = result;
+        fail_fast_cnt++;
+        return;
+      }
+
       bool is_compact_trace = true;
       if (
         options.get_bool_option("no-slice") &&

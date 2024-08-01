@@ -323,6 +323,10 @@ void goto_symext::symex_assign_rec(
     log_status("symex_assign_heap_load");
     symex_assign_heap_laod(lhs, full_lhs, rhs, full_rhs, guard, hidden);
   }
+  else if (is_heap_region2t(lhs))
+  {
+    log_status("symex_assign_heap_region");
+  }
   else
   {
     log_error("assignment to {} not handled", get_expr_id(lhs));
@@ -865,15 +869,6 @@ void goto_symext::symex_assign_heap_laod(
   guardt &guard,
   const bool hidden)
 {
-  log_status("lhs : ");
-  lhs->dump();
-  log_status("full lhs : ");
-  full_lhs->dump();
-  log_status("rhs : ");
-  rhs->dump();
-  log_status("guard : ");
-  guard.dump();
-
   assert(is_scalar_type(rhs));
 
   const heap_load2t& heap_load = to_heap_load2t(lhs);
@@ -884,14 +879,7 @@ void goto_symext::symex_assign_heap_laod(
   cur_state->rename(rhs); // shall we?
 
   expr2tc ptr_obj = pointer_object2tc(get_intloc_type(), heap_load.start_addr);
-  expr2tc updated_heap = 
-    heap_update2tc(
-      get_intheap_type(),
-      heap_load.heap,
-      ptr_obj,
-      rhs,
-      heap_load.byte_len
-    );
+  expr2tc updated_heap = heap_update2tc(heap_load.heap, ptr_obj, rhs, heap_load.byte_len);
 
   symex_assign(code_assign2tc(heap_load.heap, updated_heap), true);
 }

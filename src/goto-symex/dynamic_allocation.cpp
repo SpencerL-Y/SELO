@@ -39,7 +39,7 @@ void goto_symext::default_replace_dynamic_allocation(expr2tc &expr)
       log_status("before migrate");
       migrate_expr(symbol_expr(*ns.lookup(alloc_size_heap_name)), alloc_size_heap_2);
       log_status("migrate over");
-      expr2tc heap_contains = heap_contains2tc(get_bool_type(), alloc_size_heap_2, valid_inner.loc_ptr, 1);
+      expr2tc heap_contains = heap_contains2tc(alloc_size_heap_2, valid_inner.loc_ptr, 1);
       expr = heap_contains;
       
     }

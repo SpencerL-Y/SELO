@@ -325,15 +325,17 @@ smt_astt smt_convt::convert_ast(const expr2tc &expr)
       args[i]->dump();
     }
     log_status(" -------------- convert args finished ------------ ");
+  }
+  }
 
-  }
-  }
+  expr->dump();
 
   smt_astt a;
   switch (expr->expr_id)
   {
   case expr2t::constant_intheap_id:
   case expr2t::constant_intloc_id:
+  case expr2t::heap_region_id:
   case expr2t::pointer_with_region_id:
   case expr2t::points_to_id:
   case expr2t::uplus_id:
@@ -732,8 +734,10 @@ smt_astt smt_convt::convert_ast(const expr2tc &expr)
     if (this->solver_text() != "Z3-slhv") {
       args[0] = args[0]->project(this, 0);
       args[1] = args[1]->project(this, 0);
+      a = mk_eq(args[0], args[1]);
+    } else {
+      a = convert_slhv_opts(expr, args);
     }
-    a = mk_eq(args[0], args[1]);
     break;
   }
   case expr2t::pointer_offset_id:
