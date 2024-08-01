@@ -195,9 +195,7 @@ z3_slhv_convt::convert_slhv_opts(
     }
     case expr2t::pointer_with_region_id:
     {
-      const pointer_with_region2t& pwr = to_pointer_with_region2t(expr);
-      const symbol2t& nsym = to_symbol2t(pwr.loc_ptr);
-      return mk_smt_symbol(nsym.get_symbol_name(), mk_intloc_sort());
+      return convert_ast(to_pointer_with_region2t(expr).loc_ptr);
     }
     case expr2t::points_to_id:
     {

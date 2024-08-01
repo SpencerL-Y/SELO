@@ -101,7 +101,7 @@ public:
     fine_timet algorithm_start = current_time();
     int cnt = 0;
     for (auto &step : boost::adaptors::reverse(eq)) {
-      if (step.is_assert() && step.ignore) continue;
+      if (step.ignore) continue;
       run_on_step(step);
     }
     fine_timet algorithm_stop = current_time();
