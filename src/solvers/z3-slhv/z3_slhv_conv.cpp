@@ -107,6 +107,13 @@ smt_astt z3_slhv_convt::mk_uplus(smt_astt a, smt_astt b) {
     ),
     this->mk_intheap_sort());
 }
+smt_astt z3_slhv_convt::mk_uplus(std::vector<smt_astt> pts) {
+  z3::expr_vector pt_vec(z3_ctx);
+  for (auto pt : pts) {
+    pt_vec.push_back(to_solver_smt_ast<z3_smt_ast>(pt)->a);
+  }
+  return new_ast(z3::uplus(pt_vec), this->mk_intheap_sort());
+}
 smt_astt z3_slhv_convt::mk_subh(smt_astt a, smt_astt b) {
   assert(a->sort == mk_intheap_sort());
   assert(b->sort == mk_intheap_sort());
@@ -190,8 +197,17 @@ z3_slhv_convt::convert_slhv_opts(
     case expr2t::constant_intloc_id: return mk_nil();
     case expr2t::heap_region_id:
     {
-      assert(args.size() == 3);
-      return convert_ast(to_heap_region2t(expr).region);
+      assert(args.size() == 2);
+      const heap_region2t& region = to_heap_region2t(expr);
+      assert(is_constant_int2t(region.size));
+      const int n = to_constant_int2t(region.size).as_ulong();
+      std::vector<smt_astt> pt_vec;
+      for (unsigned i = 0; i < n; i++) {
+        smt_astt loc = i == 0 ? args[0] : mk_locadd(args[0], mk_smt_int(BigInt(i)));
+        smt_astt v = mk_fresh(mk_int_sort(), mk_fresh_name("tmp_val::"));
+        pt_vec.push_back(mk_pt(loc, v));
+      }
+      return pt_vec.size() == 1 ? pt_vec[0] : mk_uplus(pt_vec);
     }
     case expr2t::pointer_with_region_id:
     {

@@ -295,30 +295,12 @@ expr2tc goto_symext::symex_mem(
 
     std::vector<expr2tc> pt_vec;
     uint pt_num = bytes % pt_bytes == 0 ? bytes / pt_bytes : bytes;
-    for(unsigned i = 0; i < pt_num; i ++) {
-      expr2tc offset = constant_int2tc(int_type2(), BigInt(i));
-      expr2tc addr_i = i == 0 ? alloc_base_addr : locadd2tc(alloc_base_addr, offset);
-      // TODO: fix int_type
-      expr2tc fresh_data_i =
-        sideeffect2tc(
-          get_int8_type(),
-          expr2tc(),
-          expr2tc(),
-          std::vector<expr2tc>(),
-          type2tc(),
-          sideeffect2t::nondet
-        );
-      expr2tc pt_i = points_to2tc(addr_i, fresh_data_i, false);
-      pt_vec.push_back(pt_i);
-    }
-
-    expr2tc heap = pt_vec.size() > 1 ? uplus2tc(pt_vec) : pt_vec[0];
     
     expr2tc origin_base_addr(alloc_base_addr);
     cur_state->rename(alloc_base_addr);
 
     expr2tc region_size = constant_int2tc(int_type2(), BigInt(pt_num));
-    expr2tc region = heap_region2tc(heap, origin_base_addr, region_size);
+    expr2tc region = heap_region2tc(origin_base_addr, region_size);
 
     log_status("symex assign in symex_mem: allocated_heap = heaplet");
     symex_assign(code_assign2tc(allocated_heap, region));

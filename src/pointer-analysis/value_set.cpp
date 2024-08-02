@@ -563,9 +563,18 @@ void value_sett::get_value_set_rec(
     }
   }
   // SLHV:
-  if(is_pointer_with_region2t(expr)) {
+  if(is_pointer_with_region2t(expr))
+  {
     log_status("get value rec: is pointer with region2t");
     assert(is_intloc_type(expr));
+    expr2tc new_loc_object = expr;
+    insert(dest, new_loc_object, BigInt(0));
+    return;
+  }
+  // TODO: not used
+  if (is_heap_region2t(expr))
+  {
+    log_status("get value rec: is heap region");
     expr2tc new_loc_object = expr;
     insert(dest, new_loc_object, BigInt(0));
     return;

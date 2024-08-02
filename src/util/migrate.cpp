@@ -2631,11 +2631,10 @@ exprt migrate_expr_back(const expr2tc &ref)
   {
     const heap_region2t &ref2 = to_heap_region2t(ref);
     typet thetype = migrate_type_back(ref->type);
-    exprt hregion("heap_region", thetype);
-    hregion.copy_to_operands(migrate_expr_back(ref2.region));
-    hregion.copy_to_operands(migrate_expr_back(ref2.start_loc));
-    hregion.copy_to_operands(migrate_expr_back(ref2.size));
-    return hregion;
+    exprt region("heap_region", thetype);
+    region.copy_to_operands(migrate_expr_back(ref2.start_loc));
+    region.copy_to_operands(migrate_expr_back(ref2.size));
+    return region;
   }
   case expr2t::pointer_with_region_id:
   {

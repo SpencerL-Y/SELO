@@ -987,27 +987,22 @@ public:
   heap_region_data(
     const type2tc &t,
     datatype_ops::expr_ids id,
-    const expr2tc &region,
     const expr2tc &start_loc,
     const expr2tc &size)
-    : expr2t(t, id), region(region), start_loc(start_loc), size(size)
+    : expr2t(t, id), start_loc(start_loc), size(size)
   {
   }
   heap_region_data(const heap_region_data& ref) = default;
 
-  expr2tc region;
   expr2tc start_loc;
   expr2tc size;
 
   // Type mangling:
-  typedef esbmct::field_traits<expr2tc, heap_region_data, &heap_region_data::region>
-    heap_region_region_field;
   typedef esbmct::field_traits<expr2tc, heap_region_data, &heap_region_data::start_loc>
     heap_region_start_loc_field;
   typedef esbmct::field_traits<expr2tc, heap_region_data, &heap_region_data::size>
     heap_region_size_field;
   typedef esbmct::expr2t_traits<
-    heap_region_region_field,
     heap_region_start_loc_field,
     heap_region_size_field> traits;
 };
@@ -1019,8 +1014,8 @@ public:
     const type2tc &t,
     datatype_ops::expr_ids id,
     expr2tc loc_ptr,
-    expr2tc region_heap)
-    : expr2t(t, id), loc_ptr(loc_ptr), region(region_heap)
+    expr2tc region)
+    : expr2t(t, id), loc_ptr(loc_ptr), region(region)
   {
   }
 
@@ -3338,8 +3333,8 @@ public:
 class heap_region2t: public heap_region_expr_methods
 {
 public:
-  heap_region2t(const expr2tc &region, const expr2tc &start_loc, const expr2tc &size)
-  : heap_region_expr_methods(get_intheap_type(), heap_region_id, region, start_loc, size)
+  heap_region2t(const expr2tc &start_loc, const expr2tc &size)
+  : heap_region_expr_methods(get_intheap_type(), heap_region_id, start_loc, size)
   {
   }
   heap_region2t(const heap_region2t &ref) = default;

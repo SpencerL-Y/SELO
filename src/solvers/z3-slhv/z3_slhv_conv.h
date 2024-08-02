@@ -22,6 +22,7 @@ public:
     smt_astt mk_nil();
     smt_astt mk_pt(smt_astt a, smt_astt b);
     smt_astt mk_uplus(smt_astt a, smt_astt b);
+    smt_astt mk_uplus(std::vector<smt_astt> pts);
     smt_astt mk_subh(smt_astt a, smt_astt b);
     smt_astt mk_disjh(smt_astt a, smt_astt b);
     smt_astt mk_locadd(smt_astt a, smt_astt b);
