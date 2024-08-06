@@ -145,6 +145,8 @@ const expr2tc &get_heap_symbol(const expr2tc &object) {
 
 void dereferencet::dereference_expr(expr2tc &expr, guardt &guard, modet mode)
 {
+  log_status("deref expr:");
+  expr->dump();
   if (!has_dereference(expr))
     return;
 
@@ -368,6 +370,8 @@ expr2tc dereferencet::dereference_expr_nonscalar(
   modet mode,
   const expr2tc &base)
 {
+  log_status("deref expr nonscalar");
+  expr->dump();
   if (is_dereference2t(expr))
   {
     /* The first expression we're called with is index2t, member2t or non-scalar
@@ -791,7 +795,9 @@ expr2tc dereferencet::build_reference_to(
     // type2tc ptr_type = pointer_type2tc(object->type);
     // expr2tc obj_ptr = typecast2tc(ptr_type, object);
 
-    assert(is_pointer_with_region2t(object));
+    log_status("befor building pointer guard");
+    object->dump();
+
     pointer_guard = same_object2tc(deref_expr, object);
     guardt tmp_guard(guard);
     tmp_guard.add(pointer_guard);
@@ -1217,6 +1223,20 @@ void dereferencet::build_reference_slhv(
     pointer_with_region2t& pwr = to_pointer_with_region2t(value);
     expr2tc heap = pwr.region;
     expr2tc loc_ptr = pwr.loc_ptr;
+
+    log_status("adjust heap pt_bytes and size");
+    value_setst::valuest points_to_set;
+    dereference_callback.get_value_set(pwr.region, points_to_set);
+    for (expr2tc reg : points_to_set)
+    {
+      assert(is_object_descriptor2t(reg));
+      object_descriptor2t& obj = to_object_descriptor2t(reg);
+      assert(is_heap_region2t(obj.object));to_heap_region2t(obj.object);
+      if (to_heap_region2t(obj.object).update(byte_len))
+        dereference_callback.update_regions(obj.object);
+    }
+    log_status("done");
+
     value = heap_load2tc(type, heap, loc_ptr, byte_len);
   } else {
     log_error("ERROR: currently not support non-scalar type dereference");

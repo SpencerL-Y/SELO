@@ -1,5 +1,6 @@
 #include <goto-symex/goto_symex.h>
 #include <goto-symex/reachability_tree.h>
+#include <goto-symex/symex_target_equation.h>
 #include <langapi/language_util.h>
 #include <pointer-analysis/dereference.h>
 #include <irep2/irep2.h>
@@ -163,6 +164,58 @@ bool symex_dereference_statet::is_live_variable(const expr2tc &symbol)
   // There were no stack frames where that variable existed and had the correct
   // level1 num: it's dead Jim.
   return false;
+}
+
+void symex_dereference_statet::update_regions(const expr2tc &expr)
+{
+  assert(is_heap_region2t(expr));
+  const heap_region2t& region = to_heap_region2t(expr);
+  
+  // update value set
+  // log_status("update value set");
+  value_sett& value_set = goto_symex.cur_state->value_set;
+  for (auto& value : value_set.values)
+  {
+    for (auto& obj : value.second.object_map)
+    {
+      if (!is_heap_region2t(value_set.object_numbering[obj.first])) continue;
+      heap_region2t& obj_reg =
+        to_heap_region2t(value_set.object_numbering[obj.first]);
+      // obj_reg.dump();
+      if (to_symbol2t(region.start_loc).get_symbol_name() ==
+          to_symbol2t(obj_reg.start_loc).get_symbol_name()) 
+      {
+        // log_status("found region to be updated");
+        value_set.object_numbering[obj.first] = expr;
+      }
+    }
+  }
+
+  // update eq system
+  log_status("update eq system");
+  std::shared_ptr<symex_target_equationt> eq =
+    std::dynamic_pointer_cast<symex_target_equationt>(goto_symex.target);
+  for(auto& ssa_step : eq->SSA_steps)
+  {
+    if (!ssa_step.is_assignment()) continue;
+    if (!is_heap_region2t(ssa_step.rhs)) continue;
+    heap_region2t& obj_reg = to_heap_region2t(ssa_step.rhs);
+
+    // Symbols in SSA step are level2 symbol.
+    // Symbols in symex are level1 symbol.
+    expr2tc l1_rhs = ssa_step.rhs;
+    goto_symex.cur_state->level2.get_original_name(l1_rhs);
+
+    if (to_symbol2t(region.start_loc).get_symbol_name() ==
+        to_symbol2t(to_heap_region2t(l1_rhs).start_loc).get_symbol_name()) 
+    {
+      uint byte_len = to_constant_int2t(region.pt_bytes).value.to_uint64();
+      if (!obj_reg.update(byte_len)) continue;
+      ssa_step.rhs = heap_region2tc(obj_reg);
+      ssa_step.cond = equality2tc(ssa_step.lhs, ssa_step.rhs);
+      ssa_step.cond->dump();
+    }
+  }
 }
 
 void goto_symext::dereference(expr2tc &expr, dereferencet::modet mode)

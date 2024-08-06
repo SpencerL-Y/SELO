@@ -187,13 +187,19 @@ void goto_symext::symex_assign(
   replace_nondet(lhs);
   replace_nondet(rhs);
 
+  lhs->dump();
+  rhs->dump();
+
   intrinsic_races_check_dereference(lhs);
   log_status("dereference lhs write");
   dereference(lhs, dereferencet::WRITE);
   log_status("dereference rhs read");
   dereference(rhs, dereferencet::READ);
+  log_status("replace lhs");
   replace_dynamic_allocation(lhs);
+  log_status("replace rhs");
   replace_dynamic_allocation(rhs);
+  log_status("replace done");
 
   // printf expression that has lhs
   if (is_code_printf2t(rhs))
@@ -251,8 +257,11 @@ void goto_symext::symex_assign(
     }
   }
 
+  log_status("before symex assign rec");
+
   guardt g(guard); // NOT the state guard!
   symex_assign_rec(lhs, original_lhs, rhs, expr2tc(), g, hidden_ssa);
+  log_status("xxxxxxxxxxxx symex assign: done for this step");
 }
 
 void goto_symext::symex_assign_rec(
@@ -900,4 +909,29 @@ void goto_symext::replace_nondet(expr2tc &expr)
         replace_nondet(e);
     });
   }
+}
+
+
+void goto_symext::replace_heap_load(expr2tc &expr)
+{
+  heap_load2t& heap_load = to_heap_load2t(expr);
+
+  unsigned int &nondet_counter = get_nondet_counter();
+  nondet_counter++;
+
+  symbolt symbol;
+  symbol.name = "nondet_loc_"+ i2string(nondet_counter);
+  
+  symbol.id = std::string("symex_dynamic::") + id2string(symbol.name);
+  symbol.lvalue = true;
+  symbol.type = typet(typet::t_intloc);
+  // symbol.type.dynamic(true);
+  symbol.mode = "C";
+  new_context.add(symbol);
+
+  expr2tc ptr = symbol2tc(get_intloc_type(), symbol.name);
+
+  symex_assign(code_assign2tc(ptr, expr));
+
+  expr = ptr;
 }

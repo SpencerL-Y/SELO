@@ -197,10 +197,13 @@ z3_slhv_convt::convert_slhv_opts(
     case expr2t::constant_intloc_id: return mk_nil();
     case expr2t::heap_region_id:
     {
+      log_status("couvert heap region");
       assert(args.size() == 2);
       const heap_region2t& region = to_heap_region2t(expr);
+      region.dump();
       assert(is_constant_int2t(region.size));
       const int n = to_constant_int2t(region.size).as_ulong();
+      
       std::vector<smt_astt> pt_vec;
       for (unsigned i = 0; i < n; i++) {
         smt_astt loc = i == 0 ? args[0] : mk_locadd(args[0], mk_smt_int(BigInt(i)));
@@ -264,9 +267,14 @@ z3_slhv_convt::convert_slhv_opts(
     {
       const heap_load2t& heap_load = to_heap_load2t(expr);
       // TODO : fix width
-      assert(heap_load.byte_len == 4);
-      // TODO: fix v1 sort
-      smt_astt v1 = mk_fresh(mk_int_sort(), mk_fresh_name("tmp_val::"));
+      // assert(heap_load.byte_len == 4);
+      smt_sortt sort;
+      if (is_pointer_type(heap_load.type))
+        sort = mk_intloc_sort();
+      else
+        sort = mk_int_sort();
+
+      smt_astt v1 = mk_fresh(sort, mk_fresh_name("tmp_val::"));
       //current heap state
       assert_ast(mk_subh(mk_pt(args[1], v1), args[0]));
       return v1;
@@ -298,6 +306,8 @@ z3_slhv_convt::convert_slhv_opts(
     }
     case expr2t::same_object_id:
     {
+      // TODO: fix same object
+      return mk_smt_bool(true);
       const same_object2t& same = to_same_object2t(expr);
       assert(is_pointer_with_region2t(same.side_2));
       const pointer_with_region2t& pwr = to_pointer_with_region2t(same.side_2);

@@ -527,6 +527,8 @@ int esbmc_parseoptionst::doit()
     cmdline.isset("termination") || cmdline.isset("incremental-bmc") ||
     cmdline.isset("falsification") || cmdline.isset("k-induction"))
     return do_bmc_strategy(options, goto_functions);
+  
+  log_status("before starting BMC");
 
   // If no strategy is chosen, just rely on the simplifier
   // and the flags set through CMD

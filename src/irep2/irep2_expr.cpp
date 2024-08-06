@@ -77,7 +77,7 @@ static const char *expr_names[] = {
   "points_to",
   "uplus",
   "locadd",
-  "region",
+  "heap_region",
   "pointer_with_region",
   "heap_load",
   "heap_update",
@@ -421,6 +421,31 @@ void with2t::assert_consistency() const
     assert_type_compat_for_with(update_value->type, d->members[c]);
   }
   assert(type == source_value->type);
+}
+
+bool heap_region2t::update(uint byte_len)
+{
+  uint old_bytes = to_constant_int2t(pt_bytes).value.to_uint64();
+  uint old_size = to_constant_int2t(size).value.to_uint64();
+
+  assert(old_bytes * old_size % byte_len == 0);
+  // TODO: allow to split only one time
+  if (is_split) {
+    assert(byte_len == old_bytes);
+    return false;
+  }
+
+  uint new_bytes = byte_len;
+  uint new_size;
+  if (byte_len != old_bytes)
+  {
+    new_size = old_bytes * old_size / byte_len;
+    is_split = true;
+    pt_bytes = constant_int2tc(get_uint64_type(), BigInt(new_bytes));
+    size = constant_int2tc(get_uint64_type(), BigInt(new_size));
+    return true;
+  }
+  return false;
 }
 
 const expr2tc &object_descriptor2t::get_root_object() const

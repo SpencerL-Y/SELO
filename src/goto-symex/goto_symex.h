@@ -801,6 +801,12 @@ protected:
   void replace_nondet(expr2tc &expr);
 
   /**
+   *  Replace heap_load with a new pointer
+   *  @param expr Expr to search for heap_load.
+   */
+  void replace_heap_load(expr2tc &expr);
+
+  /**
    *  Fetch reference to global dynamic object counter.
    *  @return Reference to global dynamic object counter.
    */
@@ -957,6 +963,8 @@ protected:
   void
   dump_internal_state(const std::list<struct internal_item> &data) override;
   bool is_live_variable(const expr2tc &sym) override;
+
+  void update_regions(const expr2tc &expr) override;
 };
 
 #endif

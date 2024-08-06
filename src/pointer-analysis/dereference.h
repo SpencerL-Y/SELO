@@ -152,6 +152,15 @@ public:
    *  @return True if variable is alive
    *  */
   virtual bool is_live_variable(const expr2tc &sym) = 0;
+
+  /** Update regionss in value set and in eq system
+   * @param region 
+   */
+  virtual void update_regions(const expr2tc &expr)
+  {
+    log_error("Do not support");
+    abort();
+  }
 };
 
 /** Class containing expression dereference logic.

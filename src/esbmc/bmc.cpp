@@ -790,6 +790,8 @@ smt_convt::resultt bmct::multi_property_check(
     symex_slicet slicer(options);
     slicer.run(local_eq.SSA_steps);
 
+    show_vcc(local_eq);
+
     // Initialize a solver
     std::unique_ptr<smt_convt> runtime_solver(create_solver("", ns, options));
     // Save current instance

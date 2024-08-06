@@ -29,6 +29,7 @@ void goto_symext::replace_dynamic_allocation(expr2tc &expr)
 
   if (is_valid_object2t(expr) || is_deallocated_obj2t(expr))
   {
+    log_status("replace dynamic object : valid object or deallocated object");
     expr2tc &obj_ref = (is_valid_object2t(expr))
                          ? to_valid_object2t(expr).value
                          : to_deallocated_obj2t(expr).value;
@@ -66,11 +67,13 @@ void goto_symext::replace_dynamic_allocation(expr2tc &expr)
   }
   else if (is_dynamic_size2t(expr))
   {
+    log_status("replace dynamic object : dynamic size");
     // default behavior
     default_replace_dynamic_allocation(expr);
   }
   else if (is_invalid_pointer2t(expr))
   {
+    log_status("replace dynamic object : invalid pointer");
     // default behavior
     default_replace_dynamic_allocation(expr);
   }

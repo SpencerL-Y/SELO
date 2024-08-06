@@ -988,23 +988,33 @@ public:
     const type2tc &t,
     datatype_ops::expr_ids id,
     const expr2tc &start_loc,
-    const expr2tc &size)
-    : expr2t(t, id), start_loc(start_loc), size(size)
+    const expr2tc &pt_bytes,
+    const expr2tc &size,
+    bool is_split)
+    : expr2t(t, id), start_loc(start_loc), pt_bytes(pt_bytes), size(size), is_split(is_split)
   {
   }
   heap_region_data(const heap_region_data& ref) = default;
 
   expr2tc start_loc;
+  expr2tc pt_bytes;
   expr2tc size;
+  bool is_split;
 
   // Type mangling:
   typedef esbmct::field_traits<expr2tc, heap_region_data, &heap_region_data::start_loc>
     heap_region_start_loc_field;
+  typedef esbmct::field_traits<expr2tc, heap_region_data, &heap_region_data::pt_bytes>
+    heap_region_pt_bytes_field;
   typedef esbmct::field_traits<expr2tc, heap_region_data, &heap_region_data::size>
     heap_region_size_field;
+  typedef esbmct::field_traits<bool, heap_region_data, &heap_region_data::is_split>
+    heap_region_is_split_field;
   typedef esbmct::expr2t_traits<
     heap_region_start_loc_field,
-    heap_region_size_field> traits;
+    heap_region_pt_bytes_field,
+    heap_region_size_field,
+    heap_region_is_split_field> traits;
 };
 
 class pointer_with_region_data : public expr2t 
@@ -3333,11 +3343,13 @@ public:
 class heap_region2t: public heap_region_expr_methods
 {
 public:
-  heap_region2t(const expr2tc &start_loc, const expr2tc &size)
-  : heap_region_expr_methods(get_intheap_type(), heap_region_id, start_loc, size)
+  heap_region2t(const expr2tc &start_loc, const expr2tc &pt_bytes, const expr2tc &size, bool is_split)
+  : heap_region_expr_methods(get_intheap_type(), heap_region_id, start_loc, pt_bytes, size, is_split)
   {
   }
   heap_region2t(const heap_region2t &ref) = default;
+
+  bool update(uint byte_len);
 
   static std::string field_names[esbmct::num_type_fields];
 };

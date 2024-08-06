@@ -111,7 +111,17 @@ expr2tc goto_symext::symex_mem(
   const sideeffect2t &code)
 {
   log_status("symex_mem start: ");
-  if (is_nil_expr(lhs))
+  lhs->dump();
+  code.dump();
+
+  expr2tc new_lhs = lhs;
+  if (is_heap_load2t(lhs))
+  {
+    assert(is_pointer_type(new_lhs->type));
+    replace_heap_load(new_lhs);
+  }
+
+  if (is_nil_expr(new_lhs))
     return expr2tc(); // ignore
 
   // size
@@ -245,9 +255,6 @@ expr2tc goto_symext::symex_mem(
   } else {
     log_status("create heap symbol for allocation");
 
-    // TODO: fix the right width of pointee
-    uint32_t pt_bytes = 4;
-
     // value
     symbolt symbol;
     symbol.name = "dynamic_heap_"+ i2string(dynamic_counter);
@@ -259,48 +266,46 @@ expr2tc goto_symext::symex_mem(
     symbol.type = typet(typet::t_intheap);
 
     // Size in SLHV is byte level
-    expr2tc bytesize;
-    if (!is_constant_int2t(size)) {
-      size = size.simplify();
-    }
-    if (is_constant_int2t(size)) {
-      bytesize =
-        constant_int2tc(get_uint32_type(),
-          BigInt(
-            to_constant_int2t(size).value.to_uint64()
-             * type->get_width() / 8
-          )
-        );
-      symbol.type.size(migrate_expr_back(bytesize));
-    } else {
-      log_error("SLHV does not support dynamic array size");
+    // expr2tc bytesizes
+    expr2tc operand = code.operand;
+    if (!is_constant_int2t(operand))
+      operand = operand.simplify();
+    if (!is_constant_int2t(operand))
+    {
+      log_error("Do not support dynamic size");
       abort();
     }
+
+    uint total_bytes = to_constant_int2t(operand).value.to_uint64();
+    uint pt_bytes = type.get()->get_width() / 8;
+    uint size = total_bytes / pt_bytes;
+    if (pt_bytes == 1)
+    {
+      pt_bytes = total_bytes;
+      size = 1;
+    }
+    expr2tc region_pt_bytes = constant_int2tc(get_uint64_type(), BigInt(pt_bytes));
+    expr2tc region_size = constant_int2tc(get_uint64_type(), BigInt(size));
 
     symbol.type.dynamic(true);
     symbol.mode = "C";
     log_status("new_context.add(symbol);");
     new_context.add(symbol);
 
-    type2tc heap_type = get_intheap_type();
-    expr2tc allocated_heap = symbol2tc(heap_type, symbol.id);
-    std::vector<expr2tc> pts;
-    
+    assert(is_symbol2t(lhs));
+    expr2tc allocated_heap = symbol2tc(get_intheap_type(), symbol.id);
     guardt alloc_guard = cur_state->guard;
-
-    unsigned bytes = to_constant_int2t(bytesize).as_ulong();
-    log_status("Unsiged size: {}", bytes);
-
-    expr2tc alloc_base_addr = lhs;
-
-    std::vector<expr2tc> pt_vec;
-    uint pt_num = bytes % pt_bytes == 0 ? bytes / pt_bytes : bytes;
-    
+    expr2tc alloc_base_addr = new_lhs;
     expr2tc origin_base_addr(alloc_base_addr);
     cur_state->rename(alloc_base_addr);
 
-    expr2tc region_size = constant_int2tc(int_type2(), BigInt(pt_num));
-    expr2tc region = heap_region2tc(origin_base_addr, region_size);
+    expr2tc region = 
+      heap_region2tc(
+        origin_base_addr,
+        region_pt_bytes,
+        region_size,
+        size != 1  
+      );
 
     log_status("symex assign in symex_mem: allocated_heap = heaplet");
     symex_assign(code_assign2tc(allocated_heap, region));
@@ -309,7 +314,7 @@ expr2tc goto_symext::symex_mem(
     expr2tc base_value_symbol =
       symbol2tc(get_intloc_type(), to_symbol2t(origin_base_addr).get_symbol_name());
     expr2tc base_pointer_region_object = 
-      pointer_with_region2tc(base_value_symbol, region);
+      pointer_with_region2tc(base_value_symbol, allocated_heap);
     symex_assign(
       code_assign2tc(
         origin_base_addr,

@@ -32,7 +32,7 @@ expr_typedefs2(index, index_data);
 expr_typedefs3(points_to, points_to_data);
 expr_typedefs1(uplus, uplus_data);
 expr_typedefs2(locadd, locadd_data);
-expr_typedefs2(heap_region, heap_region_data);
+expr_typedefs4(heap_region, heap_region_data);
 expr_typedefs2(pointer_with_region, pointer_with_region_data);
 expr_typedefs4(heap_load, heap_load_data);
 expr_typedefs4(heap_update, heap_update_data);
