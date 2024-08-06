@@ -537,12 +537,10 @@ void value_sett::get_value_set_rec(
       return;
     }
 
-
     // Look up this symbol, with the given suffix to distinguish any arrays or
     // members we've picked out of it at a higher level.
     valuest::const_iterator v_it = values.find(sym.get_symbol_name() + suffix);
     log_status("ssssss symbol lookup name: {}", sym.get_symbol_name() + suffix);
-
 
     if (sym.rlevel == symbol2t::renaming_level::level1_global)
       assert(sym.level1_num == 0);
@@ -563,20 +561,12 @@ void value_sett::get_value_set_rec(
     }
   }
   // SLHV:
-  if(is_pointer_with_region2t(expr))
+  if (is_constant_intloc2t(expr) || is_constant_intheap2t(expr) ||
+      is_pointer_with_region2t(expr) || is_heap_region2t(expr))
   {
-    log_status("get value rec: is pointer with region2t");
-    assert(is_intloc_type(expr));
-    expr2tc new_loc_object = expr;
-    insert(dest, new_loc_object, BigInt(0));
-    return;
-  }
-  // TODO: not used
-  if (is_heap_region2t(expr))
-  {
-    log_status("get value rec: is heap region");
-    expr2tc new_loc_object = expr;
-    insert(dest, new_loc_object, BigInt(0));
+    log_status("get value set rec: SLHV");
+    expr2tc new_object = expr;
+    insert(dest, new_object, BigInt(0));
     return;
   }
 
@@ -1191,7 +1181,6 @@ void value_sett::assign(
 
   // basic type
   object_mapt values_rhs;
-  log_status("get rhs value set");
   get_value_set(rhs, values_rhs);
   assign_rec(lhs, values_rhs, "", add_to_sets);
 }

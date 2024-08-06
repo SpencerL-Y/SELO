@@ -1203,7 +1203,6 @@ void dereferencet::build_reference_rec(
   }
 }
 
-
 void dereferencet::build_reference_slhv(
   expr2tc &value,
   const expr2tc &offset,
@@ -1216,6 +1215,7 @@ void dereferencet::build_reference_slhv(
   log_status("to type: ");
   type->dump();
   assert(is_pointer_with_region2t(value));
+  value->dump();
   int flags = 0;
   if(is_scalar_type(type)) {
     int byte_len = type->get_width()/8;
@@ -1224,19 +1224,18 @@ void dereferencet::build_reference_slhv(
     expr2tc heap = pwr.region;
     expr2tc loc_ptr = pwr.loc_ptr;
 
-    log_status("adjust heap pt_bytes and size");
+    // log_status("adjust heap pt_bytes and size");
     value_setst::valuest points_to_set;
     dereference_callback.get_value_set(pwr.region, points_to_set);
     for (expr2tc reg : points_to_set)
     {
       assert(is_object_descriptor2t(reg));
       object_descriptor2t& obj = to_object_descriptor2t(reg);
+      if (is_constant_intheap2t(obj.object)) continue;
       assert(is_heap_region2t(obj.object));to_heap_region2t(obj.object);
       if (to_heap_region2t(obj.object).update(byte_len))
         dereference_callback.update_regions(obj.object);
     }
-    log_status("done");
-
     value = heap_load2tc(type, heap, loc_ptr, byte_len);
   } else {
     log_error("ERROR: currently not support non-scalar type dereference");
