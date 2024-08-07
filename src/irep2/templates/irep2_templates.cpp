@@ -167,7 +167,7 @@ std::string points_to2t::field_names[esbmct::num_type_fields] =
 std::string locadd2t::field_names[esbmct::num_type_fields] = 
 {"baseaddr", "added_num", "", "", ""};
 std::string heap_region2t::field_names[esbmct::num_type_fields] = 
-{"start_loc", "pt_bytes", "size", "is_split", ""};
+{"flag", "start_loc", "pt_bytes", "size", "is_split"};
 std::string pointer_with_region2t::field_names[esbmct::num_type_fields] = 
 {"loc_ptr", "region", "", "", ""};
 std::string heap_load2t::field_names[esbmct::num_type_fields] = 

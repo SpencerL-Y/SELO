@@ -987,21 +987,26 @@ public:
   heap_region_data(
     const type2tc &t,
     datatype_ops::expr_ids id,
+    const expr2tc &flag,
     const expr2tc &start_loc,
     const expr2tc &pt_bytes,
     const expr2tc &size,
     bool is_split)
-    : expr2t(t, id), start_loc(start_loc), pt_bytes(pt_bytes), size(size), is_split(is_split)
+    : expr2t(t, id), flag(flag),
+      start_loc(start_loc), pt_bytes(pt_bytes), size(size), is_split(is_split)
   {
   }
   heap_region_data(const heap_region_data& ref) = default;
 
+  expr2tc flag;
   expr2tc start_loc;
   expr2tc pt_bytes;
   expr2tc size;
   bool is_split;
 
   // Type mangling:
+  typedef esbmct::field_traits<expr2tc, heap_region_data, &heap_region_data::flag>
+    heap_region_flag_field;
   typedef esbmct::field_traits<expr2tc, heap_region_data, &heap_region_data::start_loc>
     heap_region_start_loc_field;
   typedef esbmct::field_traits<expr2tc, heap_region_data, &heap_region_data::pt_bytes>
@@ -1011,6 +1016,7 @@ public:
   typedef esbmct::field_traits<bool, heap_region_data, &heap_region_data::is_split>
     heap_region_is_split_field;
   typedef esbmct::expr2t_traits<
+    heap_region_flag_field,
     heap_region_start_loc_field,
     heap_region_pt_bytes_field,
     heap_region_size_field,
@@ -3343,8 +3349,15 @@ public:
 class heap_region2t: public heap_region_expr_methods
 {
 public:
-  heap_region2t(const expr2tc &start_loc, const expr2tc &pt_bytes, const expr2tc &size, bool is_split)
-  : heap_region_expr_methods(get_intheap_type(), heap_region_id, start_loc, pt_bytes, size, is_split)
+  heap_region2t(
+    const expr2tc &flag,
+    const expr2tc &start_loc,
+    const expr2tc &pt_bytes,
+    const expr2tc &size,
+    bool is_split)
+  : heap_region_expr_methods(
+    get_intheap_type(), heap_region_id,
+    flag, start_loc, pt_bytes, size, is_split)
   {
   }
   heap_region2t(const heap_region2t &ref) = default;

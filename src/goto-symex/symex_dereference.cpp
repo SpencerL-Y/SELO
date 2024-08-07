@@ -166,30 +166,15 @@ bool symex_dereference_statet::is_live_variable(const expr2tc &symbol)
   return false;
 }
 
-void symex_dereference_statet::update_regions(const expr2tc &expr)
+void symex_dereference_statet::update_regions(const expr2tc &region)
 {
-  assert(is_heap_region2t(expr));
-  const heap_region2t& region = to_heap_region2t(expr);
+  assert(is_heap_region2t(region));
   
   // update value set
-  // log_status("update value set");
   value_sett& value_set = goto_symex.cur_state->value_set;
-  for (auto& value : value_set.values)
-  {
-    for (auto& obj : value.second.object_map)
-    {
-      if (!is_heap_region2t(value_set.object_numbering[obj.first])) continue;
-      heap_region2t& obj_reg =
-        to_heap_region2t(value_set.object_numbering[obj.first]);
-      // obj_reg.dump();
-      if (to_symbol2t(region.start_loc).get_symbol_name() ==
-          to_symbol2t(obj_reg.start_loc).get_symbol_name()) 
-      {
-        // log_status("found region to be updated");
-        value_set.object_numbering[obj.first] = expr;
-      }
-    }
-  }
+  unsigned int n = value_set.object_numbering.size();
+  for(unsigned int i = 0; i < n; i++)
+    update_heap_region_rec(value_set.object_numbering[i], region);
 
   // update eq system
   log_status("update eq system");
@@ -197,24 +182,42 @@ void symex_dereference_statet::update_regions(const expr2tc &expr)
     std::dynamic_pointer_cast<symex_target_equationt>(goto_symex.target);
   for(auto& ssa_step : eq->SSA_steps)
   {
-    if (!ssa_step.is_assignment()) continue;
-    if (!is_heap_region2t(ssa_step.rhs)) continue;
-    heap_region2t& obj_reg = to_heap_region2t(ssa_step.rhs);
+    update_heap_region_rec(ssa_step.guard, region);
+    update_heap_region_rec(ssa_step.rhs, region);
+    update_heap_region_rec(ssa_step.cond, region);
+  }
+}
 
-    // Symbols in SSA step are level2 symbol.
-    // Symbols in symex are level1 symbol.
-    expr2tc l1_rhs = ssa_step.rhs;
-    goto_symex.cur_state->level2.get_original_name(l1_rhs);
+void symex_dereference_statet::update_heap_region_rec(
+  expr2tc &expr,
+  const expr2tc &region)
+{
+  if (is_nil_expr(expr)) return;
 
-    if (to_symbol2t(region.start_loc).get_symbol_name() ==
-        to_symbol2t(to_heap_region2t(l1_rhs).start_loc).get_symbol_name()) 
+  if (is_heap_region2t(expr))
+  {
+    uint byte_len =
+      to_constant_int2t(
+        to_heap_region2t(region).pt_bytes)
+        .value.to_uint64();
+
+    expr2tc old_reg = expr;
+    goto_symex.cur_state->level2.get_original_name(old_reg);
+
+    if (to_symbol2t(to_heap_region2t(region).start_loc).get_symbol_name() ==
+        to_symbol2t(to_heap_region2t(old_reg).start_loc).get_symbol_name()) 
     {
-      uint byte_len = to_constant_int2t(region.pt_bytes).value.to_uint64();
-      if (!obj_reg.update(byte_len)) continue;
-      ssa_step.rhs = heap_region2tc(obj_reg);
-      ssa_step.cond = equality2tc(ssa_step.lhs, ssa_step.rhs);
-      ssa_step.cond->dump();
+      heap_region2t& reg = to_heap_region2t(expr);
+      reg.update(byte_len);
+      expr = heap_region2tc(reg);
     }
+  }
+  else
+  {
+    expr->Foreach_operand([this, &region](expr2tc& e){
+      if (!is_nil_expr(e))
+        update_heap_region_rec(e, region);
+    });
   }
 }
 

@@ -197,8 +197,8 @@ z3_slhv_convt::convert_slhv_opts(
     case expr2t::constant_intloc_id: return mk_nil();
     case expr2t::heap_region_id:
     {
-      log_status("couvert heap region");
-      assert(args.size() == 2);
+      log_status("convert heap region");
+      assert(args.size() == 4);
       const heap_region2t& region = to_heap_region2t(expr);
       region.dump();
       assert(is_constant_int2t(region.size));
@@ -206,7 +206,7 @@ z3_slhv_convt::convert_slhv_opts(
       
       std::vector<smt_astt> pt_vec;
       for (unsigned i = 0; i < n; i++) {
-        smt_astt loc = i == 0 ? args[0] : mk_locadd(args[0], mk_smt_int(BigInt(i)));
+        smt_astt loc = i == 0 ? args[1] : mk_locadd(args[1], mk_smt_int(BigInt(i)));
         smt_astt v = mk_fresh(mk_int_sort(), mk_fresh_name("tmp_val::"));
         pt_vec.push_back(mk_pt(loc, v));
       }
@@ -234,6 +234,7 @@ z3_slhv_convt::convert_slhv_opts(
     case expr2t::locadd_id:
     {
       assert(args.size() == 2);
+      log_status("here");
       return mk_locadd(args[0], args[1]);
     }
     case expr2t::heap_append_id:
@@ -307,11 +308,9 @@ z3_slhv_convt::convert_slhv_opts(
     case expr2t::same_object_id:
     {
       // TODO: fix same object
-      return mk_smt_bool(true);
       const same_object2t& same = to_same_object2t(expr);
-      assert(is_pointer_with_region2t(same.side_2));
-      const pointer_with_region2t& pwr = to_pointer_with_region2t(same.side_2);
-      const heap_region2t& heap_region = to_heap_region2t(pwr.region);
+      assert(is_heap_region2t(same.side_2));
+      const heap_region2t& heap_region = to_heap_region2t(same.side_2);
       assert(is_constant_int2t(heap_region.size));
       smt_astt start_loc = convert_ast(heap_region.start_loc);
       smt_astt size = convert_ast(heap_region.size);

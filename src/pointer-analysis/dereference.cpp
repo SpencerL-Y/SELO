@@ -161,7 +161,6 @@ void dereferencet::dereference_expr(expr2tc &expr, guardt &guard, modet mode)
   case expr2t::address_of_id:
     dereference_addrof_expr(expr, guard, mode);
     break;
-
   case expr2t::dereference_id:
   {
     log_status("dereference expr: dereference id");
@@ -290,6 +289,8 @@ void dereferencet::dereference_addrof_expr(
   // turn &*p to p
   // this has *no* side effect!
   address_of2t &addrof = to_address_of2t(expr);
+
+  if (is_heap_region2t(addrof.ptr_obj)) return;
 
   if (is_dereference2t(addrof.ptr_obj))
   {
@@ -464,6 +465,9 @@ expr2tc dereferencet::dereference(
   modet mode,
   const expr2tc &lexical_offset)
 {
+  log_status("dereferencing pointer ---------");
+  orig_src->dump();
+
   internal_items.clear();
 
   // Awkwardly, the pointer might not be of pointer type, for example with
@@ -472,7 +476,7 @@ expr2tc dereferencet::dereference(
   // cope with the fact that this expression doesn't point at anything. Of
   // course, if it does point at something, dereferencing continues.
   expr2tc src = orig_src;
-  if (!is_pointer_type(orig_src))
+  if (!is_pointer_type(orig_src) && !is_intloc_type(orig_src))
     src = typecast2tc(pointer_type2tc(get_empty_type()), src);
 
   type2tc type = ns.follow(to_type);
@@ -482,9 +486,9 @@ expr2tc dereferencet::dereference(
   // collect objects dest may point to
   value_setst::valuest points_to_set;
 
-  dereference_callback.get_value_set(src, points_to_set);
   log_status("---- value set for ");
   src->dump();
+  dereference_callback.get_value_set(src, points_to_set);
   log_status("---- value set: {} items", points_to_set.size());
   for(expr2tc e : points_to_set) {
     e->dump();
@@ -797,6 +801,7 @@ expr2tc dereferencet::build_reference_to(
 
     log_status("befor building pointer guard");
     object->dump();
+    deref_expr->dump();
 
     pointer_guard = same_object2tc(deref_expr, object);
     guardt tmp_guard(guard);
@@ -805,6 +810,8 @@ expr2tc dereferencet::build_reference_to(
     // Check that the object we're accessing is actually alive and valid for this
     // mode.
     valid_check(object, tmp_guard, mode);
+
+    log_status("finish checking");
 
     // Don't do anything further if we're freeing things
     if (is_free(mode))
@@ -882,9 +889,9 @@ expr2tc dereferencet::build_reference_to(
     {
       bounds_check(value, final_offset, type, tmp_guard);
     }
-    else if (is_pointer_with_region2t(value)) 
+    else if (is_heap_region2t(value)) 
     {
-      check_pointer_with_region_access(value, final_offset, type, tmp_guard, mode);
+      check_heap_region_access(value, final_offset, type, tmp_guard, mode);
     }
     else
     {
@@ -1209,34 +1216,39 @@ void dereferencet::build_reference_slhv(
   const type2tc &type,
   const guardt &guard,
   modet mode,
-  unsigned long alignment
-) {
+  unsigned long alignment)
+{
   log_status("build reference slhv");
-  log_status("to type: ");
-  type->dump();
-  assert(is_pointer_with_region2t(value));
-  value->dump();
-  int flags = 0;
+  assert(is_heap_region2t(value));
   if(is_scalar_type(type)) {
-    int byte_len = type->get_width()/8;
-    assert(byte_len > 0);
-    pointer_with_region2t& pwr = to_pointer_with_region2t(value);
-    expr2tc heap = pwr.region;
-    expr2tc loc_ptr = pwr.loc_ptr;
+    if (!is_constant_int2t(offset)) offset.simplify();
+    assert(is_constant_int2t(offset));
+    int offset_bytes = to_constant_int2t(offset).value.to_uint64();
 
-    // log_status("adjust heap pt_bytes and size");
-    value_setst::valuest points_to_set;
-    dereference_callback.get_value_set(pwr.region, points_to_set);
-    for (expr2tc reg : points_to_set)
-    {
-      assert(is_object_descriptor2t(reg));
-      object_descriptor2t& obj = to_object_descriptor2t(reg);
-      if (is_constant_intheap2t(obj.object)) continue;
-      assert(is_heap_region2t(obj.object));to_heap_region2t(obj.object);
-      if (to_heap_region2t(obj.object).update(byte_len))
-        dereference_callback.update_regions(obj.object);
+    heap_region2t& heap_region = to_heap_region2t(value);
+    expr2tc heap = heap_region.flag;
+
+    int access_sz = type->get_width() / 8;
+    assert(access_sz > 0);
+    // Update its pt bytes
+    if (heap_region.update(access_sz))
+      dereference_callback.update_regions(value);
+    
+    expr2tc access_ptr;
+    if (offset_bytes == 0)
+      access_ptr = heap_region.start_loc;
+    else
+    { 
+      int offset_pt = offset_bytes / 8;
+      assert(offset_pt % access_sz == 0);
+      offset_pt /= access_sz;
+      access_ptr = locadd2tc(
+        heap_region.start_loc,
+        gen_long(get_int64_type(), offset_pt)
+      );
     }
-    value = heap_load2tc(type, heap, loc_ptr, byte_len);
+
+    value = heap_load2tc(type, heap, access_ptr, access_sz);
   } else {
     log_error("ERROR: currently not support non-scalar type dereference");
     abort();
@@ -2300,16 +2312,14 @@ void dereferencet::valid_check(
         return;
       }
     }
-  } else if(is_pointer_with_region2t(symbol)) {
-    // slhv
-    log_status("pointer with region dereference failure here");
-    // assert that the pointer we dereference with a specific length lies in the heap variable
-      // TODO: maybe add a special expression type to denote that the pointer_with_region is not valid
-    expr2tc not_valid_pointer_with_region = not2tc(valid_object2tc(symbol));
+  }
+  else if(is_heap_region2t(symbol))
+  {
+    expr2tc not_valid_heap_region = not2tc(valid_object2tc(symbol));
     log_status("not valid print:");
-    not_valid_pointer_with_region->dump();
+    not_valid_heap_region->dump();
     guardt tmp_guard(guard);
-    tmp_guard.add(not_valid_pointer_with_region);
+    tmp_guard.add(not_valid_heap_region);
     std::string foo = is_free(mode) ?  "invalid free pointer"
                                       : "invalid dereference pointer";
     dereference_failure("pointer dereference", foo, tmp_guard);
@@ -2580,26 +2590,46 @@ void dereferencet::check_data_obj_access(
   log_status("check data obj access over");
 }
 
-void dereferencet::check_pointer_with_region_access(
+void dereferencet::check_heap_region_access(
   const expr2tc &value,
   const expr2tc &offset,
   const type2tc &type,
   const guardt &guard,
-  modet mode) {
-    log_status("check pointer with region access");
-    assert(is_pointer_with_region2t(value));
-    const pointer_with_region2t& pointer_reg = to_pointer_with_region2t(value);
-    expr2tc region = pointer_reg.region;
-    expr2tc pointer_loc = pointer_reg.loc_ptr;
-    unsigned int byte_len = type->get_width()/8;
-    expr2tc bound_check = heap_contains2tc(region, pointer_loc, byte_len);
-    if(!options.get_bool_option("no-bounds-check")) {
-      guardt tmp_guard = guard;
-      tmp_guard.add(bound_check);
-      dereference_failure("pointer dereference", "Access of heap out of region", tmp_guard);
-    }
-    // TODO: maybe add alignment check
-    log_status("check pointer with region access over");
+  modet mode)
+{
+  // This check is in byte-level;
+  log_status("check heap region access");
+  assert(is_heap_region2t(value));
+  const heap_region2t& heap_region = to_heap_region2t(value);
+  unsigned int total_bytes =
+    to_constant_int2t(heap_region.pt_bytes).value.to_uint64() *
+    to_constant_int2t(heap_region.size).value.to_uint64();
+  BigInt data_sz(total_bytes);
+  BigInt access_sz(type->get_width() / 8);
+
+  // offset / 8
+  if (!is_constant_int2t(offset)) offset.simplify();
+  assert(is_constant_int2t(offset));
+  BigInt offset_sz(to_constant_int2t(offset).value.to_int64() / 8);
+
+  expr2tc data_sz_e = gen_long(offset->type, data_sz);
+  expr2tc access_sz_e = gen_long(offset->type, access_sz);
+  expr2tc offset_in_byte = gen_long(offset->type, offset_sz);
+
+  expr2tc add = add2tc(access_sz_e->type, offset_in_byte, access_sz_e);
+  expr2tc gt = greaterthan2tc(add, data_sz_e);
+  expr2tc bound_check = gt;
+  if(!options.get_bool_option("no-bounds-check"))
+  {
+    guardt tmp_guard = guard;
+    tmp_guard.add(bound_check);
+    dereference_failure(
+      "pointer dereference",
+      "Access of heap out of region",
+      tmp_guard
+    );
+  }
+  // TODO: maybe add alignment check
 }
 
 void dereferencet::check_alignment(

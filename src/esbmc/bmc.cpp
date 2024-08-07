@@ -647,7 +647,7 @@ smt_convt::resultt bmct::run_thread(std::shared_ptr<symex_target_equationt> &eq)
     {
       runtime_solver =
         std::unique_ptr<smt_convt>(create_solver("", ns, options));
-      // show_vcc(*eq);
+      show_vcc(*eq);
       // log_status("smt_convt created");
       // if (options.get_bool_option("z3-slhv")) {
       //   show_vcc(*eq);

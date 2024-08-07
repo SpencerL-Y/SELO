@@ -562,11 +562,22 @@ void value_sett::get_value_set_rec(
   }
   // SLHV:
   if (is_constant_intloc2t(expr) || is_constant_intheap2t(expr) ||
-      is_pointer_with_region2t(expr) || is_heap_region2t(expr))
+      is_heap_region2t(expr))
   {
     log_status("get value set rec: SLHV");
     expr2tc new_object = expr;
     insert(dest, new_object, BigInt(0));
+    return;
+  }
+
+  if (is_pointer_with_region2t(expr))
+  {
+    get_value_set_rec(
+      to_pointer_with_region2t(expr).region,
+      dest,
+      suffix,
+      original_type
+    );
     return;
   }
 
@@ -804,7 +815,8 @@ void value_sett::get_reference_set_rec(const expr2tc &expr, object_mapt &dest)
 {
   if (
     is_symbol2t(expr) || is_dynamic_object2t(expr) ||
-    is_constant_string2t(expr) || is_constant_array2t(expr))
+    is_constant_string2t(expr) || is_constant_array2t(expr)
+    || is_heap_region2t(expr))
   {
     // Any symbol we refer to, store into the destination object map.
     // Given that this is a simple symbol, we can be sure that the offset to
@@ -1182,6 +1194,11 @@ void value_sett::assign(
   // basic type
   object_mapt values_rhs;
   get_value_set(rhs, values_rhs);
+  log_status("get values rhs");
+  for(auto& p : values_rhs)
+  {
+    object_numbering[p.first]->dump();
+  }
   assign_rec(lhs, values_rhs, "", add_to_sets);
 }
 

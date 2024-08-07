@@ -187,9 +187,6 @@ void goto_symext::symex_assign(
   replace_nondet(lhs);
   replace_nondet(rhs);
 
-  lhs->dump();
-  rhs->dump();
-
   intrinsic_races_check_dereference(lhs);
   log_status("dereference lhs write");
   dereference(lhs, dereferencet::WRITE);

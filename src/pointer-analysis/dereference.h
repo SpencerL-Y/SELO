@@ -156,7 +156,13 @@ public:
   /** Update regionss in value set and in eq system
    * @param region 
    */
-  virtual void update_regions(const expr2tc &expr)
+  virtual void update_regions(const expr2tc &region)
+  {
+    log_error("Do not support");
+    abort();
+  }
+
+  virtual void update_heap_region_rec(expr2tc &expr, const expr2tc &region)
   {
     log_error("Do not support");
     abort();
@@ -447,7 +453,7 @@ private:
     const type2tc &type,
     const guardt &guard,
     modet mode);
-  void check_pointer_with_region_access(
+  void check_heap_region_access(
     const expr2tc &value,
     const expr2tc &offset,
     const type2tc &type,

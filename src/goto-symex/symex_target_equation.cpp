@@ -140,6 +140,7 @@ void symex_target_equationt::convert(smt_convt &smt_conv)
   log_status("============= begin converting ssa steps");
   for (auto &SSA_step : SSA_steps)
     convert_internal_step(smt_conv, assumpt_ast, assertions, SSA_step);
+  log_status("convert internal step done");
 
   if (!assertions.empty())
     smt_conv.assert_ast(smt_conv.make_n_ary_or(assertions));

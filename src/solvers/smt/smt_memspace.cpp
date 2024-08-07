@@ -539,6 +539,12 @@ smt_astt smt_convt::convert_addr_of(const expr2tc &expr)
     return convert_ast(tmp);
   }
 
+  if (is_heap_region2t(obj.ptr_obj))
+  {
+    convert_ast(obj.ptr_obj);
+    return convert_ast(to_heap_region2t(obj.ptr_obj).start_loc);
+  }
+
   log_error("Unrecognized address_of operand:\n{}", *expr);
   abort();
 }

@@ -964,7 +964,8 @@ protected:
   dump_internal_state(const std::list<struct internal_item> &data) override;
   bool is_live_variable(const expr2tc &sym) override;
 
-  void update_regions(const expr2tc &expr) override;
+  void update_regions(const expr2tc &region) override;
+  void update_heap_region_rec(expr2tc &expr, const expr2tc &region) override;
 };
 
 #endif

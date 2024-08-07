@@ -293,41 +293,38 @@ expr2tc goto_symext::symex_mem(
     new_context.add(symbol);
 
     assert(is_symbol2t(lhs));
-    expr2tc allocated_heap = symbol2tc(get_intheap_type(), symbol.id);
-    guardt alloc_guard = cur_state->guard;
-    expr2tc alloc_base_addr = new_lhs;
-    expr2tc origin_base_addr(alloc_base_addr);
-    cur_state->rename(alloc_base_addr);
+    expr2tc rhs_heap = symbol2tc(get_intheap_type(), symbol.id);
+    guardt rhs_guard = cur_state->guard;
 
-    expr2tc region = 
+    unsigned int &nondet_counter = get_nondet_counter();
+    nondet_counter++;
+    std::string rhs_base_id =
+      "symex_dynamic::heap_region_base::nondet" + std::to_string(nondet_counter);
+    expr2tc rhs_base_addr = symbol2tc(get_intloc_type(), rhs_base_id);
+
+    expr2tc rhs_heap_region_flag = symbol2tc(get_intheap_type(), symbol.id);
+    expr2tc rhs_region = 
       heap_region2tc(
-        origin_base_addr,
+        rhs_heap_region_flag,
+        rhs_base_addr,
         region_pt_bytes,
         region_size,
-        size != 1  
+        size != 1 
       );
 
     log_status("symex assign in symex_mem: allocated_heap = heaplet");
-    symex_assign(code_assign2tc(allocated_heap, region));
+    symex_assign(code_assign2tc(rhs_heap, rhs_region));
 
     log_status("create valueset base addr symbol and assign");
-    expr2tc base_value_symbol =
-      symbol2tc(get_intloc_type(), to_symbol2t(origin_base_addr).get_symbol_name());
-    expr2tc base_pointer_region_object = 
-      pointer_with_region2tc(base_value_symbol, allocated_heap);
-    symex_assign(
-      code_assign2tc(
-        origin_base_addr,
-        typecast2tc(origin_base_addr->type, base_pointer_region_object)
-      )
-    );
+    expr2tc pwr = pointer_with_region2tc(rhs_base_addr, rhs_heap);
+    symex_assign(code_assign2tc(lhs, pwr));
 
     // TODO: modify the pointer object here, maybe to wrap the intloc symbol directly
-    expr2tc ptr_obj = pointer_object2tc(get_intloc_type(), alloc_base_addr);
+    expr2tc ptr_obj = pointer_object2tc(get_intloc_type(), pwr);
     track_new_pointer(ptr_obj, get_intheap_type(), region_size);
     dynamic_memory.emplace_back(
-      allocated_heap,
-      alloc_guard,
+      rhs_heap,
+      rhs_guard,
       !is_malloc,
       symbol.name.as_string()
     );
@@ -466,14 +463,18 @@ void goto_symext::symex_free(const expr2tc &expr)
   } else {
     expr2tc freed_pointer;
     expr2tc freed_heap;
-    for(auto const& item : internal_deref_items) {
-      const pointer_with_region2t& pwr = to_pointer_with_region2t(item.object);
+    for(auto const& item : internal_deref_items)
+    {
+      assert(is_heap_region2t(item.object));
+      const heap_region2t& heap_region = to_heap_region2t(item.object);
       if(is_nil_expr(freed_pointer)) {
-        freed_pointer = pwr.loc_ptr;
-        freed_heap = pwr.region;
+        freed_pointer = heap_region.start_loc;
+        freed_heap = heap_region.flag; 
       } else {
-        freed_pointer = if2tc(freed_pointer->type, item.guard, pwr.loc_ptr, freed_pointer);
-        freed_heap = if2tc(get_intheap_type(), item.guard, pwr.region, freed_heap);
+        freed_pointer =
+          if2tc(freed_pointer->type, item.guard, heap_region.start_loc, freed_pointer);
+        freed_heap = 
+          if2tc(get_intheap_type(), item.guard, heap_region.flag, freed_heap);
       }
 
       expr2tc emp_heap = constant_intheap2tc(get_intheap_type(), true);
@@ -484,6 +485,8 @@ void goto_symext::symex_free(const expr2tc &expr)
       symex_assign(code_assign2tc(alloc_size_heap_symbol, heap_deleted));
     }
   }
+
+  log_status("xxxxxxx symex free done");
 }
 
 void goto_symext::symex_printf(const expr2tc &lhs, expr2tc &rhs)
