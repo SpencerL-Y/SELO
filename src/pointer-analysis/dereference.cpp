@@ -1248,9 +1248,9 @@ void dereferencet::build_reference_slhv(
       );
     }
     
-    std::string flag_id = std::string("symex_dynamic::nondet_") +
-      ((is_pointer_type(type) || is_intloc_type(type)) ? "loc_" : "val_") +
-      i2string(dereference_callback.get_new_nondet_id());
+    std::string flag_id =
+      std::string("nondet_loaded::") + 
+        dereference_callback.get_loaded_value_flag(access_ptr);
     expr2tc flag = symbol2tc(type, flag_id);
 
     value = heap_load2tc(type, flag, heap, access_ptr, access_sz);

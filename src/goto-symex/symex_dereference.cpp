@@ -221,10 +221,25 @@ void symex_dereference_statet::update_heap_region_rec(
   }
 }
 
-unsigned int symex_dereference_statet::get_new_nondet_id()
+std::string symex_dereference_statet::get_loaded_value_flag(const expr2tc &expr)
 {
-  return ++goto_symex.get_nondet_counter();
+  if (is_symbol2t(expr))
+    return to_symbol2t(expr).get_symbol_name();
+  else if (is_constant_int2t(expr))
+    return std::to_string(to_constant_int2t(expr).value.to_int64());
+  else if (is_locadd2t(expr))
+  {
+    const locadd2t &locadd = to_locadd2t(expr);
+    return get_loaded_value_flag(locadd.base_addr) +
+      get_loaded_value_flag(locadd.added_num);
+  }
+  else
+  {
+    log_error("Do not support");
+    abort();
+  }
 }
+
 
 void goto_symext::dereference(expr2tc &expr, dereferencet::modet mode)
 {

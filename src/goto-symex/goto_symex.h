@@ -546,7 +546,6 @@ protected:
    *  @param type Assignment type, visible by default
    *  @param kind The step kind, by default is plain BMC
    *  @param guard A guard for the assignment, true by default
-   *  @param is_replace_heap_load Replace heap_load by its flag
    */
   virtual void symex_assign(
     const expr2tc &code,
@@ -758,13 +757,13 @@ protected:
    *  @param rhs Value to assign to lhs
    *  @param guard Assignment guard.
    */
-  // void symex_assign_heap_laod(
-  //   const expr2tc &lhs,
-  //   const expr2tc &full_lhs,
-  //   expr2tc &rhs,
-  //   expr2tc &full_rhs,
-  //   guardt &guard,
-  //   const bool hidden);
+  void symex_assign_heap_laod(
+    const expr2tc &lhs,
+    const expr2tc &full_lhs,
+    expr2tc &rhs,
+    expr2tc &full_rhs,
+    guardt &guard,
+    const bool hidden);
 
   /** Symbolic implementation of malloc. */
   expr2tc symex_malloc(const expr2tc &lhs, const sideeffect2t &code);
@@ -800,12 +799,6 @@ protected:
    *  @param expr Expr to search for nondet symbols.
    */
   void replace_nondet(expr2tc &expr);
-
-  /**
-   *  Replace heap_load with a new pointer
-   *  @param expr Expr to search for heap_load.
-   */
-  void replace_heap_load(expr2tc &expr);
 
   /**
    *  Fetch reference to global dynamic object counter.
@@ -967,7 +960,7 @@ protected:
 
   void update_regions(const expr2tc &region) override;
   void update_heap_region_rec(expr2tc &expr, const expr2tc &region) override;
-  unsigned int get_new_nondet_id() override;
+  std::string get_loaded_value_flag(const expr2tc &expr) override;
 };
 
 #endif

@@ -168,7 +168,7 @@ public:
     abort();
   }
 
-  virtual unsigned int get_new_nondet_id()
+  virtual std::string get_loaded_value_flag(const expr2tc &expr)
   {
     log_error("Do not support");
     abort();

@@ -198,9 +198,9 @@ void goto_symext::symex_assign(
   replace_dynamic_allocation(rhs);
   log_status("replace done");
 
-  log_status("replace heap_load");
-  replace_heap_load(lhs);
-  replace_heap_load(rhs);
+  log_status("after deref and replace : =-====");
+  lhs->dump();
+  rhs->dump();
 
   // printf expression that has lhs
   if (is_code_printf2t(rhs))
@@ -258,7 +258,9 @@ void goto_symext::symex_assign(
     }
   }
 
-  log_status("before symex assign rec");
+  log_status("before symex assign rec : =-====");
+  lhs->dump();
+  rhs->dump();
 
   guardt g(guard); // NOT the state guard!
   symex_assign_rec(lhs, original_lhs, rhs, expr2tc(), g, hidden_ssa);
@@ -331,7 +333,7 @@ void goto_symext::symex_assign_rec(
   else if (is_heap_load2t(lhs))
   {
     log_status("symex_assign_heap_load");
-    // symex_assign_heap_laod(lhs, full_lhs, rhs, full_rhs, guard, hidden);
+    symex_assign_heap_laod(lhs, full_lhs, rhs, full_rhs, guard, hidden);
   }
   else if (is_heap_region2t(lhs))
   {
@@ -871,28 +873,28 @@ void goto_symext::symex_assign_bitfield(
   return symex_assign_rec(val, full_lhs, new_rhs, full_rhs, guard, hidden);
 }
 
-// void goto_symext::symex_assign_heap_laod(
-//   const expr2tc &lhs,
-//   const expr2tc &full_lhs,
-//   expr2tc &rhs,
-//   expr2tc &full_rhs,
-//   guardt &guard,
-//   const bool hidden)
-// {
-//   assert(is_scalar_type(rhs));
+void goto_symext::symex_assign_heap_laod(
+  const expr2tc &lhs,
+  const expr2tc &full_lhs,
+  expr2tc &rhs,
+  expr2tc &full_rhs,
+  guardt &guard,
+  const bool hidden)
+{
+  assert(is_scalar_type(rhs));
 
-//   const heap_load2t& heap_load = to_heap_load2t(lhs);
-//   assert(heap_load.byte_len * 8 == rhs->type->get_width());
+  const heap_load2t& heap_load = to_heap_load2t(lhs);
+  // assert(heap_load.byte_len * 8 == rhs->type->get_width());
 
-//   // Pin one set of rhs version numbers: if we assign part of a value to itself,
-//   // it'll change during the assignment
-//   cur_state->rename(rhs); // shall we?
+  // Pin one set of rhs version numbers: if we assign part of a value to itself,
+  // it'll change during the assignment
+  cur_state->rename(rhs); // shall we?
 
-//   expr2tc ptr_obj = pointer_object2tc(get_intloc_type(), heap_load.start_loc);
-//   expr2tc updated_heap = heap_update2tc(heap_load.heap, ptr_obj, rhs, heap_load.byte_len);
+  expr2tc ptr_obj = pointer_object2tc(get_intloc_type(), heap_load.start_loc);
+  expr2tc updated_heap = heap_update2tc(heap_load.heap, ptr_obj, rhs, heap_load.byte_len);
 
-//   symex_assign(code_assign2tc(heap_load.heap, updated_heap), true);
-// }
+  symex_assign(code_assign2tc(heap_load.heap, updated_heap), true);
+}
 
 void goto_symext::replace_nondet(expr2tc &expr)
 {
@@ -908,26 +910,6 @@ void goto_symext::replace_nondet(expr2tc &expr)
     expr->Foreach_operand([this](expr2tc &e) {
       if (!is_nil_expr(e))
         replace_nondet(e);
-    });
-  }
-}
-
-
-void goto_symext::replace_heap_load(expr2tc &expr)
-{
-  if (is_heap_load2t(expr))
-  {
-    heap_load2t& heap_load = to_heap_load2t(expr);
-    // symex_assign(code_assign2tc(heap_load.flag, expr), false, guardt(), false);
-    guardt g;
-    symex_assign_rec(heap_load.flag, heap_load.flag, expr, expr, g, false);
-    expr = heap_load.flag;
-  }
-  else
-  {
-    expr->Foreach_operand([this](expr2tc &e) {
-      if (!is_nil_expr(e))
-        replace_heap_load(e);
     });
   }
 }
