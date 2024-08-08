@@ -1066,22 +1066,32 @@ public:
   heap_load_data(
     const type2tc &t,
     datatype_ops::expr_ids id,
-    expr2tc h,
-    expr2tc start_addr,
+    const expr2tc &flag,
+    const expr2tc &heap,
+    const expr2tc &start_loc,
     unsigned int byte_len)
-    : expr2t(t, id), heap(h), start_addr(start_addr), byte_len(byte_len)
+    : expr2t(t, id), flag(flag), heap(heap), start_loc(start_loc), byte_len(byte_len)
   {
   }
 
+  expr2tc flag;
   expr2tc heap;
-  expr2tc start_addr;
+  expr2tc start_loc;
   unsigned int byte_len;
 
-
-  typedef esbmct::field_traits<expr2tc, heap_load_data, &heap_load_data::heap> heap_load_data_heap_field;
-  typedef esbmct::field_traits<expr2tc, heap_load_data, &heap_load_data::start_addr> heap_load_data_start_addr_field;
-  typedef esbmct::field_traits<unsigned int, heap_load_data, &heap_load_data::byte_len> heap_load_data_byte_len_field;
-  typedef esbmct::expr2t_traits<heap_load_data_heap_field, heap_load_data_start_addr_field, heap_load_data_byte_len_field> traits;
+  typedef esbmct::field_traits<expr2tc, heap_load_data, &heap_load_data::flag>
+    heap_load_data_flag_field;
+  typedef esbmct::field_traits<expr2tc, heap_load_data, &heap_load_data::heap>
+    heap_load_data_heap_field;
+  typedef esbmct::field_traits<expr2tc, heap_load_data, &heap_load_data::start_loc>
+    heap_load_data_start_loc_field;
+  typedef esbmct::field_traits<unsigned int, heap_load_data, &heap_load_data::byte_len>
+    heap_load_data_byte_len_field;
+  typedef esbmct::expr2t_traits<
+    heap_load_data_flag_field,
+    heap_load_data_heap_field,
+    heap_load_data_start_loc_field,
+    heap_load_data_byte_len_field> traits;
 
 };
 
@@ -3381,8 +3391,15 @@ public:
 class heap_load2t : public heap_load_expr_methods
 {
 public:
-  heap_load2t(const type2tc & type, expr2tc heap, expr2tc start_addr, unsigned int byte_len)
-  : heap_load_expr_methods(type, expr2t::heap_load_id, heap, start_addr, byte_len)
+  heap_load2t(
+    const type2tc &type, 
+    const expr2tc &flag,
+    const expr2tc &heap,
+    const expr2tc &start_loc,
+    unsigned int byte_len)
+  : heap_load_expr_methods(
+    type, expr2t::heap_load_id,
+    flag, heap, start_loc, byte_len)
   {
   }
   heap_load2t(const heap_load2t& ref) = default;

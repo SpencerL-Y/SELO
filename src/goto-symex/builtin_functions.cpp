@@ -114,14 +114,7 @@ expr2tc goto_symext::symex_mem(
   lhs->dump();
   code.dump();
 
-  expr2tc new_lhs = lhs;
-  if (is_heap_load2t(lhs))
-  {
-    assert(is_pointer_type(new_lhs->type));
-    replace_heap_load(new_lhs);
-  }
-
-  if (is_nil_expr(new_lhs))
+  if (is_nil_expr(lhs))
     return expr2tc(); // ignore
 
   // size
@@ -296,10 +289,7 @@ expr2tc goto_symext::symex_mem(
     expr2tc rhs_heap = symbol2tc(get_intheap_type(), symbol.id);
     guardt rhs_guard = cur_state->guard;
 
-    unsigned int &nondet_counter = get_nondet_counter();
-    nondet_counter++;
-    std::string rhs_base_id =
-      "symex_dynamic::heap_region_base::nondet" + std::to_string(nondet_counter);
+    std::string rhs_base_id = to_symbol2t(lhs).get_symbol_name();
     expr2tc rhs_base_addr = symbol2tc(get_intloc_type(), rhs_base_id);
 
     expr2tc rhs_heap_region_flag = symbol2tc(get_intheap_type(), symbol.id);

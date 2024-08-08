@@ -1247,8 +1247,13 @@ void dereferencet::build_reference_slhv(
         gen_long(get_int64_type(), offset_pt)
       );
     }
+    
+    std::string flag_id = std::string("symex_dynamic::nondet_") +
+      ((is_pointer_type(type) || is_intloc_type(type)) ? "loc_" : "val_") +
+      i2string(dereference_callback.get_new_nondet_id());
+    expr2tc flag = symbol2tc(type, flag_id);
 
-    value = heap_load2tc(type, heap, access_ptr, access_sz);
+    value = heap_load2tc(type, flag, heap, access_ptr, access_sz);
   } else {
     log_error("ERROR: currently not support non-scalar type dereference");
     abort();

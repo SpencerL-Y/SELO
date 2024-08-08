@@ -167,6 +167,12 @@ public:
     log_error("Do not support");
     abort();
   }
+
+  virtual unsigned int get_new_nondet_id()
+  {
+    log_error("Do not support");
+    abort();
+  }
 };
 
 /** Class containing expression dereference logic.

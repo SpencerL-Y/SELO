@@ -2632,7 +2632,9 @@ exprt migrate_expr_back(const expr2tc &ref)
     const heap_region2t &ref2 = to_heap_region2t(ref);
     typet thetype = migrate_type_back(ref->type);
     exprt region("heap_region", thetype);
+    region.copy_to_operands(migrate_expr_back(ref2.flag));
     region.copy_to_operands(migrate_expr_back(ref2.start_loc));
+    region.copy_to_operands(migrate_expr_back(ref2.pt_bytes));
     region.copy_to_operands(migrate_expr_back(ref2.size));
     return region;
   }
@@ -2650,8 +2652,9 @@ exprt migrate_expr_back(const expr2tc &ref)
     const heap_load2t& ref2 = to_heap_load2t(ref);
     typet thetype = migrate_type_back(ref->type);
     exprt heap_load("heap_load", thetype);
+    heap_load.copy_to_operands(migrate_expr_back(ref2.flag));
     heap_load.copy_to_operands(migrate_expr_back(ref2.heap));
-    heap_load.copy_to_operands(migrate_expr_back(ref2.start_addr));
+    heap_load.copy_to_operands(migrate_expr_back(ref2.start_loc));
     heap_load.set("byte_len", irep_idt(std::to_string(ref2.byte_len)));
     return heap_load;
   }

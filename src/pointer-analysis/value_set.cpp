@@ -214,6 +214,7 @@ void value_sett::get_value_set_rec(
 {
   log_status("get value set rec for: ");
   expr->dump();
+
   if (is_unknown2t(expr) || is_invalid2t(expr))
   {
     log_status("is unknown expr or invalid expr");
@@ -562,7 +563,7 @@ void value_sett::get_value_set_rec(
   }
   // SLHV:
   if (is_constant_intloc2t(expr) || is_constant_intheap2t(expr) ||
-      is_heap_region2t(expr))
+      is_heap_region2t(expr) || is_heap_update2t(expr) || is_heap_append2t(expr))
   {
     log_status("get value set rec: SLHV");
     expr2tc new_object = expr;
@@ -570,13 +571,28 @@ void value_sett::get_value_set_rec(
     return;
   }
 
+  if (is_locadd2t(expr))
+  {
+    const locadd2t& locadd = to_locadd2t(expr);
+    assert(is_intloc_type(locadd.base_addr));
+    abort();
+    // TODO
+  }
+
   if (is_pointer_with_region2t(expr))
   {
     get_value_set_rec(
       to_pointer_with_region2t(expr).region,
-      dest,
-      suffix,
-      original_type
+      dest, suffix, original_type
+    );
+    return;
+  }
+
+  if (is_heap_load2t(expr))
+  {
+    get_value_set_rec(
+      to_heap_load2t(expr).flag,
+      dest, suffix, original_type
     );
     return;
   }

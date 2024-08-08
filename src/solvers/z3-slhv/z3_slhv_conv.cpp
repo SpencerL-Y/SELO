@@ -269,16 +269,9 @@ z3_slhv_convt::convert_slhv_opts(
       const heap_load2t& heap_load = to_heap_load2t(expr);
       // TODO : fix width
       // assert(heap_load.byte_len == 4);
-      smt_sortt sort;
-      if (is_pointer_type(heap_load.type))
-        sort = mk_intloc_sort();
-      else
-        sort = mk_int_sort();
-
-      smt_astt v1 = mk_fresh(sort, mk_fresh_name("tmp_val::"));
       //current heap state
-      assert_ast(mk_subh(mk_pt(args[1], v1), args[0]));
-      return v1;
+      assert_ast(mk_subh(mk_pt(args[2], args[0]), args[1]));
+      return args[0];
     }
     case expr2t::heap_contains_id:
     {
@@ -309,20 +302,24 @@ z3_slhv_convt::convert_slhv_opts(
     {
       // TODO: fix same object
       const same_object2t& same = to_same_object2t(expr);
-      assert(is_heap_region2t(same.side_2));
-      const heap_region2t& heap_region = to_heap_region2t(same.side_2);
-      assert(is_constant_int2t(heap_region.size));
-      smt_astt start_loc = convert_ast(heap_region.start_loc);
-      smt_astt size = convert_ast(heap_region.size);
-      smt_astt nondet_offset = mk_fresh(mk_int_sort(), mk_fresh_name("tmp_val::")); 
-      return 
-        mk_and(
-          mk_eq(args[0], mk_locadd(start_loc, nondet_offset)),
+      if (is_heap_region2t(same.side_2))
+      {
+        const heap_region2t& heap_region = to_heap_region2t(same.side_2);
+        assert(is_constant_int2t(heap_region.size));
+        smt_astt start_loc = convert_ast(heap_region.start_loc);
+        smt_astt size = convert_ast(heap_region.size);
+        smt_astt nondet_offset = mk_fresh(mk_int_sort(), mk_fresh_name("tmp_val::")); 
+        return 
           mk_and(
-            mk_le(mk_smt_int(BigInt(0)), nondet_offset),
-            mk_lt(nondet_offset, size)
-          )
-        );
+            mk_eq(args[0], mk_locadd(start_loc, nondet_offset)),
+            mk_and(
+              mk_le(mk_smt_int(BigInt(0)), nondet_offset),
+              mk_lt(nondet_offset, size)
+            )
+          );
+      }
+      else if (is_heap_load2t(same.side_2))
+        return mk_eq(args[0], args[1]);
     }
     default: {
       log_status("Invalid SLHV operations!!!");

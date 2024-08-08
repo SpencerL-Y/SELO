@@ -11,9 +11,16 @@ template <bool Add>
 bool symex_slicet::get_symbols(const expr2tc &expr)
 {
   bool res = false;
-  if (is_pointer_with_region2t(expr)) {
+  if (is_pointer_with_region2t(expr))
+  {
     return get_symbols<Add>(to_pointer_with_region2t(expr).loc_ptr);
-  } else {
+  }
+  else if (is_heap_load2t(expr))
+  {
+    return get_symbols<Add>(to_heap_load2t(expr).flag);
+  }
+  else
+  {
     // Recursively look if any of the operands has a inner symbol
     expr->foreach_operand([this, &res](const expr2tc &e) {
       if (!is_nil_expr(e))

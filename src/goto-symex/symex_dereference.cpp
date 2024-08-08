@@ -221,6 +221,11 @@ void symex_dereference_statet::update_heap_region_rec(
   }
 }
 
+unsigned int symex_dereference_statet::get_new_nondet_id()
+{
+  return ++goto_symex.get_nondet_counter();
+}
+
 void goto_symext::dereference(expr2tc &expr, dereferencet::modet mode)
 {
   symex_dereference_statet symex_dereference_state(*this, *cur_state);
