@@ -803,9 +803,18 @@ expr2tc dereferencet::build_reference_to(
     object->dump();
     deref_expr->dump();
 
-    pointer_guard = same_object2tc(deref_expr, object);
     guardt tmp_guard(guard);
-    tmp_guard.add(pointer_guard);
+    if (is_heap_region2t(object))
+    {
+      // pointer_guard = same_object2tc(deref_expr, object);
+      pointer_guard = equality2tc(deref_expr, to_heap_region2t(object).start_loc);
+      tmp_guard.add(pointer_guard);
+    }
+    else
+    {
+      log_error("Not heap region");
+      abort();
+    }
 
     // Check that the object we're accessing is actually alive and valid for this
     // mode.
@@ -2327,101 +2336,12 @@ void dereferencet::valid_check(
     tmp_guard.add(not_valid_heap_region);
     std::string foo = is_free(mode) ?  "invalid free pointer"
                                       : "invalid dereference pointer";
+    // deref failure will replace heap region with heap contains
+    // that indicates the reigon is avaliable.
     dereference_failure("pointer dereference", foo, tmp_guard);
     return;
   }
 }
-
-// void dereferencet::valid_check_slhv(
-//   const expr2tc &object,
-//   const guardt &guard,
-//   modet mode)
-// {
-//   const expr2tc &symbol = get_symbol(object);
-
-//   if (is_constant_string2t(symbol))
-//   {
-//     // always valid, but can't write
-
-//     if (is_write(mode))
-//     {
-//       dereference_failure(
-//         "pointer dereference", "write access to string constant", guard);
-//     }
-//   }
-//   else if (is_nil_expr(symbol))
-//   {
-//     // always "valid", shut up
-//     return;
-//   }
-//   else if (is_symbol2t(symbol))
-//   {
-//     // Hacks, but as dereferencet object isn't persistent, necessary. Fix by
-//     // making dereferencet persistent.
-//     if (has_prefix(
-//           to_symbol2t(symbol).thename.as_string(), "symex::invalid_object"))
-//     {
-//       // This is an invalid object; if we're in read or write mode, that's an error.
-//       if (is_read(mode) || is_write(mode))
-//         dereference_failure("pointer dereference", "invalid pointer", guard);
-//       return;
-//     }
-
-//     const symbolt &sym = *ns.lookup(to_symbol2t(symbol).thename);
-//     if (has_prefix(sym.id.as_string(), "symex_dynamic::"))
-//     {
-//       // Assert that it hasn't (nondeterministically) been invalidated.
-//       expr2tc addrof = address_of2tc(symbol->type, symbol);
-//       expr2tc valid_expr = valid_object2tc(addrof);
-//       expr2tc not_valid_expr = not2tc(valid_expr);
-
-//       guardt tmp_guard(guard);
-//       tmp_guard.add(not_valid_expr);
-
-//       std::string foo = is_free(mode) ? "invalidated dynamic object freed"
-//                                       : "invalidated dynamic object";
-//       dereference_failure("pointer dereference", foo, tmp_guard);
-//     }
-//     else
-//     {
-//       // Not dynamic; if we're in free mode, that's an error.
-//       if (is_free(mode))
-//       {
-//         dereference_failure(
-//           "pointer dereference", "free() of non-dynamic memory", guard);
-//         return;
-//       }
-
-//       // Otherwise, this is a pointer to some kind of lexical variable, with
-//       // either global or function-local scope. Ask symex to determine if
-//       // it's live.
-//       if (!dereference_callback.is_live_variable(symbol))
-//       {
-//         // Any access where this guard is true -> failure
-//         dereference_failure(
-//           "pointer dereference",
-//           "accessed expired variable pointer `" +
-//             get_pretty_name(to_symbol2t(symbol).thename.as_string()) + "'",
-//           guard);
-//         return;
-//       }
-//     }
-//   } else if(is_pointer_with_region2t(symbol)) {
-//     // slhv
-//     log_status("pointer with region dereference failure here");
-//     // assert that the pointer we dereference with a specific length lies in the heap variable
-//       // TODO: maybe add a special expression type to denote that the pointer_with_region is not valid
-//     expr2tc not_valid_pointer_with_region = not2tc(valid_object2tc(symbol));
-//     log_status("not valid print:");
-//     not_valid_pointer_with_region->dump();
-//     guardt tmp_guard(guard);
-//     tmp_guard.add(not_valid_pointer_with_region);
-//     std::string foo = is_free(mode) ?  "invalid free pointer"
-//                                       : "invalid dereference pointer";
-//     dereference_failure("pointer dereference", foo, tmp_guard);
-//     return;
-//   }
-// }
 
 void dereferencet::bounds_check(
   const expr2tc &expr,

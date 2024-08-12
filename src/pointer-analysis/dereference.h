@@ -424,7 +424,6 @@ private:
     const type2tc &type,
     const guardt &guard);
   void valid_check(const expr2tc &expr, const guardt &guard, modet mode);
-  // void valid_check_slhv(const expr2tc &expr, const guardt &guard, modet mode);
   std::vector<expr2tc> extract_bytes(
     const expr2tc &object,
     unsigned int bytes,

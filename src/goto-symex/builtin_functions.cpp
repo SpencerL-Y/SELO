@@ -406,73 +406,57 @@ void goto_symext::symex_free(const expr2tc &expr)
   tmp->dump();
   dereference(tmp, dereferencet::INTERNAL);
 
-  bool is_old_encoding = !options.get_bool_option("z3-slhv");
   // Only add assertions to check pointer offset if pointer check is enabled
   if (!options.get_bool_option("no-pointer-check"))
   {
     // Get all dynamic objects allocated using alloca
-    if (is_old_encoding)
+    std::vector<allocated_obj> allocad;
+    for (auto const &item : dynamic_memory)
+      if (item.auto_deallocd)
+        allocad.push_back(item);
+
+    for (auto const &item : internal_deref_items)
     {
-      std::vector<allocated_obj> allocad;
-      for (auto const &item : dynamic_memory)
-        if (item.auto_deallocd)
-          allocad.push_back(item);
+      log_status("internal deref item: ");
+      item.object->dump();
+      log_status("offset: ");
+      item.offset->dump();
+      guardt g = cur_state->guard;
+      g.add(item.guard);
 
-      for (auto const &item : internal_deref_items)
+      // Check if the offset of the object being freed is zero
+      expr2tc offset = item.offset;
+      expr2tc eq = equality2tc(offset, gen_ulong(0));
+      g.guard_expr(eq);
+      claim(eq, "Operand of free must have zero pointer offset");
+
+      // Check if we are not freeing an dynamic object allocated using alloca
+      for (auto const &a : allocad)
       {
-        log_status("internal deref item: ");
-        item.object->dump();
-        log_status("offset: ");
-        item.offset->dump();
-        guardt g = cur_state->guard;
-        g.add(item.guard);
-
-        // Check if the offset of the object being freed is zero
-        expr2tc offset = item.offset;
-        expr2tc eq = equality2tc(offset, gen_ulong(0));
-        g.guard_expr(eq);
-        claim(eq, "Operand of free must have zero pointer offset");
-
-        // Check if we are not freeing an dynamic object allocated using alloca
-        for (auto const &a : allocad)
+        expr2tc alloc_obj = get_base_object(a.obj);
+        while (is_if2t(alloc_obj))
         {
-          expr2tc alloc_obj = get_base_object(a.obj);
-          while (is_if2t(alloc_obj))
-          {
-            const if2t &the_if = to_if2t(alloc_obj);
-            assert(is_symbol2t(the_if.false_value));
-            assert(to_symbol2t(the_if.false_value).thename == "NULL");
-            alloc_obj = get_base_object(the_if.true_value);
-          }
-          assert(is_symbol2t(alloc_obj));
-          const irep_idt &id_alloc_obj = to_symbol2t(alloc_obj).thename;
-          const irep_idt &id_item_obj = to_symbol2t(item.object).thename;
-          // Check if the object allocated with alloca is the same
-          // as given in the free function
-          if (id_alloc_obj == id_item_obj)
-          {
-            expr2tc noteq = notequal2tc(alloc_obj, item.object);
-            g.guard_expr(noteq);
-            claim(noteq, "dereference failure: invalid pointer freed");
-          }
+          const if2t &the_if = to_if2t(alloc_obj);
+          assert(is_symbol2t(the_if.false_value));
+          assert(to_symbol2t(the_if.false_value).thename == "NULL");
+          alloc_obj = get_base_object(the_if.true_value);
         }
-      }
-    }
-    else
-    {
-      log_status("here");
-      for (auto const &item : internal_deref_items)
-      {
-        log_status("internal deref item: ");
-        item.object->dump();
-        log_status("offset: ");
-        item.offset->dump();
-        guardt g = cur_state->guard;
-        g.add(item.guard);
+        assert(is_symbol2t(alloc_obj));
+        const irep_idt &id_alloc_obj = to_symbol2t(alloc_obj).thename;
+        const irep_idt &id_item_obj = to_symbol2t(item.object).thename;
+        // Check if the object allocated with alloca is the same
+        // as given in the free function
+        if (id_alloc_obj == id_item_obj)
+        {
+          expr2tc noteq = notequal2tc(alloc_obj, item.object);
+          g.guard_expr(noteq);
+          claim(noteq, "dereference failure: invalid pointer freed");
+        }
       }
     }
   }
 
+  bool is_old_encoding = !options.get_bool_option("z3-slhv");
   if(is_old_encoding){  
     // Clear the alloc bit.
     type2tc sym_type = array_type2tc(get_bool_type(), expr2tc(), true);
