@@ -14,11 +14,11 @@ void goto_symext::default_replace_dynamic_allocation(expr2tc &expr)
       default_replace_dynamic_allocation(e);
   });
 
+  bool use_old_encoding = !options.get_bool_option("z3-slhv");
   if (is_valid_object2t(expr))
   {
     /* alloc */
     // replace with CPROVER_alloc[POINTER_OBJECT(...)]
-    bool use_old_encoding = !options.get_bool_option("z3-slhv");
     if(use_old_encoding) {
       const valid_object2t &obj = to_valid_object2t(expr);
 
@@ -51,35 +51,48 @@ void goto_symext::default_replace_dynamic_allocation(expr2tc &expr)
 
     expr2tc obj_expr = pointer_object2tc(pointer_type2(), ptr.ptr_obj);
 
-    expr2tc alloc_arr_2;
-    migrate_expr(symbol_expr(*ns.lookup(valid_ptr_arr_name)), alloc_arr_2);
+    if (use_old_encoding)
+    {
+      expr2tc alloc_arr_2;
+      migrate_expr(symbol_expr(*ns.lookup(valid_ptr_arr_name)), alloc_arr_2);
 
-    expr2tc index_expr = index2tc(get_bool_type(), alloc_arr_2, obj_expr);
-    expr2tc notindex = not2tc(index_expr);
+      expr2tc index_expr = index2tc(get_bool_type(), alloc_arr_2, obj_expr);
+      expr2tc notindex = not2tc(index_expr);
 
-    // XXXjmorse - currently we don't correctly track the fact that stack
-    // objects change validity as the program progresses, and the solver is
-    // free to guess that a stack ptr is invalid, as we never update
-    // __ESBMC_alloc for stack ptrs.
-    // So, add the precondition that invalid_ptr only ever applies to dynamic
-    // objects.
+      // XXXjmorse - currently we don't correctly track the fact that stack
+      // objects change validity as the program progresses, and the solver is
+      // free to guess that a stack ptr is invalid, as we never update
+      // __ESBMC_alloc for stack ptrs.
+      // So, add the precondition that invalid_ptr only ever applies to dynamic
+      // objects.
 
-    expr2tc sym_2;
-    migrate_expr(symbol_expr(*ns.lookup(dyn_info_arr_name)), sym_2);
+      expr2tc sym_2;
+      migrate_expr(symbol_expr(*ns.lookup(dyn_info_arr_name)), sym_2);
 
-    expr2tc ptr_obj = pointer_object2tc(pointer_type2(), ptr.ptr_obj);
-    expr2tc is_dyn = index2tc(get_bool_type(), sym_2, ptr_obj);
+      expr2tc ptr_obj = pointer_object2tc(pointer_type2(), ptr.ptr_obj);
+      expr2tc is_dyn = index2tc(get_bool_type(), sym_2, ptr_obj);
 
-    // Catch free pointers: don't allow anything to be pointer object 1, the
-    // invalid pointer.
-    type2tc ptr_type = pointer_type2tc(get_empty_type());
-    expr2tc invalid_object = symbol2tc(ptr_type, "INVALID");
-    expr2tc isinvalid = equality2tc(ptr.ptr_obj, invalid_object);
+      // Catch free pointers: don't allow anything to be pointer object 1, the
+      // invalid pointer.
+      type2tc ptr_type = pointer_type2tc(get_empty_type());
+      expr2tc invalid_object = symbol2tc(ptr_type, "INVALID");
+      expr2tc isinvalid = equality2tc(ptr.ptr_obj, invalid_object);
 
-    expr2tc is_not_bad_ptr = and2tc(notindex, is_dyn);
-    expr2tc is_valid_ptr = or2tc(is_not_bad_ptr, isinvalid);
+      expr2tc is_not_bad_ptr = and2tc(notindex, is_dyn);
+      expr2tc is_valid_ptr = or2tc(is_not_bad_ptr, isinvalid);
 
-    expr = is_valid_ptr;
+      expr = is_valid_ptr;
+    }
+    else
+    {
+      expr2tc alloc_size_heap;
+      migrate_expr(symbol_expr(*ns.lookup(alloc_size_heap_name)), alloc_size_heap);
+
+      expr2tc heap_contains = heap_contains2tc(alloc_size_heap, obj_expr, 1);
+      expr2tc not_valid = not2tc(heap_contains);
+
+      expr = not_valid;
+    }
   }
   else if (is_deallocated_obj2t(expr))
   {

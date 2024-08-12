@@ -1168,8 +1168,8 @@ void goto_symext::add_memory_leak_checks()
         return is_any ? is_any : gen_false_expr();
       };
   }
-  bool is_old_encoding = !options.get_bool_option("z3-slhv");
-  if(is_old_encoding) {
+  bool use_old_encoding = !options.get_bool_option("z3-slhv");
+  if(use_old_encoding) {
     for (auto const &it : dynamic_memory)
     {
       // Don't check memory leak if the object is automatically   deallocated

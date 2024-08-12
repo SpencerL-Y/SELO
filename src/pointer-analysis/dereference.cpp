@@ -940,7 +940,12 @@ void dereferencet::deref_invalid_ptr(
   if (is_free(mode))
   {
     // You're allowed to free NULL.
-    expr2tc null_ptr = symbol2tc(pointer_type2tc(get_empty_type()), "NULL");
+    bool use_old_encoding = !options.get_bool_option("z3-slhv");
+    expr2tc null_ptr;
+    if (use_old_encoding)
+      null_ptr = symbol2tc(pointer_type2tc(get_empty_type()), "NULL");
+    else
+      null_ptr = gen_intloc_constant(0);
     expr2tc neq = notequal2tc(null_ptr, deref_expr);
     expr2tc and_ = and2tc(neq, invalid_pointer_expr);
     validity_test = and_;

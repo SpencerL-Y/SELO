@@ -148,8 +148,8 @@ expr2tc goto_symext::symex_mem(
   unsigned int &dynamic_counter = get_dynamic_counter();
   dynamic_counter++;
 
-  bool is_old_encoding = !options.get_bool_option("z3-slhv");
-  if (is_old_encoding) {
+  bool use_old_encoding = !options.get_bool_option("z3-slhv");
+  if (use_old_encoding) {
     symbolt symbol;
 
     symbol.name = "dynamic_" + i2string(dynamic_counter) +
@@ -344,11 +344,11 @@ void goto_symext::track_new_pointer(
   const type2tc &new_type,
   const expr2tc &size)
 {
-  bool is_old_encoding = !options.get_bool_option("z3-slhv");
+  bool use_old_encoding = !options.get_bool_option("z3-slhv");
   // Also update all the accounting data.
 
   // Mark that object as being dynamic, in the __ESBMC_is_dynamic array
-  if(is_old_encoding) {
+  if(use_old_encoding) {
     type2tc sym_type = array_type2tc(get_bool_type(), expr2tc (), true);
     expr2tc sym = symbol2tc(sym_type, dyn_info_arr_name);
 
@@ -456,8 +456,8 @@ void goto_symext::symex_free(const expr2tc &expr)
     }
   }
 
-  bool is_old_encoding = !options.get_bool_option("z3-slhv");
-  if(is_old_encoding){  
+  bool use_old_encoding = !options.get_bool_option("z3-slhv");
+  if(use_old_encoding){  
     // Clear the alloc bit.
     type2tc sym_type = array_type2tc(get_bool_type(), expr2tc(), true);
     expr2tc ptr_obj = pointer_object2tc(pointer_type2(), code.operand);
