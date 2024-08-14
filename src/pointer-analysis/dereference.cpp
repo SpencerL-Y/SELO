@@ -667,10 +667,11 @@ expr2tc dereferencet::build_reference_to(
 
   bool use_old_encoding = !options.get_bool_option("z3-slhv");
 
-  if ((is_constant_intheap2t(root_object) || is_null_object2t(root_object)) &&
+  if ((is_constant_intloc2t(object) ||
+      is_constant_intheap2t(object) ||
+      is_null_object2t(root_object)) &&
       !is_free(mode) && !is_internal(mode))
   {
-
     expr2tc pointer_guard;
     if (use_old_encoding)
     {
@@ -692,7 +693,9 @@ expr2tc dereferencet::build_reference_to(
     // solver will only get confused.
     return value;
   }
-  if ((is_constant_intheap2t(root_object) || is_null_object2t(root_object)) &&
+  if ((is_constant_intloc2t(object) ||
+      is_constant_intheap2t(object) ||
+      is_null_object2t(root_object)) &&
       (is_free(mode) || is_internal(mode)))
   {
     // Freeing NULL is completely legit according to C

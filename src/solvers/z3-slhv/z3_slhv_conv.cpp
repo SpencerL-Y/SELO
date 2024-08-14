@@ -279,7 +279,9 @@ z3_slhv_convt::convert_slhv_opts(
       // TODO : fix width
       // assert(heap_ct.byte_len == 4);
       smt_astt sh;
-      if (is_symbol2t(heap_ct.hterm) || is_pointer_with_region2t(heap_ct.hterm))
+      if (is_symbol2t(heap_ct.hterm) ||
+          is_pointer_with_region2t(heap_ct.hterm) ||
+          is_pointer_object2t(heap_ct.hterm))
       {
         sh = mk_pt(args[0], mk_fresh(mk_int_sort(), mk_fresh_name("tmp_val::")));
         // TODO : support multiple loaded
@@ -314,7 +316,10 @@ z3_slhv_convt::convert_slhv_opts(
 
 smt_astt z3_slhv_convt::project(const expr2tc &expr)
 {
-  if (is_pointer_with_region2t(expr))
+  if (is_constant_intheap2t(expr) ||
+      is_constant_intloc2t(expr))
+    return convert_ast(expr);
+  else if (is_pointer_with_region2t(expr))
     return convert_ast(expr);
   else if (is_heap_region2t(expr))
     return convert_ast(to_heap_region2t(expr).start_loc);
