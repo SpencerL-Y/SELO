@@ -66,9 +66,18 @@ void goto_symex_statet::initialize(
 
 bool goto_symex_statet::constant_propagation(const expr2tc &expr) const
 {
-  if(is_intheap_type(expr)) {
-    return false;
+  // SLHV propagation
+  if (is_heap_region2t(expr) || is_pointer_with_region2t(expr) ||
+      is_constant_intheap2t(expr) || is_constant_intloc2t(expr) ||
+      is_heap_load2t(expr))
+    return true;
+  if (is_locadd2t(expr))
+  {
+    locadd2t locadd = to_locadd2t(expr);
+    return constant_propagation(locadd.loc) &&
+      constant_propagation(locadd.offset);
   }
+
   if (is_array_type(expr))
   {
     array_type2t arr = to_array_type(expr->type);
@@ -244,6 +253,11 @@ void goto_symex_statet::rename(expr2tc &expr)
 {
   // rename all the symbols with their last known value
 
+  if (is_pointer_with_region2t(expr) ||
+      is_heap_region2t(expr) ||
+      is_heap_load2t(expr))
+    return; // Do not rename pwr
+
   if (is_nil_expr(expr))
     return;
 
@@ -316,6 +330,8 @@ void goto_symex_statet::fixup_renamed_type(
   }
   if (is_pointer_type(orig_type))
   {
+    if (is_intloc_type(expr)) return;
+
     assert(is_pointer_type(expr));
 
     // Grab pointer types

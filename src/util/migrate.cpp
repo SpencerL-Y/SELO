@@ -2623,8 +2623,8 @@ exprt migrate_expr_back(const expr2tc &ref)
     const locadd2t &ref2 = to_locadd2t(ref);
     typet thetype = migrate_type_back(ref->type);
     exprt locadd("locadd", thetype);
-    locadd.copy_to_operands(migrate_expr_back(ref2.base_addr));
-    locadd.copy_to_operands(migrate_expr_back(ref2.added_num));
+    locadd.copy_to_operands(migrate_expr_back(ref2.loc));
+    locadd.copy_to_operands(migrate_expr_back(ref2.offset));
     return locadd;
   }
   case expr2t::heap_region_id:
@@ -2695,8 +2695,8 @@ exprt migrate_expr_back(const expr2tc &ref)
    const heap_contains2t &ref2 = to_heap_contains2t(ref);
    typet thetype = migrate_type_back(ref->type);
    exprt heap_contains("heap_contains", thetype);
-   heap_contains.copy_to_operands(migrate_expr_back(ref2.heapvar));
-   heap_contains.copy_to_operands(migrate_expr_back(ref2.start_loc));
+   heap_contains.copy_to_operands(migrate_expr_back(ref2.hterm));
+   heap_contains.copy_to_operands(migrate_expr_back(ref2.heap));
    heap_contains.set("byte_len", irep_idt(std::to_string(ref2.byte_len)));
    return heap_contains;
 

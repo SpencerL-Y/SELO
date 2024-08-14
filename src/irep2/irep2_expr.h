@@ -906,9 +906,8 @@ public:
     const type2tc &t,
     datatype_ops::expr_ids id,
     const expr2tc &addrloc,
-    const expr2tc &content,
-    bool is_loc) 
-    : expr2t(t, id), addr(addrloc), content(content), is_loc_content(is_loc)
+    const expr2tc &content) 
+    : expr2t(t, id), addr(addrloc), content(content)
   {
   }
   points_to_data(const points_to_data& ref) = default;
@@ -916,16 +915,15 @@ public:
 
   expr2tc addr;
   expr2tc content;
-  bool is_loc_content;
 
   // Type mangling:
   typedef esbmct::field_traits<expr2tc, points_to_data, &points_to_data::addr>
-    addr_field;
+    points_to_data_addr_field;
   typedef esbmct::field_traits<expr2tc, points_to_data, &points_to_data::content>
-    content_field;
-  typedef esbmct::field_traits<bool, points_to_data, &points_to_data::is_loc_content>
-    is_loc_content_field;
-  typedef esbmct::expr2t_traits<addr_field, content_field, is_loc_content_field> traits;
+    points_to_data_content_field;
+  typedef esbmct::expr2t_traits<
+    points_to_data_addr_field,
+    points_to_data_content_field> traits;
 
 };
 
@@ -963,21 +961,21 @@ public:
   locadd_data(
     const type2tc &t,
     datatype_ops::expr_ids id,
-    const expr2tc &base_addr,
-    const expr2tc &added)
-    : expr2t(t, id), base_addr(base_addr), added_num(added)
+    const expr2tc &loc,
+    const expr2tc &offset)
+    : expr2t(t, id), loc(loc), offset(offset)
   {
   }
   locadd_data(const locadd_data& ref) = default;
-  expr2tc base_addr;
-  expr2tc added_num;
+  expr2tc loc;
+  expr2tc offset;
 
   // Type mangling:
-  typedef esbmct::field_traits<expr2tc, locadd_data, &locadd_data::base_addr>
-    locadd_base_addr_field;
-  typedef esbmct::field_traits<expr2tc, locadd_data, &locadd_data::added_num>
-    locadd_added_num_field;
-  typedef esbmct::expr2t_traits<locadd_base_addr_field, locadd_added_num_field> traits;
+  typedef esbmct::field_traits<expr2tc, locadd_data, &locadd_data::loc>
+    locadd_loc_field;
+  typedef esbmct::field_traits<expr2tc, locadd_data, &locadd_data::offset>
+    locadd_offset_field;
+  typedef esbmct::expr2t_traits<locadd_loc_field, locadd_offset_field> traits;
 
 };
 
@@ -1201,30 +1199,29 @@ public:
   heap_contains_data(
     const type2tc &t,
     datatype_ops::expr_ids id,
-    expr2tc hvar,
-    expr2tc start_loc,
-    unsigned int blk_byte_len)
-    : expr2t(t, id), heapvar(hvar), start_loc(start_loc), byte_len(blk_byte_len)
+    expr2tc hterm,
+    expr2tc heap,
+    unsigned int byte_len)
+    : expr2t(t, id), hterm(hterm), heap(heap), byte_len(byte_len)
   {
   }
 
-  expr2tc heapvar;
-  expr2tc start_loc;
+  expr2tc hterm;
+  expr2tc heap;
   unsigned int byte_len;
 
   //Type mangling:
-  typedef esbmct::field_traits<expr2tc, heap_contains_data, &heap_contains_data::heapvar>
-    heap_contains_data_heapvar_field;
-  typedef esbmct::field_traits<expr2tc, heap_contains_data, &heap_contains_data::start_loc>
-    heap_contains_data_start_loc_field;
+  typedef esbmct::field_traits<expr2tc, heap_contains_data, &heap_contains_data::hterm>
+    heap_contains_data_hterm_field;
+  typedef esbmct::field_traits<expr2tc, heap_contains_data, &heap_contains_data::heap>
+    heap_contains_data_heap_field;
   typedef esbmct::field_traits<unsigned int, heap_contains_data, &heap_contains_data::byte_len>
     heap_contains_data_byte_len_field;
 
-  typedef esbmct::expr2t_traits
-  <
-  heap_contains_data_heapvar_field,  heap_contains_data_start_loc_field, heap_contains_data_byte_len_field
-  > traits;
-
+  typedef esbmct::expr2t_traits<
+    heap_contains_data_hterm_field,
+    heap_contains_data_heap_field,
+    heap_contains_data_byte_len_field> traits;
 };
 
 class string_ops : public expr2t
@@ -3322,8 +3319,8 @@ public:
 class points_to2t : public points_to_expr_methods
 {
 public:
-  points_to2t(const expr2tc addr, const expr2tc& content, bool is_loc)
-    : points_to_expr_methods(get_intheap_type(), points_to_id, addr, content, is_loc)
+  points_to2t(const expr2tc &addr, const expr2tc &content)
+    : points_to_expr_methods(get_intheap_type(), points_to_id, addr, content)
   {
   }
   points_to2t(const points_to2t &ref) = default;
@@ -3347,8 +3344,8 @@ public:
 class locadd2t : public locadd_expr_methods
 {
 public:
-  locadd2t(const expr2tc &base_addr, const expr2tc &added)
-  : locadd_expr_methods(get_intloc_type(), locadd_id, base_addr, added)
+  locadd2t(const expr2tc &loc, const expr2tc &offset)
+  : locadd_expr_methods(get_intloc_type(), locadd_id, loc, offset)
   {
   }
   locadd2t(const locadd2t &ref) = default;
@@ -3442,11 +3439,12 @@ public:
 
   static std::string field_names[esbmct::num_type_fields];
 };
+
 class heap_contains2t : public heap_contains_expr_methods
 {
 public:
-  heap_contains2t(expr2tc hvar, expr2tc start_loc, unsigned int byte_len)
-  : heap_contains_expr_methods(get_bool_type(), heap_contains_id, hvar, start_loc, byte_len)
+  heap_contains2t(expr2tc hterm, expr2tc heap, unsigned int byte_len)
+  : heap_contains_expr_methods(get_bool_type(), heap_contains_id, hterm, heap, byte_len)
   {
   }
   heap_contains2t(const heap_contains2t &ref) = default;

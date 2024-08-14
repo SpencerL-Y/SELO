@@ -231,10 +231,10 @@ z3_slhv_convt::convert_slhv_opts(
       return h;
     }
     case expr2t::add_id:
+    case expr2t::sub_id:
     case expr2t::locadd_id:
     {
       assert(args.size() == 2);
-      log_status("here");
       return mk_locadd(args[0], args[1]);
     }
     case expr2t::heap_append_id:
@@ -277,19 +277,18 @@ z3_slhv_convt::convert_slhv_opts(
     {
       const heap_contains2t& heap_ct = to_heap_contains2t(expr);
       // TODO : fix width
-      assert(heap_ct.byte_len == 4);
-      smt_astt sh = mk_pt(args[1], mk_fresh(mk_int_sort(), mk_fresh_name("tmp_val::")));
-      for (int i = 1; i < heap_ct.byte_len / 4; i++) {
-        sh = mk_uplus(
-          sh,
-          mk_pt(
-            mk_locadd(args[1], mk_smt_int(BigInt(i))),
-            // TODO: fix sort
-            mk_fresh(mk_int_sort(), mk_fresh_name("tmp_val::"))
-          )
-        );
+      // assert(heap_ct.byte_len == 4);
+      smt_astt sh;
+      if (is_symbol2t(heap_ct.hterm) || is_pointer_with_region2t(heap_ct.hterm))
+      {
+        sh = mk_pt(args[0], mk_fresh(mk_int_sort(), mk_fresh_name("tmp_val::")));
+        // TODO : support multiple loaded
       }
-      return mk_subh(sh, args[0]);
+      else if (is_points_to2t(heap_ct.hterm))
+      {
+        sh = args[0];
+      }
+      return mk_subh(sh, args[1]);
     }
     case expr2t::heap_delete_id:
     {
@@ -300,31 +299,46 @@ z3_slhv_convt::convert_slhv_opts(
     }
     case expr2t::same_object_id:
     {
-      // TODO: fix same object
+      // Do project for SLHV
       const same_object2t& same = to_same_object2t(expr);
-      if (is_heap_region2t(same.side_2))
-      {
-        const heap_region2t& heap_region = to_heap_region2t(same.side_2);
-        assert(is_constant_int2t(heap_region.size));
-        smt_astt start_loc = convert_ast(heap_region.start_loc);
-        smt_astt size = convert_ast(heap_region.size);
-        smt_astt nondet_offset = mk_fresh(mk_int_sort(), mk_fresh_name("tmp_val::")); 
-        return 
-          mk_and(
-            mk_eq(args[0], mk_locadd(start_loc, nondet_offset)),
-            mk_and(
-              mk_le(mk_smt_int(BigInt(0)), nondet_offset),
-              mk_lt(nondet_offset, size)
-            )
-          );
-      }
-      else if (is_heap_load2t(same.side_2))
-        return mk_eq(args[0], args[1]);
+      smt_astt p1 = this->project(same.side_1);
+      smt_astt p2 = this->project(same.side_2);
+      return mk_eq(p1, p2);
     }
     default: {
       log_status("Invalid SLHV operations!!!");
       abort();
     }
+  }
+}
+
+smt_astt z3_slhv_convt::project(const expr2tc &expr)
+{
+  if (is_pointer_with_region2t(expr))
+    return convert_ast(expr);
+  else if (is_heap_region2t(expr))
+    return convert_ast(to_heap_region2t(expr).start_loc);
+  else if (is_heap_load2t(expr))
+    return convert_ast(to_heap_load2t(expr).flag);
+  else if (is_typecast2t(expr))
+    return this->project(to_typecast2t(expr).from);
+  else if (is_locadd2t(expr) || is_add2t(expr) || is_sub2t(expr))
+  {
+    expr2tc ptr;
+    if (is_locadd2t(expr))
+      ptr = to_locadd2t(expr).loc;
+    else if (is_add2t(expr))
+      ptr = is_pointer_type(to_add2t(expr).side_1) ?
+        to_add2t(expr).side_1 : to_add2t(expr).side_2;
+    else if (is_sub2t(expr))
+      ptr = is_pointer_type(to_sub2t(expr).side_1) ?
+        to_sub2t(expr).side_1 : to_sub2t(expr).side_2;
+    return this->project(ptr);
+ }
+  else
+  {
+    log_error("Do not support");
+    abort();
   }
 }
 

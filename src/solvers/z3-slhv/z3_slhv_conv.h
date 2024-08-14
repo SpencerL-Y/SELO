@@ -41,6 +41,7 @@ public:
     smt_sortt convert_slhv_sorts(const type2tc &type) override;
     smt_astt
     convert_slhv_opts(const expr2tc &expr, const std::vector<smt_astt>& args) override;
+    smt_astt project(const expr2tc &expr);
 
     void dump_smt() override;
 

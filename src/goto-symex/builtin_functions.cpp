@@ -120,9 +120,6 @@ expr2tc goto_symext::symex_mem(
   // size
   type2tc type = code.alloctype;
   expr2tc size = code.size;
-  log_status("alloc size: ");
-  size->dump();
-  // TODO slhv: need to do the constant propagation here 
   bool size_is_one = false;
 
   if (is_nil_type(type))
@@ -132,11 +129,10 @@ expr2tc goto_symext::symex_mem(
     size_is_one = true;
   else
   {
-    cur_state->rename(size);
+    cur_state->rename(size); // rename will do constant propagation
     BigInt i;
     if (is_constant_int2t(size))
     {
-      log_status("is constant");
       uint64_t v = to_constant_int2t(size).value.to_uint64();
       if (v == 1)
         size_is_one = true;
@@ -260,16 +256,22 @@ expr2tc goto_symext::symex_mem(
 
     // Size in SLHV is byte level
     // expr2tc bytesizes
-    expr2tc operand = code.operand;
-    if (!is_constant_int2t(operand))
-      operand = operand.simplify();
-    if (!is_constant_int2t(operand))
+    expr2tc bytes;
+    if (size_is_one)
+      bytes = gen_ulong(type->get_width() / 8);
+    else
     {
-      log_error("Do not support dynamic size");
-      abort();
+      bytes = size;
+      if (!is_constant_int2t(bytes)) 
+        bytes = bytes.simplify();
+      if (!is_constant_int2t(bytes))
+      {
+        log_error("Do not support dynamic size");
+        abort();
+      }
     }
 
-    uint total_bytes = to_constant_int2t(operand).value.to_uint64();
+    uint total_bytes = to_constant_int2t(bytes).value.to_uint64();
     uint pt_bytes = type.get()->get_width() / 8;
     uint size = total_bytes / pt_bytes;
     if (pt_bytes == 1)
@@ -322,7 +324,10 @@ expr2tc goto_symext::symex_mem(
     // TODO: modify the pointer object here, maybe to wrap the intloc symbol directly
     expr2tc ptr_obj =
       pointer_object2tc(get_intloc_type(), to_pointer_with_region2t(pwr).loc_ptr);
-    track_new_pointer(ptr_obj, get_intheap_type(), region_size);
+    track_new_pointer(
+      ptr_obj,
+      get_intheap_type(),
+      gen_ulong(total_bytes));
     dynamic_memory.emplace_back(
       rhs_heap,
       rhs_guard,

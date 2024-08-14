@@ -961,6 +961,8 @@ protected:
   void update_regions(const expr2tc &region) override;
   void update_heap_region_rec(expr2tc &expr, const expr2tc &region) override;
   std::string get_loaded_value_flag(const expr2tc &expr) override;
+  std::string get_nondet_id(std::string prefix = "") override;
+  irep_idt get_alooc_size_heap_name() override;
 };
 
 #endif

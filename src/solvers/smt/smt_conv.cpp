@@ -467,7 +467,9 @@ smt_astt smt_convt::convert_ast(const expr2tc &expr)
       is_pointer_type(expr->type) || is_pointer_type(sub.side_1) ||
       is_pointer_type(sub.side_2))
     {
-      a = convert_pointer_arith(expr, expr->type);
+      a = this->solver_text() == "Z3-slhv" ?
+        convert_slhv_opts(expr, args) : 
+        convert_pointer_arith(expr, expr->type);
     }
     else if (int_encoding)
     {

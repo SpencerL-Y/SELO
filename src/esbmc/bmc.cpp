@@ -796,7 +796,7 @@ smt_convt::resultt bmct::multi_property_check(
     std::unique_ptr<smt_convt> runtime_solver(create_solver("", ns, options));
     // Save current instance
     generate_smt_from_equation(*runtime_solver, local_eq);
-
+    
     log_status(
       "Solving claim '{}' with solver {}",
       claim.claim_msg,

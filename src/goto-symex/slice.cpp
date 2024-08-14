@@ -15,8 +15,6 @@ bool symex_slicet::get_symbols(const expr2tc &expr)
     return get_symbols<Add>(to_heap_region2t(expr).start_loc);
   else if (is_pointer_with_region2t(expr))
     return get_symbols<Add>(to_pointer_with_region2t(expr).loc_ptr);
-  else if (is_heap_load2t(expr))
-    return get_symbols<Add>(to_heap_load2t(expr).flag);
   else
   {
     // Recursively look if any of the operands has a inner symbol

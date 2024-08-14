@@ -173,6 +173,18 @@ public:
     log_error("Do not support");
     abort();
   }
+
+  virtual std::string get_nondet_id(std::string prefix = "")
+  {
+    log_error("Do not support");
+    abort();
+  }
+
+  virtual irep_idt get_alooc_size_heap_name()
+  {
+    log_error("Do not support");
+    abort();
+  }
 };
 
 /** Class containing expression dereference logic.

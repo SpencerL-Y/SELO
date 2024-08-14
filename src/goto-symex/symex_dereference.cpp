@@ -230,9 +230,11 @@ std::string symex_dereference_statet::get_loaded_value_flag(const expr2tc &expr)
   else if (is_locadd2t(expr))
   {
     const locadd2t &locadd = to_locadd2t(expr);
-    return get_loaded_value_flag(locadd.base_addr) +
-      get_loaded_value_flag(locadd.added_num);
+    return get_loaded_value_flag(locadd.loc) +
+      get_loaded_value_flag(locadd.offset);
   }
+  else if (is_typecast2t(expr))
+    return get_loaded_value_flag(to_typecast2t(expr).from);
   else
   {
     log_error("Do not support");
@@ -240,6 +242,16 @@ std::string symex_dereference_statet::get_loaded_value_flag(const expr2tc &expr)
   }
 }
 
+std::string symex_dereference_statet::get_nondet_id(std::string prefix)
+{
+  unsigned int nondet_counter = goto_symex.get_nondet_counter();
+  return prefix + std::to_string(++nondet_counter);
+}
+
+irep_idt symex_dereference_statet::get_alooc_size_heap_name()
+{
+  return goto_symex.alloc_size_heap_name;
+}
 
 void goto_symext::dereference(expr2tc &expr, dereferencet::modet mode)
 {

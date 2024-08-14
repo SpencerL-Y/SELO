@@ -574,7 +574,7 @@ void value_sett::get_value_set_rec(
   if (is_locadd2t(expr))
   {
     const locadd2t& locadd = to_locadd2t(expr);
-    assert(is_intloc_type(locadd.base_addr));
+    assert(is_intloc_type(locadd.loc));
     abort();
     // TODO
   }

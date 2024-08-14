@@ -806,8 +806,16 @@ expr2tc dereferencet::build_reference_to(
     guardt tmp_guard(guard);
     if (is_heap_region2t(object))
     {
-      // pointer_guard = same_object2tc(deref_expr, object);
-      pointer_guard = equality2tc(deref_expr, to_heap_region2t(object).start_loc);
+      heap_region2t& heap_region = to_heap_region2t(value);
+      int access_sz = type->get_width() / 8;
+      // Update its pt bytes
+      if (heap_region.update(access_sz))
+        dereference_callback.update_regions(value);
+
+      if (is_free(mode))
+        pointer_guard = equality2tc(deref_expr, to_heap_region2t(object).start_loc);
+      else
+        pointer_guard = same_object2tc(deref_expr, object);
       tmp_guard.add(pointer_guard);
     }
     else
@@ -815,6 +823,9 @@ expr2tc dereferencet::build_reference_to(
       log_error("Not heap region");
       abort();
     }
+
+    log_status("generated pointer guard:");
+    pointer_guard->dump();
 
     // Check that the object we're accessing is actually alive and valid for this
     // mode.
@@ -839,37 +850,47 @@ expr2tc dereferencet::build_reference_to(
     // If offset is unknown, or whatever, we have to consider it
     // nondeterministic, and let the reference builders deal with it.
     unsigned int alignment = o.alignment;
-    if (!is_constant_int2t(final_offset))
+
+    bool use_old_encoding = !options.get_bool_option("z3-slhv");
+    if (use_old_encoding)
     {
-      if(is_pointer_with_region2t(value)) {
-        log_status("ERROR: non constant offset of pointer with region");
-      }
-      assert(alignment != 0);
-
-      /* The expression being dereferenced doesn't need to be just a symbol: it
-       * might have all kind of things messing with alignment in there. */
-      if (!is_symbol2t(deref_expr))
+      if (!is_constant_int2t(final_offset))
       {
-        alignment = 1;
+        assert(alignment != 0);
+
+        /* The expression being dereferenced doesn't need to be just a symbol: it
+        * might have all kind of things messing with alignment in there. */
+        if (!is_symbol2t(deref_expr))
+        {
+          alignment = 1;
+        }
+
+        final_offset =
+          pointer_offset2tc(get_int_type(config.ansi_c.address_width), deref_expr);
       }
 
+      type2tc offset_type = bitsize_type2();
+      if (final_offset->type != offset_type)
+        final_offset = typecast2tc(offset_type, final_offset);
+
+      // Converting final_offset from bytes to bits!
       final_offset =
-        pointer_offset2tc(get_int_type(config.ansi_c.address_width), deref_expr);
+        mul2tc(final_offset->type, final_offset, gen_long(final_offset->type, 8));
+
+      // Add any offset introduced lexically at the dereference site, i.e. member
+      // or index exprs, like foo->bar[3]. If bar is of integer type, we translate
+      // that to be a dereference of foo + extra_offset, resulting in an integer.
+      if (!is_nil_expr(lexical_offset))
+        final_offset = add2tc(final_offset->type, final_offset, lexical_offset);
     }
-
-    type2tc offset_type = bitsize_type2();
-    if (final_offset->type != offset_type)
-      final_offset = typecast2tc(offset_type, final_offset);
-
-    // Converting final_offset from bytes to bits!
-    final_offset =
-      mul2tc(final_offset->type, final_offset, gen_long(final_offset->type, 8));
-
-    // Add any offset introduced lexically at the dereference site, i.e. member
-    // or index exprs, like foo->bar[3]. If bar is of integer type, we translate
-    // that to be a dereference of foo + extra_offset, resulting in an integer.
-    if (!is_nil_expr(lexical_offset))
-      final_offset = add2tc(final_offset->type, final_offset, lexical_offset);
+    else
+    {
+      if (!is_constant_int2t(final_offset))
+      {
+        final_offset = deref_expr;
+      }
+      // TODO: add lexical offset
+    }
 
     // If we're in internal mode, collect all of our data into one struct, insert
     // it into the list of internal data, and then bail. The caller does not want
@@ -1233,6 +1254,9 @@ void dereferencet::build_reference_slhv(
   unsigned long alignment)
 {
   log_status("build reference slhv");
+  value->dump();
+  guard.dump();
+  offset->dump();
   assert(is_heap_region2t(value));
   if(is_scalar_type(type)) {
     if (!is_constant_int2t(offset)) offset.simplify();
@@ -1243,11 +1267,6 @@ void dereferencet::build_reference_slhv(
     expr2tc heap = heap_region.flag;
 
     int access_sz = type->get_width() / 8;
-    assert(access_sz > 0);
-    // Update its pt bytes
-    if (heap_region.update(access_sz))
-      dereference_callback.update_regions(value);
-    
     expr2tc access_ptr;
     if (offset_bytes == 0)
       access_ptr = heap_region.start_loc;
@@ -2262,6 +2281,9 @@ void dereferencet::valid_check(
   const guardt &guard,
   modet mode)
 {
+  log_status("entering valid check");
+  object->dump();
+
   const expr2tc &symbol = get_symbol(object);
 
   if (is_constant_string2t(symbol))
@@ -2334,6 +2356,8 @@ void dereferencet::valid_check(
   }
   else if(is_heap_region2t(symbol))
   {
+    log_status("guard : ");
+    guard.dump();
     expr2tc not_valid_heap_region = not2tc(valid_object2tc(symbol));
     log_status("not valid print:");
     not_valid_heap_region->dump();
@@ -2529,26 +2553,78 @@ void dereferencet::check_heap_region_access(
 {
   // This check is in byte-level;
   log_status("check heap region access");
+  guard.dump();
+  log_status("offset");
+  offset->dump();
   assert(is_heap_region2t(value));
   const heap_region2t& heap_region = to_heap_region2t(value);
-  unsigned int total_bytes =
-    to_constant_int2t(heap_region.pt_bytes).value.to_uint64() *
-    to_constant_int2t(heap_region.size).value.to_uint64();
-  BigInt data_sz(total_bytes);
-  BigInt access_sz(type->get_width() / 8);
 
-  // offset / 8
-  if (!is_constant_int2t(offset)) offset.simplify();
-  assert(is_constant_int2t(offset));
-  BigInt offset_sz(to_constant_int2t(offset).value.to_int64() / 8);
+  heap_region.pt_bytes->dump();
+  heap_region.size->dump();
 
-  expr2tc data_sz_e = gen_long(offset->type, data_sz);
-  expr2tc access_sz_e = gen_long(offset->type, access_sz);
-  expr2tc offset_in_byte = gen_long(offset->type, offset_sz);
+  expr2tc offset_e = offset;
+  if (!is_constant_int2t(offset_e) && is_signedbv_type(offset_e))
+    offset_e = offset_e.simplify();
 
-  expr2tc add = add2tc(access_sz_e->type, offset_in_byte, access_sz_e);
-  expr2tc gt = greaterthan2tc(add, data_sz_e);
-  expr2tc bound_check = gt;
+  std::string sz_id = dereference_callback.get_nondet_id("nondet_region_size::");
+  expr2tc sz = symbol2tc(get_uint64_type(), sz_id);
+  expr2tc sz_pt = points_to2tc(heap_region.start_loc, sz);
+  expr2tc alloc_size_heap;
+  migrate_expr(
+    symbol_expr(
+      *ns.lookup(dereference_callback.get_alooc_size_heap_name())),
+      alloc_size_heap);
+  expr2tc heap_ct = heap_contains2tc(sz_pt, alloc_size_heap, 1);
+
+  expr2tc data_sz = gen_ulong(type->get_width());
+  expr2tc offset_check;
+  if (!is_constant_int2t(offset_e))
+  {
+    // pointer arithmetic
+    if (is_add2t(offset_e) || is_sub2t(offset_e))
+    {
+      expr2tc side_1 = is_add2t(offset_e) ?
+        to_add2t(offset_e).side_1 : to_sub2t(offset_e).side_1;
+      expr2tc side_2 = is_add2t(offset_e) ?
+        to_add2t(offset_e).side_2 : to_sub2t(offset_e).side_2;
+      
+      expr2tc ptr = is_pointer_type(side_1) ? side_1 : side_2;
+      expr2tc off = is_pointer_type(side_1) ? side_2 : side_1;
+      
+      if (!is_signedbv_type(off) && !is_unsignedbv_type(off))
+      {
+        log_error("Do not support");
+        abort();
+      }
+
+      std::string nondet_off_id = dereference_callback.get_nondet_id("nondet_off::");
+      expr2tc off_var = symbol2tc(get_uint64_type(), nondet_off_id);
+
+      expr2tc target_loc = locadd2tc(heap_region.start_loc, off_var);
+      expr2tc offset_loc = locadd2tc(ptr, off_var);
+      expr2tc eq = equality2tc(target_loc, offset_loc);
+      expr2tc ge = greaterthanequal2tc(off_var, gen_ulong(0));
+      expr2tc lt = lessthan2tc(off_var, sz);
+
+      offset_check = and2tc(eq, and2tc(ge, lt));
+    }
+    else
+    {
+      log_error("Do not support");
+      abort();
+    }
+  }
+  else
+  {
+    expr2tc off_var = offset_e;
+    offset_check =
+      and2tc(
+        greaterthanequal2tc(off_var, gen_ulong(0)),
+        lessthan2tc(off_var, sz)
+      );
+  }
+
+  expr2tc bound_check = not2tc(and2tc(heap_ct, offset_check));
   if(!options.get_bool_option("no-bounds-check"))
   {
     guardt tmp_guard = guard;

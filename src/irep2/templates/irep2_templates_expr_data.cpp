@@ -29,7 +29,7 @@ expr_typedefs4(byte_update, byte_update_data);
 expr_typedefs3(with, with_data);
 expr_typedefs2(member, member_data);
 expr_typedefs2(index, index_data);
-expr_typedefs3(points_to, points_to_data);
+expr_typedefs2(points_to, points_to_data);
 expr_typedefs1(uplus, uplus_data);
 expr_typedefs2(locadd, locadd_data);
 expr_typedefs5(heap_region, heap_region_data);

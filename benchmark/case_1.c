@@ -1,15 +1,18 @@
 #include <stdlib.h>
 
-int main(){
+typedef struct {
+    void *lo;
+    void *hi;
+} TData;
 
-    int num = 5;
-    int *i = (int*) malloc(sizeof(int));
-    int *j = (int*)malloc(num*sizeof(int)); 
-    int *p = NULL;
-    if(i == j) {
-        free(j);
-        p = i;
-    } else {
-        p = j;
-    }
+int main() {
+    TData * p1 = malloc(sizeof(TData));
+    p1->lo = malloc(12);
+    p1->hi = malloc(12);
+    void * p2;
+    int x;
+    if (x) p2 = p1->hi;
+    else p2 = p1->lo;
+    free(p2);
+    return 0;
 }
