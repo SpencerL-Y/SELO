@@ -160,7 +160,7 @@ void goto_symext::symex_assign(
             allocsize_heap.type = typet(typet::t_intheap);
             new_context.add(allocsize_heap);
             expr2tc new_lhs = symbol2tc(get_intheap_type(),   allocsize_heap.id);
-            expr2tc new_rhs = constant_intheap2tc(get_intheap_type(), true);
+            expr2tc new_rhs = gen_emp();
             symex_assign(code_assign2tc(new_lhs, new_rhs));
           } 
           return;

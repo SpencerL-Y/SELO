@@ -52,10 +52,9 @@ public:
 
 class constant_intloc_data : public constant2t 
 {
-
 public:
-  constant_intloc_data(const type2tc &t, expr2t::expr_ids id, const BigInt &bint)
-    : constant2t(t, id), value(bint)
+  constant_intloc_data(const type2tc &t, expr2t::expr_ids id, const BigInt &value)
+    : constant2t(t, id), value(value)
   {
   }
   constant_intloc_data(const constant_intloc_data &ref) = default;
@@ -72,21 +71,23 @@ public:
 
 class constant_intheap_data : public constant2t 
 {
-
 public:
-  constant_intheap_data(const type2tc &t, expr2t::expr_ids id, const bool e)
-    : constant2t(t, id), is_emp(e)
+  constant_intheap_data(
+    const type2tc &t,
+    expr2t::expr_ids id,
+    const expr2tc &value)
+    : constant2t(t, id), value(value)
   {
   }
   constant_intheap_data(const constant_intheap_data &ref) = default;
 
-  bool is_emp;
+  expr2tc value;
 
   // Type mangling:
   typedef esbmct::
-    field_traits<bool, constant_intheap_data, &constant_intheap_data::is_emp>
-      value_field;
-  typedef esbmct::expr2t_traits<value_field> traits;
+    field_traits<expr2tc, constant_intheap_data, &constant_intheap_data::value>
+      constant_intheap_value_field;
+  typedef esbmct::expr2t_traits<constant_intheap_value_field> traits;
 };
 
 
@@ -1933,23 +1934,29 @@ public:
 
 class constant_intloc2t : public constant_intloc_expr_methods
 {
-  public:
-  constant_intloc2t(const type2tc &type, const BigInt &input)
-    : constant_intloc_expr_methods(type, constant_intloc_id, input)
+public:
+  constant_intloc2t(const BigInt &value)
+    : constant_intloc_expr_methods(get_intloc_type(), constant_intloc_id, value)
   {
   }
+  
   unsigned long as_ulong() const;
+  bool is_nil() const;
+
   static std::string field_names[esbmct::num_type_fields];
 };
 
 class constant_intheap2t : public constant_intheap_expr_methods
 {
-  public:
-  constant_intheap2t(const type2tc &type, bool is_emp)
-    : constant_intheap_expr_methods(type, constant_intheap_id, is_emp)
+public:
+  constant_intheap2t(const expr2tc &value)
+    : constant_intheap_expr_methods(
+      get_intheap_type(), constant_intheap_id, value)
   {
   }
-  bool get_is_emp() const;
+
+  bool is_emp() const;
+
   static std::string field_names[esbmct::num_type_fields];
 };
 

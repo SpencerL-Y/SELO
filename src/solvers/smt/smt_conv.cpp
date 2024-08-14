@@ -301,6 +301,8 @@ smt_astt smt_convt::convert_ast(const expr2tc &expr)
   case expr2t::constant_array_id:
   case expr2t::constant_vector_id:
   case expr2t::constant_array_of_id:
+  case expr2t::constant_intloc_id:
+  case expr2t::constant_intheap_id:
   case expr2t::index_id:
   case expr2t::address_of_id:
   case expr2t::ieee_add_id:

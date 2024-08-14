@@ -665,12 +665,23 @@ expr2tc dereferencet::build_reference_to(
   const expr2tc &root_object = o.get_root_object();
   const expr2tc &object = o.object;
 
-  if (is_null_object2t(root_object) && !is_free(mode) && !is_internal(mode))
-  {
-    type2tc nullptrtype = pointer_type2tc(type);
-    expr2tc null_ptr = symbol2tc(nullptrtype, "NULL");
+  bool use_old_encoding = !options.get_bool_option("z3-slhv");
 
-    expr2tc pointer_guard = same_object2tc(deref_expr, null_ptr);
+  if ((is_constant_intheap2t(root_object) || is_null_object2t(root_object)) &&
+      !is_free(mode) && !is_internal(mode))
+  {
+
+    expr2tc pointer_guard;
+    if (use_old_encoding)
+    {
+      type2tc nullptrtype = pointer_type2tc(type);
+      expr2tc null_ptr = symbol2tc(nullptrtype, "NULL");
+      pointer_guard = same_object2tc(deref_expr, null_ptr);
+    }
+    else
+    {
+      pointer_guard = same_object2tc(deref_expr, gen_nil());
+    }
 
     guardt tmp_guard(guard);
     tmp_guard.add(pointer_guard);
@@ -681,13 +692,13 @@ expr2tc dereferencet::build_reference_to(
     // solver will only get confused.
     return value;
   }
-  if (is_null_object2t(root_object) && (is_free(mode) || is_internal(mode)))
+  if ((is_constant_intheap2t(root_object) || is_null_object2t(root_object)) &&
+      (is_free(mode) || is_internal(mode)))
   {
     // Freeing NULL is completely legit according to C
     return value;
   }
   
-  bool use_old_encoding = !options.get_bool_option("z3-slhv");
   if(use_old_encoding) {
     value = object;
 
@@ -966,7 +977,7 @@ void dereferencet::deref_invalid_ptr(
     if (use_old_encoding)
       null_ptr = symbol2tc(pointer_type2tc(get_empty_type()), "NULL");
     else
-      null_ptr = gen_intloc_constant(0);
+      null_ptr = gen_nil();
     expr2tc neq = notequal2tc(null_ptr, deref_expr);
     expr2tc and_ = and2tc(neq, invalid_pointer_expr);
     validity_test = and_;
