@@ -184,14 +184,8 @@ void goto_symext::symex_step(reachability_treet &art)
       replace_null(tmp);
     replace_nondet(tmp);
 
-    tmp->dump();
-
     dereference(tmp, dereferencet::READ);
-    log_status("after deref");
-    tmp->dump();
     replace_dynamic_allocation(tmp);
-    log_status("after replace dynamic");
-    tmp->dump();
 
     symex_goto(tmp);
   }

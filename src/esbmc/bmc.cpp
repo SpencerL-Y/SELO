@@ -168,7 +168,6 @@ void bmct::generate_smt_from_equation(
 smt_convt::resultt
 bmct::run_decision_procedure(smt_convt &smt_conv, symex_target_equationt &eq)
 {
-  log_status("run decision procedure");
   generate_smt_from_equation(smt_conv, eq);
 
   if (
@@ -785,10 +784,13 @@ smt_convt::resultt bmct::multi_property_check(
       reached_mul_claims.emplace(cmt_loc);
     if (is_verified && !options.get_bool_option("keep-verified-claims"))
       return;
+    
+    if (i != 5) return;
 
     // Slice
     symex_slicet slicer(options);
-    slicer.run(local_eq.SSA_steps);
+    if (!options.get_bool_option("no-slice"))
+      slicer.run(local_eq.SSA_steps);
 
     show_vcc(local_eq);
 
@@ -807,6 +809,8 @@ smt_convt::resultt bmct::multi_property_check(
     fine_timet sat_stop = current_time();
     log_status(
       "Runtime decision procedure: {}s", time2string(sat_stop - sat_start));
+    
+    log_status("Result : {}", (result == smt_convt::P_SATISFIABLE));
 
     // If an assertion instance is verified to be violated
     if (result == smt_convt::P_SATISFIABLE)

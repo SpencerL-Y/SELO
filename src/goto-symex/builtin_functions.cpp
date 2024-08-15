@@ -338,7 +338,7 @@ expr2tc goto_symext::symex_mem(
     if (is_heap_load2t(lhs))
     {
       guardt g;
-      symex_assign_heap_laod(lhs, lhs, pwr, pwr, g, false);
+      symex_assign_heap_load(lhs, lhs, pwr, pwr, g, false);
     }
     return expr2tc();
   }

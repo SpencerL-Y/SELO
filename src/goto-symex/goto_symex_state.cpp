@@ -253,12 +253,12 @@ void goto_symex_statet::rename(expr2tc &expr)
 {
   // rename all the symbols with their last known value
 
-  if (is_pointer_with_region2t(expr) ||
-      is_heap_region2t(expr) ||
-      is_heap_load2t(expr) ||
-      is_constant_intheap2t(expr) ||
-      is_constant_intloc2t(expr))
-    return; // Do not rename pwr
+  if (is_slhv_expr(expr))
+  {
+    return;
+    rename_slhv_expr(expr);
+    return;
+  }
 
   if (is_nil_expr(expr))
     return;
@@ -282,6 +282,16 @@ void goto_symex_statet::rename(expr2tc &expr)
     // do this recursively
     expr->Foreach_operand([this](expr2tc &e) { rename(e); });
   }
+}
+
+void goto_symex_statet::rename_slhv_expr(expr2tc &expr)
+{
+  if (is_constant_intheap2t(expr) ||
+      is_constant_intloc2t(expr) ||
+      is_heap_region2t(expr) ||
+      is_pointer_with_region2t(expr))
+    return;
+  expr->Foreach_operand([this](expr2tc &e) { rename(e); });
 }
 
 void goto_symex_statet::rename_address(expr2tc &expr)

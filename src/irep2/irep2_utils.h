@@ -189,6 +189,21 @@ inline bool is_comp_expr(const expr2tc &expr)
          expr->expr_id == expr2t::notequal_id;
 }
 
+inline bool is_slhv_expr(const expr2tc &expr)
+{
+  return is_constant_intheap2t(expr) ||
+         is_constant_intloc2t(expr) ||
+         is_points_to2t(expr) ||
+         is_locadd2t(expr) ||
+         is_pointer_with_region2t(expr) ||
+         is_heap_append2t(expr) ||
+         is_heap_contains2t(expr) ||
+         is_heap_delete2t(expr) ||
+         is_heap_load2t(expr) ||
+         is_heap_region2t(expr) ||
+         is_heap_update2t(expr);
+}
+
 /** Test if expr is true. First checks whether the expr is a constant bool, and
  *  then whether it's true-valued. If these are both true, return true,
  *  otherwise return false.

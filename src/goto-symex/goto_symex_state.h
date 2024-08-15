@@ -346,6 +346,8 @@ public:
    */
   void rename(expr2tc &expr);
 
+  void rename_slhv_expr(expr2tc &expr);
+
   void rename_type(expr2tc &expr);
 
   /**

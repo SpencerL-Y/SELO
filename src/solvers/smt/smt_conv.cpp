@@ -248,6 +248,7 @@ smt_astt smt_convt::convert_ast(const expr2tc &expr)
   smt_cachet::const_iterator cache_result = smt_cache.find(expr);
   if (cache_result != smt_cache.end()) {
     log_status("found!!!!!!!!");
+    cache_result->ast->dump();
     return (cache_result->ast);
   }
 

@@ -316,8 +316,7 @@ z3_slhv_convt::convert_slhv_opts(
 
 smt_astt z3_slhv_convt::project(const expr2tc &expr)
 {
-  if (is_constant_intheap2t(expr) ||
-      is_constant_intloc2t(expr))
+  if (is_constant_intheap2t(expr) || is_constant_intloc2t(expr))
     return convert_ast(expr);
   else if (is_pointer_with_region2t(expr))
     return convert_ast(expr);
@@ -333,16 +332,16 @@ smt_astt z3_slhv_convt::project(const expr2tc &expr)
     if (is_locadd2t(expr))
       ptr = to_locadd2t(expr).loc;
     else if (is_add2t(expr))
-      ptr = is_pointer_type(to_add2t(expr).side_1) ?
+      ptr = (is_pointer_type(to_add2t(expr).side_1) || is_intloc_type(to_add2t(expr).side_1))?
         to_add2t(expr).side_1 : to_add2t(expr).side_2;
     else if (is_sub2t(expr))
-      ptr = is_pointer_type(to_sub2t(expr).side_1) ?
+      ptr = (is_pointer_type(to_sub2t(expr).side_1) || is_intloc_type(to_sub2t(expr).side_1))?
         to_sub2t(expr).side_1 : to_sub2t(expr).side_2;
     return this->project(ptr);
  }
   else
   {
-    log_error("Do not support");
+    expr->dump();
     abort();
   }
 }

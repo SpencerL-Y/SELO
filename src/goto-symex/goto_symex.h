@@ -757,7 +757,7 @@ protected:
    *  @param rhs Value to assign to lhs
    *  @param guard Assignment guard.
    */
-  void symex_assign_heap_laod(
+  void symex_assign_heap_load(
     const expr2tc &lhs,
     const expr2tc &full_lhs,
     expr2tc &rhs,
