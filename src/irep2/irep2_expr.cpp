@@ -267,7 +267,7 @@ unsigned long constant_intloc2t::as_ulong() const
 
 bool constant_intloc2t::is_nil() const
 {
-  return this->as_ulong() == 0;
+  return is_nil_loc;
 }
 
 bool constant_intheap2t::is_emp() const

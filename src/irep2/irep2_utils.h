@@ -273,12 +273,12 @@ inline expr2tc gen_slong(signed long val)
 
 inline expr2tc gen_intloc_constant(unsigned long val)
 {
-  return constant_intloc2tc(BigInt(val));
+  return constant_intloc2tc(BigInt(val), false);
 }
 
 inline expr2tc gen_nil()
 {
-  return gen_intloc_constant(0);
+  return constant_intloc2tc(BigInt(0), true);
 }
 
 inline expr2tc gen_emp() 

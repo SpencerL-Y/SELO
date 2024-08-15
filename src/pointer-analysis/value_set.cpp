@@ -1210,11 +1210,6 @@ void value_sett::assign(
   // basic type
   object_mapt values_rhs;
   get_value_set(rhs, values_rhs);
-  log_status("get values rhs");
-  for(auto& p : values_rhs)
-  {
-    object_numbering[p.first]->dump();
-  }
   assign_rec(lhs, values_rhs, "", add_to_sets);
 }
 

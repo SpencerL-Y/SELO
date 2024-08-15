@@ -141,6 +141,7 @@ void goto_symext::symex_assign(
   const code_assign2t &code = to_code_assign2t(code_assign);
   expr2tc assign_target = code.target;
   expr2tc assign_source = code.source;
+
   bool use_old_encoding = !options.get_bool_option("z3-slhv");
   if(!use_old_encoding) {
     if(is_symbol2t(assign_target) &&
@@ -166,7 +167,6 @@ void goto_symext::symex_assign(
           return;
         }
   }
-  code.dump();
   // Sanity check: if the target has zero size, then we've ended up assigning
   // to/from either a C++ POD class with no fields or an empty C struct or
   // union. The rest of the model checker isn't rated for dealing with this
@@ -184,6 +184,17 @@ void goto_symext::symex_assign(
   expr2tc original_lhs = code.target;
   expr2tc lhs = code.target;
   expr2tc rhs = code.source;
+  if (options.get_bool_option("z3-slhv"))
+  {
+    replace_null(lhs);
+    replace_null(rhs);
+  }
+
+  log_status("symex assign lhs : ------------- ");
+  lhs->dump();
+  log_status("symex assign rhs : ------------- ");
+  rhs->dump();
+
   replace_nondet(lhs);
   replace_nondet(rhs);
 
@@ -910,6 +921,23 @@ void goto_symext::replace_nondet(expr2tc &expr)
     expr->Foreach_operand([this](expr2tc &e) {
       if (!is_nil_expr(e))
         replace_nondet(e);
+    });
+  }
+}
+
+void goto_symext::replace_null(expr2tc &expr)
+{
+  if (is_nil_expr(expr)) return;
+  if (is_symbol2t(expr))
+  {
+    if (to_symbol2t(expr).get_symbol_name() != "NULL") return;
+    expr = is_intheap_type(expr) ? gen_emp() : gen_nil();
+  }
+  else
+  {
+    expr->Foreach_operand([this](expr2tc &e) {
+      if (!is_nil_expr(e))
+        replace_null(e);
     });
   }
 }

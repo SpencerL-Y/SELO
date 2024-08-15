@@ -267,13 +267,6 @@ void goto_symex_statet::rename(expr2tc &expr)
 
   if (is_symbol2t(expr))
   {
-    if (to_symbol2t(expr).get_symbol_name() == std::string("NULL") &&
-        (is_intheap_type(expr) || is_intloc_type(expr) || is_pointer_type(expr)))
-    {
-      expr = is_intheap_type(expr) ? gen_emp() : gen_nil();
-      return;
-    }
-
     type2tc origtype = expr->type;
     top().level1.rename(expr);
     level2.rename(expr);

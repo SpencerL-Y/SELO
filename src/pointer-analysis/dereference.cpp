@@ -465,7 +465,7 @@ expr2tc dereferencet::dereference(
   modet mode,
   const expr2tc &lexical_offset)
 {
-  log_status("dereferencing pointer ---------");
+  log_status("--------------- dereferencing pointer ---------");
   orig_src->dump();
 
   internal_items.clear();
@@ -521,6 +521,9 @@ expr2tc dereferencet::dereference(
 
     if (is_nil_expr(new_value))
       continue;
+    
+    log_status("after building reference to : not nill");
+    new_value->dump();
 
     assert(!is_nil_expr(pointer_guard));
 
@@ -826,10 +829,7 @@ expr2tc dereferencet::build_reference_to(
       if (heap_region.update(access_sz))
         dereference_callback.update_regions(value);
 
-      if (is_free(mode))
-        pointer_guard = equality2tc(deref_expr, to_heap_region2t(object).start_loc);
-      else
-        pointer_guard = same_object2tc(deref_expr, object);
+      pointer_guard = same_object2tc(deref_expr, object);
       tmp_guard.add(pointer_guard);
     }
     else

@@ -53,19 +53,29 @@ public:
 class constant_intloc_data : public constant2t 
 {
 public:
-  constant_intloc_data(const type2tc &t, expr2t::expr_ids id, const BigInt &value)
-    : constant2t(t, id), value(value)
+  constant_intloc_data(
+    const type2tc &t,
+    expr2t::expr_ids id,
+    const BigInt &value,
+    bool is_nil_loc)
+    : constant2t(t, id), value(value), is_nil_loc(is_nil_loc)
   {
   }
   constant_intloc_data(const constant_intloc_data &ref) = default;
 
   BigInt value;
+  bool is_nil_loc;
 
   // Type mangling:
   typedef esbmct::
     field_traits<BigInt, constant_intloc_data, &constant_intloc_data::value>
-      value_field;
-  typedef esbmct::expr2t_traits<value_field> traits;
+      constant_intloc_data_value_field;
+  typedef esbmct::
+    field_traits<bool, constant_intloc_data, &constant_intloc_data::is_nil_loc>
+      constant_intloc_data_is_nil_loc_field;
+  typedef esbmct::expr2t_traits<
+    constant_intloc_data_value_field,
+    constant_intloc_data_is_nil_loc_field> traits;
 };
 
 
@@ -1935,8 +1945,8 @@ public:
 class constant_intloc2t : public constant_intloc_expr_methods
 {
 public:
-  constant_intloc2t(const BigInt &value)
-    : constant_intloc_expr_methods(get_intloc_type(), constant_intloc_id, value)
+  constant_intloc2t(const BigInt &value, bool is_nil_loc)
+    : constant_intloc_expr_methods(get_intloc_type(), constant_intloc_id, value, is_nil_loc)
   {
   }
   

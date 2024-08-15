@@ -1,7 +1,7 @@
 #include <irep2/irep2_templates_expr.h>
 
 expr_typedefs1(constant_int, constant_int_data);
-expr_typedefs1(constant_intloc, constant_intloc_data);
+expr_typedefs2(constant_intloc, constant_intloc_data);
 expr_typedefs1(constant_intheap, constant_intheap_data);
 expr_typedefs1(constant_fixedbv, constant_fixedbv_data);
 expr_typedefs1(constant_floatbv, constant_floatbv_data);
