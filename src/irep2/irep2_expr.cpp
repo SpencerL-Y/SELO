@@ -259,6 +259,22 @@ long constant_int2t::as_long() const
   return value.to_int64();
 }
 
+unsigned long constant_intloc2t::as_ulong() const
+{
+  assert(!value.is_negative());
+  return value.to_uint64();
+}
+
+bool constant_intloc2t::is_nil() const
+{
+  return is_nil_loc;
+}
+
+bool constant_intheap2t::is_emp() const
+{
+  return is_nil_expr(value);
+}
+
 bool constant_bool2t::is_true() const
 {
   return value;

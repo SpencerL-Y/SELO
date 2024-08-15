@@ -801,6 +801,12 @@ protected:
   void replace_nondet(expr2tc &expr);
 
   /**
+   *  Replace NULL symbols to constant_intheap or constant_intloc
+   *  @param expr Expr to search for NULL symbols.
+   */
+  void replace_null(expr2tc &expr);
+
+  /**
    *  Fetch reference to global dynamic object counter.
    *  @return Reference to global dynamic object counter.
    */

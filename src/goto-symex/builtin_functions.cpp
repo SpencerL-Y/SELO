@@ -489,7 +489,7 @@ void goto_symext::symex_free(const expr2tc &expr)
           if2tc(get_intheap_type(), item.guard, heap_region.flag, freed_heap);
       }
 
-      expr2tc emp_heap = constant_intheap2tc(get_intheap_type(), true);
+      expr2tc emp_heap = gen_emp();
       log_status("symex free freed_heap emp_heap");
       symex_assign(code_assign2tc(freed_heap, emp_heap));
       expr2tc alloc_size_heap_symbol = symbol2tc(get_intheap_type(), alloc_size_heap_name);

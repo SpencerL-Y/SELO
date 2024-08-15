@@ -1602,7 +1602,8 @@ expr2tc bitcast2t::do_simplify() const
 expr2tc typecast2t::do_simplify() const
 {
   // Follow approach of old irep, i.e., copy it
-  if (type == from->type)
+  if (type == from->type ||
+      (is_intloc_type(from->type) && is_pointer_type(type)))
   {
     // Typecast to same type means this can be eliminated entirely
     return from;
@@ -1858,6 +1859,23 @@ static expr2tc simplify_relations(
   const expr2tc &side_1,
   const expr2tc &side_2)
 {
+  // SLHV constant simply
+
+  if (is_constant_intloc2t(side_1) && is_constant_intloc2t(side_2))
+  {
+    if (to_constant_intloc2t(side_1).as_ulong() != to_constant_intloc2t(side_2).as_ulong())
+      return gen_true_expr();
+    else
+      return gen_false_expr(); // Fix
+  }
+  if (is_constant_intheap2t(side_1) && is_constant_intheap2t(side_2))
+  {
+    if (to_constant_intheap2t(side_1).is_emp() && to_constant_intheap2t(side_2).is_emp())
+      return gen_false_expr();
+    else
+      return gen_true_expr(); // Fix
+  }
+
   if (!is_number_type(type))
     return expr2tc();
 

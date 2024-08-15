@@ -2046,8 +2046,6 @@ exprt migrate_expr_back(const expr2tc &ref)
     const constant_intheap2t &ref2 = to_constant_intheap2t(ref);
     typet thetype = migrate_type_back(ref->type);
     constant_exprt theexpr(thetype);
-    bool is_emp = ref2.is_emp;
-    theexpr.set("is_emp", is_emp ? irep_idt("true") : irep_idt("false"));
     return theexpr;
   }
   case expr2t::constant_fixedbv_id:

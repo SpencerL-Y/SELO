@@ -271,15 +271,19 @@ inline expr2tc gen_slong(signed long val)
   return constant_int2tc(get_int_type(config.ansi_c.word_size), BigInt(val));
 }
 
+inline expr2tc gen_intloc_constant(unsigned long val)
+{
+  return constant_intloc2tc(BigInt(val), false);
+}
+
+inline expr2tc gen_nil()
+{
+  return constant_intloc2tc(BigInt(0), true);
+}
 
 inline expr2tc gen_emp() 
 {
-  return constant_intheap2tc(get_intheap_type(), true);
-}
-
-inline expr2tc gen_intloc_constant(unsigned long val)
-{
-  return constant_intloc2tc(get_intloc_type(), BigInt(val));
+  return constant_intheap2tc(expr2tc());
 }
 
 inline const type2tc &get_array_subtype(const type2tc &type)

@@ -42,8 +42,10 @@ std::string cpp_name_type2t::field_names[esbmct::num_type_fields] =
 
 std::string constant_int2t::field_names[esbmct::num_type_fields] =
   {"value", "", "", "", ""};
-std::string constant_intloc2t::field_names[esbmct::num_type_fields] = {"value" , "", "", "", ""};
-std::string constant_intheap2t::field_names[esbmct::num_type_fields] = {"is_emp" , "", "", "", ""};
+std::string constant_intloc2t::field_names[esbmct::num_type_fields] =
+  {"value", "is_nil", "", "", ""};
+std::string constant_intheap2t::field_names[esbmct::num_type_fields] =
+  {"value", "", "", "", ""};
 std::string constant_fixedbv2t::field_names[esbmct::num_type_fields] =
   {"value", "", "", "", ""};
 std::string constant_floatbv2t::field_names[esbmct::num_type_fields] =

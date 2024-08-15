@@ -180,10 +180,18 @@ void goto_symext::symex_step(reachability_treet &art)
   {
     log_status("    ======= goto symex: GOTO");
     expr2tc tmp(instruction.guard);
+    if (options.get_bool_option("z3-slhv"))
+      replace_null(tmp);
     replace_nondet(tmp);
 
+    tmp->dump();
+
     dereference(tmp, dereferencet::READ);
+    log_status("after deref");
+    tmp->dump();
     replace_dynamic_allocation(tmp);
+    log_status("after replace dynamic");
+    tmp->dump();
 
     symex_goto(tmp);
   }
@@ -211,6 +219,8 @@ void goto_symext::symex_step(reachability_treet &art)
         goto_symext::symex_assign(assign);
       }
 
+      if (options.get_bool_option("z3-slhv"))
+        replace_null(thecode);
       symex_return(thecode);
     }
 
@@ -333,6 +343,7 @@ void goto_symext::symex_step(reachability_treet &art)
 
   case OTHER:
     log_status("    ======= goto symex: OTHER");
+    log_status("guard - {}", !cur_state->guard.is_false());
     if (!cur_state->guard.is_false())
       symex_other(instruction.code);
     cur_state->source.pc++;
@@ -383,7 +394,7 @@ void goto_symext::symex_step(reachability_treet &art)
       fmt::underlying(instruction.type));
     abort();
   }
-
+  log_status("finish this step");
 }
 
 void goto_symext::symex_assume()
@@ -392,7 +403,9 @@ void goto_symext::symex_assume()
     return;
 
   expr2tc cond = cur_state->source.pc->guard;
-
+  
+  if (options.get_bool_option("z3-slhv"))
+    replace_null(cond);
   replace_nondet(cond);
   dereference(cond, dereferencet::READ);
   replace_dynamic_allocation(cond);
@@ -417,6 +430,8 @@ void goto_symext::symex_assert()
   const goto_programt::instructiont &instruction = *cur_state->source.pc;
 
   expr2tc tmp = instruction.guard;
+  if (options.get_bool_option("z3-slhv"))
+    replace_null(tmp);
   replace_nondet(tmp);
 
   intrinsic_races_check_dereference(tmp);
@@ -1217,7 +1232,7 @@ void goto_symext::add_memory_leak_checks()
     log_status("memleak encoding");
     for (auto const &it : dynamic_memory){
       log_status("allocated object {}: ",  it.name );
-      expr2tc deallocated = equality2tc(it.obj, constant_intheap2tc(get_intheap_type(), true));
+      expr2tc deallocated = equality2tc(it.obj, gen_emp());
       expr2tc when = it.alloc_guard.as_expr();
       expr2tc cond = implies2tc(when, deallocated);
       cur_state->rename(cond);

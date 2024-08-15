@@ -255,7 +255,9 @@ void goto_symex_statet::rename(expr2tc &expr)
 
   if (is_pointer_with_region2t(expr) ||
       is_heap_region2t(expr) ||
-      is_heap_load2t(expr))
+      is_heap_load2t(expr) ||
+      is_constant_intheap2t(expr) ||
+      is_constant_intloc2t(expr))
     return; // Do not rename pwr
 
   if (is_nil_expr(expr))
