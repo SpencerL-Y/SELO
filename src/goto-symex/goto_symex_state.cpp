@@ -67,9 +67,9 @@ void goto_symex_statet::initialize(
 bool goto_symex_statet::constant_propagation(const expr2tc &expr) const
 {
   // SLHV propagation
-  if (is_heap_region2t(expr) || is_pointer_with_region2t(expr) ||
-      is_constant_intheap2t(expr) || is_constant_intloc2t(expr) ||
-      is_heap_load2t(expr))
+  if (is_pointer_with_region2t(expr) ||
+      is_constant_intheap2t(expr) ||
+      is_constant_intloc2t(expr))
     return true;
   if (is_locadd2t(expr))
   {
@@ -252,14 +252,6 @@ void goto_symex_statet::rename_type(expr2tc &expr)
 void goto_symex_statet::rename(expr2tc &expr)
 {
   // rename all the symbols with their last known value
-
-  if (is_pointer_with_region2t(expr) ||
-      is_heap_region2t(expr) ||
-      is_heap_load2t(expr) ||
-      is_constant_intheap2t(expr) ||
-      is_constant_intloc2t(expr))
-    return; // Do not rename pwr
-
   if (is_nil_expr(expr))
     return;
 
@@ -281,6 +273,27 @@ void goto_symex_statet::rename(expr2tc &expr)
   {
     // do this recursively
     expr->Foreach_operand([this](expr2tc &e) { rename(e); });
+  }
+
+  if (is_pointer_with_region2t(expr))
+  {
+    pointer_with_region2t &pwr = to_pointer_with_region2t(expr);
+    if (is_pointer_with_region2t(pwr.loc_ptr))
+      pwr.loc_ptr = to_pointer_with_region2t(pwr.loc_ptr).loc_ptr;
+  }
+
+  if (is_heap_region2t(expr))
+  {
+    heap_region2t &hr = to_heap_region2t(expr);
+    if (is_pointer_with_region2t(hr.start_loc))
+      hr.start_loc = to_pointer_with_region2t(hr.start_loc).loc_ptr;
+  }
+  
+  if (is_heap_load2t(expr))
+  {
+    heap_load2t &hl = to_heap_load2t(expr);
+    if (is_pointer_with_region2t(hl.flag))
+      hl.flag = to_pointer_with_region2t(hl.flag).loc_ptr;
   }
 }
 

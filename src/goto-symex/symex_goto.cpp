@@ -216,10 +216,6 @@ static inline guardt merge_state_guards(
   goto_symext::statet::goto_statet &goto_state,
   goto_symex_statet &state)
 {
-  log_status("{} - {} - {}",
-    !goto_state.guard.is_false(),
-    !state.guard.is_false(),
-    state.guard.disjunction_may_simplify(goto_state.guard));
   // adjust guard, even using guards from unreachable states. This helps to
   // shrink the state guard if the incoming edge is from a path that was
   // truncated by config.unwind, config.depth or an assume-false instruction.

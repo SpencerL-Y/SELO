@@ -318,6 +318,7 @@ expr2tc goto_symext::symex_mem(
     symex_assign(code_assign2tc(rhs_heap, rhs_region));
 
     log_status("create valueset base addr symbol and assign");
+    cur_state->rename(rhs_base_addr);
     expr2tc pwr = pointer_with_region2tc(rhs_base_addr, rhs_heap);
     symex_assign(code_assign2tc(lhs_flag, pwr));
 
@@ -328,6 +329,7 @@ expr2tc goto_symext::symex_mem(
       ptr_obj,
       get_intheap_type(),
       gen_ulong(total_bytes));
+    cur_state->rename(rhs_heap);
     dynamic_memory.emplace_back(
       rhs_heap,
       rhs_guard,
@@ -338,7 +340,7 @@ expr2tc goto_symext::symex_mem(
     if (is_heap_load2t(lhs))
     {
       guardt g;
-      symex_assign_heap_laod(lhs, lhs, pwr, pwr, g, false);
+      symex_assign_heap_load(lhs, lhs, pwr, pwr, g, false);
     }
     return expr2tc();
   }

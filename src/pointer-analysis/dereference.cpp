@@ -819,15 +819,20 @@ expr2tc dereferencet::build_reference_to(
     log_status("befor building pointer guard");
     object->dump();
     deref_expr->dump();
+    type->dump();
 
     guardt tmp_guard(guard);
     if (is_heap_region2t(object))
     {
       heap_region2t& heap_region = to_heap_region2t(value);
-      int access_sz = type->get_width() / 8;
-      // Update its pt bytes
-      if (heap_region.update(access_sz))
-        dereference_callback.update_regions(value);
+
+      if (!is_free(mode) && !is_internal(mode))
+      {
+        int access_sz = type_byte_size(type).to_uint64();
+        // Update its pt bytes
+        if (heap_region.update(access_sz))
+          dereference_callback.update_regions(value);
+      }
 
       pointer_guard = same_object2tc(deref_expr, object);
       tmp_guard.add(pointer_guard);
@@ -1280,15 +1285,14 @@ void dereferencet::build_reference_slhv(
     heap_region2t& heap_region = to_heap_region2t(value);
     expr2tc heap = heap_region.flag;
 
-    int access_sz = type->get_width() / 8;
+    int access_sz = type_byte_size(type).to_uint64();
     expr2tc access_ptr;
     if (offset_bytes == 0)
       access_ptr = heap_region.start_loc;
     else
     { 
-      int offset_pt = offset_bytes / 8;
-      assert(offset_pt % access_sz == 0);
-      offset_pt /= access_sz;
+      assert(offset_bytes % access_sz == 0);
+      int offset_pt = offset_bytes / access_sz;
       access_ptr = locadd2tc(
         heap_region.start_loc,
         gen_long(get_int64_type(), offset_pt)
@@ -1296,9 +1300,22 @@ void dereferencet::build_reference_slhv(
     }
     
     std::string flag_id =
-      std::string("nondet_loaded::") + 
-        dereference_callback.get_loaded_value_flag(access_ptr);
-    expr2tc flag = symbol2tc(type, flag_id);
+      dereference_callback.get_loaded_value_flag(access_ptr)
+        + std::string("::loaded::");
+
+    symbolt symbol;
+    symbol.name = flag_id;
+    symbol.id = "heap_load::" + id2string(symbol.name);
+    symbol.lvalue = true;
+    symbol.type = 
+      (is_pointer_type(type) || is_intloc_type(type)) ?
+        typet(typet::t_intloc) : typet(typet::t_integer);
+
+    symbol.mode = "C";
+    log_status("new_context.add(symbol);");
+    new_context.add(symbol);
+
+    expr2tc flag = symbol2tc(type, symbol.id);
 
     value = heap_load2tc(type, flag, heap, access_ptr, access_sz);
   } else {
