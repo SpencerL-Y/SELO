@@ -784,8 +784,6 @@ smt_convt::resultt bmct::multi_property_check(
       reached_mul_claims.emplace(cmt_loc);
     if (is_verified && !options.get_bool_option("keep-verified-claims"))
       return;
-    
-    if (i != 5) return;
 
     // Slice
     symex_slicet slicer(options);

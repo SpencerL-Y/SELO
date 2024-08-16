@@ -331,6 +331,7 @@ smt_astt smt_convt::convert_ast(const expr2tc &expr)
   }
   }
 
+  log_status("begin convert expr");
   expr->dump();
 
   smt_astt a;

@@ -1291,9 +1291,8 @@ void dereferencet::build_reference_slhv(
       access_ptr = heap_region.start_loc;
     else
     { 
-      int offset_pt = offset_bytes / 8;
-      assert(offset_pt % access_sz == 0);
-      offset_pt /= access_sz;
+      assert(offset_bytes % access_sz == 0);
+      int offset_pt = offset_bytes / access_sz;
       access_ptr = locadd2tc(
         heap_region.start_loc,
         gen_long(get_int64_type(), offset_pt)
