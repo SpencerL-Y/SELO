@@ -284,52 +284,45 @@ expr2tc goto_symext::symex_mem(
 
     symbol.type.dynamic(true);
     symbol.mode = "C";
-    log_status("new_context.add(symbol);");
     new_context.add(symbol);
-
-    expr2tc lhs_flag;
-    if (is_symbol2t(lhs))
-      lhs_flag = lhs;
-    else if (is_heap_load2t(lhs))
-      lhs_flag = to_heap_load2t(lhs).flag;
-    else
-    {
-      log_error("Do not support this expr");
-      abort();
-    }
 
     expr2tc rhs_heap = symbol2tc(get_intheap_type(), symbol.id);
     guardt rhs_guard = cur_state->guard;
 
-    std::string rhs_base_id = to_symbol2t(lhs_flag).get_symbol_name();
-    expr2tc rhs_base_addr = symbol2tc(get_intloc_type(), rhs_base_id);
+    // set a location for new heap region
+    symbolt heap_region_loc;
+    heap_region_loc.name = "heap_region_loc_"+ i2string(dynamic_counter);
+    
+    heap_region_loc.id = std::string("symex_dynamic::") + id2string(heap_region_loc.name);
+    heap_region_loc.lvalue = true;
 
-    expr2tc rhs_heap_region_flag = symbol2tc(get_intheap_type(), symbol.id);
+    heap_region_loc.type = typet(typet::t_intheap);
+
+    heap_region_loc.mode = "C";
+    new_context.add(heap_region_loc);
+
+    expr2tc rhs_base_loc = symbol2tc(get_intloc_type(), heap_region_loc.id);
+    cur_state->rename(rhs_base_loc);
+
     expr2tc rhs_region = 
       heap_region2tc(
-        rhs_heap_region_flag,
-        rhs_base_addr,
+        rhs_heap,
+        rhs_base_loc,
         region_pt_bytes,
         region_size,
         size != 1 
       );
-
+    
     log_status("symex assign in symex_mem: allocated_heap = heaplet");
     symex_assign(code_assign2tc(rhs_heap, rhs_region));
 
-    log_status("create valueset base addr symbol and assign");
-    cur_state->rename(rhs_base_addr);
-    expr2tc pwr = pointer_with_region2tc(rhs_base_addr, rhs_heap);
-    symex_assign(code_assign2tc(lhs_flag, pwr));
-
-    // TODO: modify the pointer object here, maybe to wrap the intloc symbol directly
-    expr2tc ptr_obj =
-      pointer_object2tc(get_intloc_type(), to_pointer_with_region2t(pwr).loc_ptr);
+    // link pointer variable and heap variable
+    expr2tc pwr = pointer_with_region2tc(rhs_base_loc, rhs_heap);
     track_new_pointer(
-      ptr_obj,
+      rhs_base_loc,
       get_intheap_type(),
       gen_ulong(total_bytes));
-    cur_state->rename(rhs_heap);
+
     dynamic_memory.emplace_back(
       rhs_heap,
       rhs_guard,
@@ -337,10 +330,15 @@ expr2tc goto_symext::symex_mem(
       symbol.name.as_string()
     );
 
+    log_status("create valueset base loc symbol and assign");
     if (is_heap_load2t(lhs))
     {
       guardt g;
       symex_assign_heap_load(lhs, lhs, pwr, pwr, g, false);
+    }
+    else
+    {
+      symex_assign(code_assign2tc(lhs, pwr));
     }
     return expr2tc();
   }

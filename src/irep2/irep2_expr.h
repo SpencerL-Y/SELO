@@ -935,7 +935,6 @@ public:
   typedef esbmct::expr2t_traits<
     points_to_data_addr_field,
     points_to_data_content_field> traits;
-
 };
 
 
@@ -963,7 +962,6 @@ public:
   typedef esbmct::field_traits<unsigned int, uplus_data, &uplus_data::member_num>
     member_num_field;
   typedef esbmct::expr2t_traits<uplus_members_field, member_num_field> traits;
-
 };
 
 class locadd_data : public expr2t 
@@ -987,7 +985,6 @@ public:
   typedef esbmct::field_traits<expr2tc, locadd_data, &locadd_data::offset>
     locadd_offset_field;
   typedef esbmct::expr2t_traits<locadd_loc_field, locadd_offset_field> traits;
-
 };
 
 class heap_region_data : public expr2t
@@ -1066,7 +1063,9 @@ public:
   }
 
   expr2tc pwr;
-  typedef esbmct::field_traits<expr2tc, heap_free_data, &heap_free_data::pwr> heap_free_data_pwr_field;
+
+  typedef esbmct::field_traits<expr2tc, heap_free_data, &heap_free_data::pwr>
+    heap_free_data_pwr_field;
   typedef esbmct::expr2t_traits<heap_free_data_pwr_field> traits;
 };
 
@@ -1075,21 +1074,17 @@ public:
   heap_load_data(
     const type2tc &t,
     datatype_ops::expr_ids id,
-    const expr2tc &flag,
     const expr2tc &heap,
     const expr2tc &start_loc,
     unsigned int byte_len)
-    : expr2t(t, id), flag(flag), heap(heap), start_loc(start_loc), byte_len(byte_len)
+    : expr2t(t, id), heap(heap), start_loc(start_loc), byte_len(byte_len)
   {
   }
 
-  expr2tc flag;
   expr2tc heap;
   expr2tc start_loc;
   unsigned int byte_len;
 
-  typedef esbmct::field_traits<expr2tc, heap_load_data, &heap_load_data::flag>
-    heap_load_data_flag_field;
   typedef esbmct::field_traits<expr2tc, heap_load_data, &heap_load_data::heap>
     heap_load_data_heap_field;
   typedef esbmct::field_traits<expr2tc, heap_load_data, &heap_load_data::start_loc>
@@ -1097,11 +1092,9 @@ public:
   typedef esbmct::field_traits<unsigned int, heap_load_data, &heap_load_data::byte_len>
     heap_load_data_byte_len_field;
   typedef esbmct::expr2t_traits<
-    heap_load_data_flag_field,
     heap_load_data_heap_field,
     heap_load_data_start_loc_field,
     heap_load_data_byte_len_field> traits;
-
 };
 
 class heap_update_data : public expr2t
@@ -3367,6 +3360,8 @@ public:
   }
   locadd2t(const locadd2t &ref) = default;
 
+  std::string offset_as_string() const;
+
   static std::string field_names[esbmct::num_type_fields];
 };
 
@@ -3406,14 +3401,13 @@ class heap_load2t : public heap_load_expr_methods
 {
 public:
   heap_load2t(
-    const type2tc &type, 
-    const expr2tc &flag,
+    const type2tc &type,
     const expr2tc &heap,
     const expr2tc &start_loc,
     unsigned int byte_len)
   : heap_load_expr_methods(
     type, expr2t::heap_load_id,
-    flag, heap, start_loc, byte_len)
+    heap, start_loc, byte_len)
   {
   }
   heap_load2t(const heap_load2t& ref) = default;

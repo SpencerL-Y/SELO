@@ -186,8 +186,13 @@ void goto_symext::symex_assign(
   expr2tc rhs = code.source;
   if (options.get_bool_option("z3-slhv"))
   {
+    // Use SLHV empty pointer and empty heap
     replace_null(lhs);
     replace_null(rhs);
+
+    // Turn every form of pointer arithmetic to locadd
+    replace_by_locadd(lhs);
+    replace_by_locadd(rhs);
   }
 
   log_status("symex assign lhs : ------------- ");
@@ -902,15 +907,12 @@ void goto_symext::symex_assign_heap_load(
   assert(is_scalar_type(rhs));
 
   const heap_load2t& heap_load = to_heap_load2t(lhs);
-  // assert(heap_load.byte_len * 8 == rhs->type->get_width());
-
-  symex_assign_rec(heap_load.flag, heap_load.flag, rhs, full_rhs, guard, hidden);
 
   expr2tc updated_heap =
     heap_update2tc(
       heap_load.heap,
       heap_load.start_loc,
-      heap_load.flag,
+      rhs,
       heap_load.byte_len);
 
   symex_assign_rec(heap_load.heap, heap_load.heap, updated_heap, updated_heap, guard, hidden);
@@ -947,6 +949,64 @@ void goto_symext::replace_null(expr2tc &expr)
     expr->Foreach_operand([this](expr2tc &e) {
       if (!is_nil_expr(e))
         replace_null(e);
+    });
+  }
+}
+
+void goto_symext::replace_by_locadd(expr2tc &expr)
+{
+  if (is_nil_expr(expr) || is_symbol2t(expr)) return;
+  if (is_member2t(expr))
+  {
+      member2t& member = to_member2t(expr);
+      
+      type2tc deref_type = member.type;
+      expr2tc deref_loc;
+
+      if (is_dereference2t(member.source_value))
+      {
+        dereference2t& deref = to_dereference2t(member.source_value);
+        expr2tc loc_ptr = deref.value;
+        replace_by_locadd(loc_ptr);
+        
+        struct_type2t& ty = to_struct_type(deref.type);
+        unsigned int index = ty.get_component_number(member.member);
+        
+        if (index != 0)
+          deref_loc = locadd2tc(loc_ptr, gen_ulong(index));
+        else
+          deref_loc = loc_ptr;
+      }
+      else
+      {
+        // TODO
+        log_error("Do not support this member expr");
+        abort();
+      }
+      
+      expr = dereference2tc(deref_type, deref_loc);
+  }
+  else if (is_add2t(expr) || is_sub2t(expr))
+  {
+    expr2tc side_1 = is_add2t(expr) ? to_add2t(expr).side_1 : to_sub2t(expr).side_1;
+    expr2tc side_2 = is_add2t(expr) ? to_add2t(expr).side_2 : to_sub2t(expr).side_2;
+
+    replace_by_locadd(side_1);
+    replace_by_locadd(side_2);
+    
+    if (is_pointer_type(side_2) || is_intloc_type(side_2))
+      std::swap(side_1, side_2);
+
+    if (is_sub2t(expr))
+      side_2 = neg2tc(side_2->type, side_2);
+
+    expr = locadd2tc(side_1, side_2);
+  }
+  else
+  {
+    expr->Foreach_operand([this](expr2tc &e) {
+      if (!is_nil_expr(e))
+        replace_by_locadd(e);
     });
   }
 }

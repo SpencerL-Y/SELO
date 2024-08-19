@@ -203,6 +203,13 @@ void value_sett::get_value_set(const expr2tc &expr, object_mapt &dest) const
 
   // Then, start fetching values.
   get_value_set_rec(new_expr, dest, "", new_expr->type);
+
+    // Convert values into expressions to return.
+  log_status("result value set:");
+  for (object_mapt::const_iterator it = dest.begin();
+       it != dest.end();
+       it++)
+    to_expr(it)->dump();
 }
 
 void value_sett::get_value_set_rec(
@@ -574,9 +581,20 @@ void value_sett::get_value_set_rec(
   if (is_locadd2t(expr))
   {
     const locadd2t& locadd = to_locadd2t(expr);
-    assert(is_intloc_type(locadd.loc));
-    abort();
-    // TODO
+    expr2tc base_ptr = locadd.loc;
+    expr2tc off = locadd.offset;
+
+    if ((!is_pointer_type(base_ptr) && !is_intloc_type(base_ptr)) ||
+        is_pointer_type(off) || is_intloc_type(off))
+    {
+      log_error("Wrong locadd expr");
+      abort();
+    }
+
+    // Do not need to update offset in SLHV
+    log_status("here");
+    get_value_set_rec(base_ptr, dest, suffix, original_type);
+    return;
   }
 
   if (is_pointer_with_region2t(expr))
@@ -591,7 +609,7 @@ void value_sett::get_value_set_rec(
   if (is_heap_load2t(expr))
   {
     get_value_set_rec(
-      to_heap_load2t(expr).flag,
+      to_heap_load2t(expr).start_loc,
       dest, suffix, original_type
     );
     return;

@@ -270,7 +270,15 @@ z3_slhv_convt::convert_slhv_opts(
       // TODO : fix width
       // assert(heap_load.byte_len == 4);
       //current heap state
-      assert_ast(mk_subh(mk_pt(args[2], args[0]), args[1]));
+
+      smt_astt v1;
+
+      if (is_pointer_type(heap_load.type) || is_intloc_type(heap_load.type))
+        v1 = mk_fresh(mk_intloc_sort(), mk_fresh_name("tmp_loc::"));
+      else
+        v1 = mk_fresh(mk_int_sort(), mk_fresh_name("tmp_val::"));
+
+      assert_ast(mk_subh(mk_pt(args[1], v1), args[0]));
       return args[0];
     }
     case expr2t::heap_contains_id:
@@ -325,7 +333,7 @@ smt_astt z3_slhv_convt::project(const expr2tc &expr)
   else if (is_heap_region2t(expr))
     return convert_ast(to_heap_region2t(expr).start_loc);
   else if (is_heap_load2t(expr))
-    return convert_ast(to_heap_load2t(expr).flag);
+    return project(to_heap_load2t(expr).start_loc);
   else if (is_typecast2t(expr))
     return this->project(to_typecast2t(expr).from);
   else if (is_locadd2t(expr) || is_add2t(expr) || is_sub2t(expr))

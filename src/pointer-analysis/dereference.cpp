@@ -178,7 +178,6 @@ void dereferencet::dereference_expr(expr2tc &expr, guardt &guard, modet mode)
     expr = result;
     break;
   }
-
   case expr2t::index_id:
   case expr2t::member_id:
   {
@@ -485,7 +484,6 @@ expr2tc dereferencet::dereference(
 
   // collect objects dest may point to
   value_setst::valuest points_to_set;
-
   log_status("---- value set for ");
   src->dump();
   dereference_callback.get_value_set(src, points_to_set);
@@ -1298,26 +1296,8 @@ void dereferencet::build_reference_slhv(
         gen_long(get_int64_type(), offset_pt)
       );
     }
-    
-    std::string flag_id =
-      dereference_callback.get_loaded_value_flag(access_ptr)
-        + std::string("::loaded::");
 
-    symbolt symbol;
-    symbol.name = flag_id;
-    symbol.id = "heap_load::" + id2string(symbol.name);
-    symbol.lvalue = true;
-    symbol.type = 
-      (is_pointer_type(type) || is_intloc_type(type)) ?
-        typet(typet::t_intloc) : typet(typet::t_integer);
-
-    symbol.mode = "C";
-    log_status("new_context.add(symbol);");
-    new_context.add(symbol);
-
-    expr2tc flag = symbol2tc(type, symbol.id);
-
-    value = heap_load2tc(type, flag, heap, access_ptr, access_sz);
+    value = heap_load2tc(type, heap, access_ptr, access_sz);
   } else {
     log_error("ERROR: currently not support non-scalar type dereference");
     abort();

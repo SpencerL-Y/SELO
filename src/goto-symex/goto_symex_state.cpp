@@ -288,13 +288,6 @@ void goto_symex_statet::rename(expr2tc &expr)
     if (is_pointer_with_region2t(hr.start_loc))
       hr.start_loc = to_pointer_with_region2t(hr.start_loc).loc_ptr;
   }
-  
-  if (is_heap_load2t(expr))
-  {
-    heap_load2t &hl = to_heap_load2t(expr);
-    if (is_pointer_with_region2t(hl.flag))
-      hl.flag = to_pointer_with_region2t(hl.flag).loc_ptr;
-  }
 }
 
 void goto_symex_statet::rename_address(expr2tc &expr)

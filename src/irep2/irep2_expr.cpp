@@ -464,6 +464,35 @@ bool heap_region2t::update(uint byte_len)
   return false;
 }
 
+std::string locadd2t::offset_as_string() const
+{
+  if (is_symbol2t(offset))
+    return to_symbol2t(offset).get_symbol_name();
+  else if (is_neg2t(offset))
+  {
+    neg2t off = to_neg2t(offset);
+    expr2tc val = off.value.simplify();
+    if (!is_constant_int2t(val))
+    {
+      log_error("Doe no support for offset_as_string of neg");
+      abort();
+    }
+    return std::string("-")
+      + std::to_string(to_constant_int2t(val).value.to_int64());
+  }
+  else
+  {
+    expr2tc off = offset;
+    if (!is_constant_int2t(off)) off = off.simplify();
+    if (!is_constant_int2t(off))
+    {
+      log_error("Doe no support for offset_as_string");
+      abort();
+    }
+    return std::to_string(to_constant_int2t(off).value.to_int64());
+  }
+}
+
 const expr2tc &object_descriptor2t::get_root_object() const
 {
   const expr2tc *tmp = &object;

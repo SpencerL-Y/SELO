@@ -807,6 +807,12 @@ protected:
   void replace_null(expr2tc &expr);
 
   /**
+   *  Replace member, indexof ... by locadd
+   *  @param expr Expr to a location.
+   */
+  void replace_by_locadd(expr2tc &expr);
+
+  /**
    *  Fetch reference to global dynamic object counter.
    *  @return Reference to global dynamic object counter.
    */

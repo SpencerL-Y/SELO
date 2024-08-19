@@ -173,7 +173,7 @@ std::string heap_region2t::field_names[esbmct::num_type_fields] =
 std::string pointer_with_region2t::field_names[esbmct::num_type_fields] = 
 {"loc_ptr", "region", "", "", ""};
 std::string heap_load2t::field_names[esbmct::num_type_fields] = 
-{"flag", "src_heap", "start_loc", "byte_len", ""};
+{"src_heap", "start_loc", "byte_len", "", ""};
 std::string heap_update2t::field_names[esbmct::num_type_fields] = 
 {"src_heap", "start_addr", "updated_val", "byte_len", ""};
 std::string heap_append2t::field_names[esbmct::num_type_fields] = 

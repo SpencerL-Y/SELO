@@ -2042,7 +2042,6 @@ exprt migrate_expr_back(const expr2tc &ref)
   }
   case expr2t::constant_intheap_id:
   {
-
     const constant_intheap2t &ref2 = to_constant_intheap2t(ref);
     typet thetype = migrate_type_back(ref->type);
     constant_exprt theexpr(thetype);
@@ -2650,7 +2649,6 @@ exprt migrate_expr_back(const expr2tc &ref)
     const heap_load2t& ref2 = to_heap_load2t(ref);
     typet thetype = migrate_type_back(ref->type);
     exprt heap_load("heap_load", thetype);
-    heap_load.copy_to_operands(migrate_expr_back(ref2.flag));
     heap_load.copy_to_operands(migrate_expr_back(ref2.heap));
     heap_load.copy_to_operands(migrate_expr_back(ref2.start_loc));
     heap_load.set("byte_len", irep_idt(std::to_string(ref2.byte_len)));
