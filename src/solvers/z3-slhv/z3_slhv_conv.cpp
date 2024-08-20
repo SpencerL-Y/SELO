@@ -279,7 +279,7 @@ z3_slhv_convt::convert_slhv_opts(
         v1 = mk_fresh(mk_int_sort(), mk_fresh_name("tmp_val::"));
 
       assert_ast(mk_subh(mk_pt(args[1], v1), args[0]));
-      return args[0];
+      return v1;
     }
     case expr2t::heap_contains_id:
     {
