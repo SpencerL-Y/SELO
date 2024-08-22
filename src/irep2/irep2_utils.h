@@ -197,7 +197,7 @@ inline bool is_slhv_expr(const expr2tc &expr)
          is_locadd2t(expr) ||
          is_pointer_with_region2t(expr) ||
          is_heap_append2t(expr) ||
-         is_heap_contains2t(expr) ||
+         is_heap_contain2t(expr) ||
          is_heap_delete2t(expr) ||
          is_heap_load2t(expr) ||
          is_heap_region2t(expr) ||

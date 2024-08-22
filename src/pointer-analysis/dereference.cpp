@@ -137,10 +137,6 @@ const expr2tc &dereferencet::get_symbol(const expr2tc &expr)
   return expr;
 }
 
-const expr2tc &get_heap_symbol(const expr2tc &object) {
-
-}
-
 /************************* Expression decomposing code ************************/
 
 void dereferencet::dereference_expr(expr2tc &expr, guardt &guard, modet mode)
@@ -157,7 +153,6 @@ void dereferencet::dereference_expr(expr2tc &expr, guardt &guard, modet mode)
   case expr2t::if_id:
     dereference_guard_expr(expr, guard, mode);
     break;
-
   case expr2t::address_of_id:
     dereference_addrof_expr(expr, guard, mode);
     break;
@@ -192,7 +187,6 @@ void dereferencet::dereference_expr(expr2tc &expr, guardt &guard, modet mode)
       expr = res;
     break;
   }
-
   default:
   {
     // Recurse over the operands
@@ -288,8 +282,6 @@ void dereferencet::dereference_addrof_expr(
   // turn &*p to p
   // this has *no* side effect!
   address_of2t &addrof = to_address_of2t(expr);
-
-  if (is_heap_region2t(addrof.ptr_obj)) return;
 
   if (is_dereference2t(addrof.ptr_obj))
   {
@@ -484,6 +476,7 @@ expr2tc dereferencet::dereference(
 
   // collect objects dest may point to
   value_setst::valuest points_to_set;
+
   log_status("---- value set for ");
   src->dump();
   dereference_callback.get_value_set(src, points_to_set);
@@ -814,25 +807,29 @@ expr2tc dereferencet::build_reference_to(
     // type2tc ptr_type = pointer_type2tc(object->type);
     // expr2tc obj_ptr = typecast2tc(ptr_type, object);
 
-    log_status("befor building pointer guard");
-    object->dump();
+    log_status("before building pointer guard");
+    value->dump();
     deref_expr->dump();
     type->dump();
 
     guardt tmp_guard(guard);
-    if (is_heap_region2t(object))
+    if (is_heap_region2t(value))
     {
       heap_region2t& heap_region = to_heap_region2t(value);
 
       if (!is_free(mode) && !is_internal(mode))
       {
-        int access_sz = type_byte_size(type).to_uint64();
-        // Update its pt bytes
-        if (heap_region.update(access_sz))
-          dereference_callback.update_regions(value);
+        int access_sz = type->get_width() / 8;
+        // Do alignment
+        intheap_type2t &_type = to_intheap_type(heap_region.type);
+        bool has_changed = _type.do_alignment(access_sz);
+        if (false)
+        {
+          to_symbol2t(heap_region.flag).type = heap_region.type;
+          dereference_callback.update_heap_type(heap_region.flag);
+        }
       }
-
-      pointer_guard = same_object2tc(deref_expr, object);
+      pointer_guard = same_object2tc(deref_expr, value);
       tmp_guard.add(pointer_guard);
     }
     else
@@ -841,12 +838,13 @@ expr2tc dereferencet::build_reference_to(
       abort();
     }
 
+
     log_status("generated pointer guard:");
     pointer_guard->dump();
 
     // Check that the object we're accessing is actually alive and valid for this
     // mode.
-    valid_check(object, tmp_guard, mode);
+    valid_check(value, tmp_guard, mode);
 
     log_status("finish checking");
 
@@ -902,11 +900,11 @@ expr2tc dereferencet::build_reference_to(
     }
     else
     {
+      if (!is_nil_expr(lexical_offset))
+        final_offset = add2tc(final_offset->type, final_offset, lexical_offset);
+
       if (!is_constant_int2t(final_offset))
-      {
-        final_offset = deref_expr;
-      }
-      // TODO: add lexical offset
+        final_offset = final_offset.simplify();
     }
 
     // If we're in internal mode, collect all of our data into one struct, insert
@@ -1276,28 +1274,25 @@ void dereferencet::build_reference_slhv(
   offset->dump();
   assert(is_heap_region2t(value));
   if(is_scalar_type(type)) {
-    if (!is_constant_int2t(offset)) offset.simplify();
-    assert(is_constant_int2t(offset));
-    int offset_bytes = to_constant_int2t(offset).value.to_uint64();
-
+    if (!is_constant_int2t(offset))
+    {
+      log_error("Do not support non-constant offset");
+      abort();
+    }
+     
+    unsigned int field = to_constant_int2t(offset).value.to_uint64();
     heap_region2t& heap_region = to_heap_region2t(value);
-    expr2tc heap = heap_region.flag;
 
-    int access_sz = type_byte_size(type).to_uint64();
-    expr2tc access_ptr;
-    if (offset_bytes == 0)
-      access_ptr = heap_region.start_loc;
-    else
-    { 
-      assert(offset_bytes % access_sz == 0);
-      int offset_pt = offset_bytes / access_sz;
-      access_ptr = locadd2tc(
-        heap_region.start_loc,
-        gen_long(get_int64_type(), offset_pt)
-      );
+    intheap_type2t &_type = to_intheap_type(heap_region.type);
+    if (_type.set_field_type(field, type))
+    {
+      heap_region.flag->type = heap_region.type;
+      dereference_callback.update_heap_type(heap_region.flag);
     }
 
-    value = heap_load2tc(type, heap, access_ptr, access_sz);
+    expr2tc heap = heap_region.flag;
+
+    value = fieldof2tc(type, value, gen_ulong(field));
   } else {
     log_error("ERROR: currently not support non-scalar type dereference");
     abort();
@@ -2570,8 +2565,7 @@ void dereferencet::check_heap_region_access(
   assert(is_heap_region2t(value));
   const heap_region2t& heap_region = to_heap_region2t(value);
 
-  heap_region.pt_bytes->dump();
-  heap_region.size->dump();
+  heap_region.type->dump();
 
   expr2tc offset_e = offset;
   if (!is_constant_int2t(offset_e) && is_signedbv_type(offset_e))
@@ -2579,13 +2573,13 @@ void dereferencet::check_heap_region_access(
 
   std::string sz_id = dereference_callback.get_nondet_id("nondet_region_size::");
   expr2tc sz = symbol2tc(get_uint64_type(), sz_id);
-  expr2tc sz_pt = points_to2tc(heap_region.start_loc, sz);
+  expr2tc sz_pt = points_to2tc(heap_region.source_location, sz);
   expr2tc alloc_size_heap;
   migrate_expr(
     symbol_expr(
-      *ns.lookup(dereference_callback.get_alooc_size_heap_name())),
+      *ns.lookup(dereference_callback.get_alloc_size_heap_name())),
       alloc_size_heap);
-  expr2tc heap_ct = heap_contains2tc(sz_pt, alloc_size_heap, 1);
+  expr2tc heap_ct = heap_contain2tc(sz_pt, alloc_size_heap);
 
   expr2tc data_sz = gen_ulong(type->get_width());
   expr2tc offset_check;
@@ -2611,7 +2605,7 @@ void dereferencet::check_heap_region_access(
       std::string nondet_off_id = dereference_callback.get_nondet_id("nondet_off::");
       expr2tc off_var = symbol2tc(get_uint64_type(), nondet_off_id);
 
-      expr2tc target_loc = locadd2tc(heap_region.start_loc, off_var);
+      expr2tc target_loc = locadd2tc(heap_region.source_location, off_var);
       expr2tc offset_loc = locadd2tc(ptr, off_var);
       expr2tc eq = equality2tc(target_loc, offset_loc);
       expr2tc ge = greaterthanequal2tc(off_var, gen_ulong(0));

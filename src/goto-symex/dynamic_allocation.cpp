@@ -40,8 +40,8 @@ void goto_symext::default_replace_dynamic_allocation(expr2tc &expr)
       log_status("before migrate");
       migrate_expr(symbol_expr(*ns.lookup(alloc_size_heap_name)), alloc_size_heap_2);
       log_status("migrate over");
-      expr2tc heap_contains = heap_contains2tc(valid_inner.start_loc, alloc_size_heap_2, 1);
-      expr = heap_contains;
+      expr2tc heap_contain = heap_contain2tc(valid_inner.source_location, alloc_size_heap_2);
+      expr = heap_contain;
     }
   }
   else if (is_invalid_pointer2t(expr))
@@ -88,8 +88,8 @@ void goto_symext::default_replace_dynamic_allocation(expr2tc &expr)
       expr2tc alloc_size_heap;
       migrate_expr(symbol_expr(*ns.lookup(alloc_size_heap_name)), alloc_size_heap);
 
-      expr2tc heap_contains = heap_contains2tc(obj_expr, alloc_size_heap, 1);
-      expr2tc not_valid = not2tc(heap_contains);
+      expr2tc heap_contain = heap_contain2tc(obj_expr, alloc_size_heap);
+      expr2tc not_valid = not2tc(heap_contain);
 
       expr = not_valid;
     }

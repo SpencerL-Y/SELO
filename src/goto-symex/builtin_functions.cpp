@@ -122,6 +122,11 @@ expr2tc goto_symext::symex_mem(
   expr2tc size = code.size;
   bool size_is_one = false;
 
+  log_status("alloctype : ");
+  type->dump();
+  log_status("size : ");
+  size->dump();
+
   if (is_nil_type(type))
     type = char_type2();
 
@@ -254,39 +259,45 @@ expr2tc goto_symext::symex_mem(
 
     symbol.type = typet(typet::t_intheap);
 
-    // Size in SLHV is byte level
-    // expr2tc bytesizes
-    expr2tc bytes;
+    type2tc heap_type;
     if (size_is_one)
-      bytes = gen_ulong(type->get_width() / 8);
+    {
+      heap_type = get_intheap_type(type_byte_size(type).to_uint64());
+      to_intheap_type(heap_type).is_aligned = true;
+    }
     else
     {
-      bytes = size;
+      expr2tc bytes = size;
       if (!is_constant_int2t(bytes)) 
-        bytes = bytes.simplify();
-      if (!is_constant_int2t(bytes))
+        bytes = bytes->simplify();
+      if (is_constant_int2t(bytes))
+      {
+        heap_type = get_intheap_type(to_constant_int2t(bytes).value.to_uint64());
+      }
+      else
       {
         log_error("Do not support dynamic size");
         abort();
       }
     }
+    to_intheap_type(heap_type).is_region = true;
 
-    uint total_bytes = to_constant_int2t(bytes).value.to_uint64();
-    uint pt_bytes = type.get()->get_width() / 8;
-    uint size = total_bytes / pt_bytes;
-    if (pt_bytes == 1)
-    {
-      pt_bytes = total_bytes;
-      size = 1;
-    }
-    expr2tc region_pt_bytes = constant_int2tc(get_uint64_type(), BigInt(pt_bytes));
-    expr2tc region_size = constant_int2tc(get_uint64_type(), BigInt(size));
+    // uint total_bytes = to_constant_int2t(bytes).value.to_uint64();
+    // uint pt_bytes = type.get()->get_width() / 8;
+    // uint size = total_bytes / pt_bytes;
+    // if (pt_bytes == 1)
+    // {
+    //   pt_bytes = total_bytes;
+    //   size = 1;
+    // }
+    // expr2tc region_pt_bytes = constant_int2tc(get_uint64_type(), BigInt(pt_bytes));
+    // expr2tc region_size = constant_int2tc(get_uint64_type(), BigInt(size));
 
     symbol.type.dynamic(true);
     symbol.mode = "C";
     new_context.add(symbol);
 
-    expr2tc rhs_heap = symbol2tc(get_intheap_type(), symbol.id);
+    expr2tc rhs_heap = symbol2tc(heap_type, symbol.id);
     guardt rhs_guard = cur_state->guard;
 
     // set a location for new heap region
@@ -302,26 +313,18 @@ expr2tc goto_symext::symex_mem(
     new_context.add(heap_region_loc);
 
     expr2tc rhs_base_loc = symbol2tc(get_intloc_type(), heap_region_loc.id);
-    cur_state->rename(rhs_base_loc);
 
-    expr2tc rhs_region = 
-      heap_region2tc(
-        rhs_heap,
-        rhs_base_loc,
-        region_pt_bytes,
-        region_size,
-        size != 1 
-      );
+    expr2tc rhs_region = heap_region2tc(heap_type, rhs_heap, rhs_base_loc);
     
     log_status("symex assign in symex_mem: allocated_heap = heaplet");
     symex_assign(code_assign2tc(rhs_heap, rhs_region));
 
-    // link pointer variable and heap variable
-    expr2tc pwr = pointer_with_region2tc(rhs_base_loc, rhs_heap);
-    track_new_pointer(
-      rhs_base_loc,
-      get_intheap_type(),
-      gen_ulong(total_bytes));
+    // // link pointer variable and heap variable
+    // expr2tc pwr = pointer_with_region2tc(rhs_base_loc, rhs_heap);
+    // track_new_pointer(
+    //   rhs_base_loc,
+    //   get_intheap_type(),
+    //   gen_ulong(total_bytes));
 
     dynamic_memory.emplace_back(
       rhs_heap,
@@ -331,15 +334,17 @@ expr2tc goto_symext::symex_mem(
     );
 
     log_status("create valueset base loc symbol and assign");
-    if (is_heap_load2t(lhs))
-    {
-      guardt g;
-      symex_assign_heap_load(lhs, lhs, pwr, pwr, g, false);
-    }
-    else
-    {
-      symex_assign(code_assign2tc(lhs, pwr));
-    }
+    symex_assign(code_assign2tc(lhs, locationof2tc(rhs_region)));
+
+    // if (is_heap_load2t(lhs))
+    // {
+    //   guardt g;
+    //   symex_assign_heap_load(lhs, lhs, pwr, pwr, g, false);
+    // }
+    // else
+    // {
+    //   symex_assign(code_assign2tc(lhs, pwr));
+    // }
     return expr2tc();
   }
 }
@@ -381,7 +386,8 @@ void goto_symext::track_new_pointer(
     // TODO SLHV: add non-constant size later
     assert(is_constant_int2t(size));
 
-    expr2tc updated_heap = heap_append2tc(allocsize_symbol, ptr_obj, size, 4);
+    expr2tc updated_heap =
+      heap_append2tc(allocsize_symbol, points_to2tc(ptr_obj, size));
     symex_assign(code_assign2tc(allocsize_symbol, updated_heap), true);
   }
 }
@@ -480,11 +486,11 @@ void goto_symext::symex_free(const expr2tc &expr)
       assert(is_heap_region2t(item.object));
       const heap_region2t& heap_region = to_heap_region2t(item.object);
       if(is_nil_expr(freed_pointer)) {
-        freed_pointer = heap_region.start_loc;
+        freed_pointer = heap_region.source_location;
         freed_heap = heap_region.flag; 
       } else {
         freed_pointer =
-          if2tc(freed_pointer->type, item.guard, heap_region.start_loc, freed_pointer);
+          if2tc(freed_pointer->type, item.guard, heap_region.source_location, freed_pointer);
         freed_heap = 
           if2tc(get_intheap_type(), item.guard, heap_region.flag, freed_heap);
       }
@@ -493,7 +499,7 @@ void goto_symext::symex_free(const expr2tc &expr)
       log_status("symex free freed_heap emp_heap");
       symex_assign(code_assign2tc(freed_heap, emp_heap));
       expr2tc alloc_size_heap_symbol = symbol2tc(get_intheap_type(), alloc_size_heap_name);
-      expr2tc heap_deleted = heap_delete2tc(alloc_size_heap_symbol, freed_pointer, 4);
+      expr2tc heap_deleted = heap_delete2tc(alloc_size_heap_symbol, freed_pointer);
       symex_assign(code_assign2tc(alloc_size_heap_symbol, heap_deleted));
     }
   }

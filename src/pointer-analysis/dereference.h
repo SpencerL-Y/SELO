@@ -153,22 +153,14 @@ public:
    *  */
   virtual bool is_live_variable(const expr2tc &sym) = 0;
 
-  /** Update regionss in value set and in eq system
-   * @param region 
-   */
-  virtual void update_regions(const expr2tc &region)
+
+  virtual void update_heap_type(const expr2tc &flag)
   {
     log_error("Do not support");
     abort();
   }
 
-  virtual void update_heap_region_rec(expr2tc &expr, const expr2tc &region)
-  {
-    log_error("Do not support");
-    abort();
-  }
-
-  virtual std::string get_loaded_value_flag(const expr2tc &expr)
+  virtual void update_heap_type_rec(expr2tc &expr, const symbol2t &flag)
   {
     log_error("Do not support");
     abort();
@@ -180,7 +172,7 @@ public:
     abort();
   }
 
-  virtual irep_idt get_alooc_size_heap_name()
+  virtual irep_idt get_alloc_size_heap_name()
   {
     log_error("Do not support");
     abort();

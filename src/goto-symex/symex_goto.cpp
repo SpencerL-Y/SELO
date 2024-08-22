@@ -232,7 +232,9 @@ static inline guardt merge_state_guards(
     (!goto_state.guard.is_false() && !state.guard.is_false()) ||
     state.guard.disjunction_may_simplify(goto_state.guard))
   {
-    return state.guard | goto_state.guard;
+    // return state.guard | goto_state.guard;
+    state.guard |= goto_state.guard;
+    return state.guard;
   }
   else if (state.guard.is_false() && !goto_state.guard.is_false())
   {
@@ -265,8 +267,7 @@ void goto_symext::merge_gotos()
 
     // Merge guards. Don't write this to `state` yet because we might move
     // goto_state over it below.
-    // guardt new_guard = merge_state_guards(goto_state, *cur_state);
-
+    guardt new_guard = merge_state_guards(goto_state, *cur_state);
 
     if (!goto_state.guard.is_false())
     {
@@ -282,7 +283,8 @@ void goto_symext::merge_gotos()
         std::min(cur_state->num_instructions, goto_state.num_instructions);
     }
 
-    cur_state->guard = merge_state_guards(goto_state, *cur_state);
+    cur_state->guard = std::move(new_guard);
+    // cur_state->guard = merge_state_guards(goto_state, *cur_state);
   }
 
   // clean up to save some memory
@@ -303,10 +305,8 @@ void goto_symext::merge_locality(const statet::goto_statet &src)
 
 void goto_symext::merge_value_sets(const statet::goto_statet &src)
 {
-  log_status("merge value set {}", cur_state->guard.is_false());
   if (cur_state->guard.is_false())
   {
-    log_status("just replace");
     cur_state->value_set = src.value_set;
     return;
   }

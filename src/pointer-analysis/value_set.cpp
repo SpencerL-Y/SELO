@@ -203,13 +203,6 @@ void value_sett::get_value_set(const expr2tc &expr, object_mapt &dest) const
 
   // Then, start fetching values.
   get_value_set_rec(new_expr, dest, "", new_expr->type);
-
-    // Convert values into expressions to return.
-  log_status("result value set:");
-  for (object_mapt::const_iterator it = dest.begin();
-       it != dest.end();
-       it++)
-    to_expr(it)->dump();
 }
 
 void value_sett::get_value_set_rec(
@@ -565,12 +558,15 @@ void value_sett::get_value_set_rec(
     if (v_it != values.end())
     {
       make_union(dest, v_it->second.object_map);
+      log_status("points_to somthing");
+      for (auto obj : dest)
+        object_numbering[obj.first]->dump();
       return;
     }
   }
   // SLHV:
   if (is_constant_intloc2t(expr) || is_constant_intheap2t(expr) ||
-      is_heap_region2t(expr) || is_heap_update2t(expr) || is_heap_append2t(expr))
+      is_heap_region2t(expr) || is_heap_append2t(expr))
   {
     log_status("get value set rec: SLHV");
     expr2tc new_object = expr;
@@ -581,39 +577,67 @@ void value_sett::get_value_set_rec(
   if (is_locadd2t(expr))
   {
     const locadd2t& locadd = to_locadd2t(expr);
-    expr2tc base_ptr = locadd.loc;
-    expr2tc off = locadd.offset;
+    assert(is_intloc_type(locadd.location));
+    abort();
+    // TODO
+  }
 
-    if ((!is_pointer_type(base_ptr) && !is_intloc_type(base_ptr)) ||
-        is_pointer_type(off) || is_intloc_type(off))
+  if (is_locationof2t(expr))
+  {
+    get_value_set_rec(
+      to_locationof2t(expr).heap_term,
+      dest, suffix, original_type
+    );
+    return;
+  }
+
+  if (is_fieldof2t(expr))
+  {
+    const fieldof2t &fieldof = to_fieldof2t(expr);
+    const heap_region2t &heap_region = to_heap_region2t(fieldof.heap_region);
+    expr2tc field = fieldof.field;
+
+    if (!is_constant_int2t(field))
     {
-      log_error("Wrong locadd expr");
+      log_error("Do not support dynamic offset yet");
       abort();
     }
 
-    // Do not need to update offset in SLHV
-    log_status("here");
-    get_value_set_rec(base_ptr, dest, suffix, original_type);
-    return;
-  }
+    std::string str_field =
+      std::to_string(to_constant_int2t(field).value.to_uint64()); 
 
-  if (is_pointer_with_region2t(expr))
-  {
     get_value_set_rec(
-      to_pointer_with_region2t(expr).region,
-      dest, suffix, original_type
+      heap_region.flag,
+      dest,
+      "::field::" + str_field + "::" + suffix,
+      original_type
     );
     return;
   }
 
-  if (is_heap_load2t(expr))
+  if (is_heap_update2t(expr))
   {
-    get_value_set_rec(
-      to_heap_load2t(expr).start_loc,
-      dest, suffix, original_type
-    );
-    return;
+    log_status("finish get_value_set_rec heap_update");
+    abort();
   }
+
+  // if (is_pointer_with_region2t(expr))
+  // {
+  //   get_value_set_rec(
+  //     to_pointer_with_region2t(expr).region,
+  //     dest, suffix, original_type
+  //   );
+  //   return;
+  // }
+
+  // if (is_heap_load2t(expr))
+  // {
+  //   get_value_set_rec(
+  //     to_heap_load2t(expr).flag,
+  //     dest, suffix, original_type
+  //   );
+  //   return;
+  // }
 
   if (is_add2t(expr) || is_sub2t(expr))
   {
@@ -1178,7 +1202,6 @@ void value_sett::assign(
 
   if (is_array_type(lhs_type))
   {
-    log_status("value set assign: lhs is_array_type");
     const array_type2t &arr_type = to_array_type(lhs_type);
     expr2tc unknown = unknown2tc(
       arr_type.array_size ? arr_type.array_size->type : index_type2());
@@ -1223,6 +1246,18 @@ void value_sett::assign(
       }
     }
     return;
+  }
+
+  if (is_intheap_type(lhs_type))
+  {
+    if (to_intheap_type(lhs_type).is_region && is_heap_update2t(rhs))
+    {
+      const heap_update2t &heap_upd = to_heap_update2t(rhs);
+      expr2tc lhs_field = 
+        fieldof2tc(rhs->type, heap_upd.source_heap, heap_upd.update_field);
+      assign(lhs_field, heap_upd.update_value, true);
+      return; 
+    }
   }
 
   // basic type
@@ -1374,6 +1409,27 @@ void value_sett::assign_rec(
       to_member2t(lhs).source_value,
       values_rhs,
       "." + component_name + suffix,
+      add_to_sets);
+  }
+  else if (is_fieldof2t(lhs))
+  {
+    const fieldof2t &fieldof = to_fieldof2t(lhs);
+
+    expr2tc field = fieldof.field;
+    if (!is_constant_int2t(field))
+    {
+      log_error("Do not support dynamic offset yet");
+      abort();
+    }
+    std::string str_field =
+      std::to_string(to_constant_int2t(field).value.to_uint64());
+
+    const heap_region2t &heap_region = to_heap_region2t(fieldof.heap_region);
+
+    assign_rec(
+      heap_region.flag,
+      values_rhs,
+      "::field::" + str_field + "::" + suffix,
       add_to_sets);
   }
   else if (

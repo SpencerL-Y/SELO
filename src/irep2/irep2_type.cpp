@@ -183,10 +183,42 @@ unsigned int empty_type2t::get_width() const
 {
   throw symbolic_type_excp();
 }
+
 unsigned int intheap_type2t::get_width() const
 {
   throw symbolic_type_excp();
 }
+
+bool intheap_type2t::do_alignment(unsigned int access_sz)
+{
+  if (is_aligned) return false;
+  if (total_bytes % access_sz != 0)
+  {
+    log_error("Do not support unaligned access");
+    abort();
+  }
+  unsigned int num_of_fields = total_bytes / access_sz;
+  if (!field_types.empty()) field_types.clear();
+  for (unsigned int i = 0; i < num_of_fields; i++)
+    field_types.push_back(get_empty_type());
+  is_aligned = true;
+  return true;
+}
+
+bool intheap_type2t::set_field_type(unsigned int field, const type2tc &type)
+{
+  if (field >= field_types.size())
+  {
+    log_error("Out of fields size");
+    abort();
+  }
+  if (!is_empty_type(field_types[field])) return false;
+  field_types[field] =
+    (is_pointer_type(type) || is_intloc_type(type)) ?
+      get_intloc_type() : get_int64_type();
+  return true;
+}
+
 unsigned int intloc_type2t::get_width() const
 {
   throw symbolic_type_excp();

@@ -159,7 +159,6 @@ smt_sortt z3_slhv_convt::mk_intloc_sort() {
 }
 
 smt_sortt z3_slhv_convt::mk_struct_sort(const type2tc &type) {
-  assert(is_intloc_type(type));
   return mk_intloc_sort();
 }
 
@@ -191,30 +190,104 @@ smt_sortt z3_slhv_convt::convert_slhv_sorts(const type2tc &type) {
 
 smt_astt
 z3_slhv_convt::convert_slhv_opts(
-  const expr2tc &expr, const std::vector<smt_astt>& args) {
-  switch (expr->expr_id) {
-    case expr2t::constant_intheap_id: return mk_emp();
-    case expr2t::constant_intloc_id: return mk_nil();
+  const expr2tc &expr, const std::vector<smt_astt>& args)
+{
+  switch (expr->expr_id)
+  {
+    case expr2t::constant_intheap_id:
+      return mk_emp();
+    case expr2t::constant_intloc_id:
+      return mk_nil();
     case expr2t::heap_region_id:
     {
       log_status("convert heap region");
-      assert(args.size() == 4);
-      const heap_region2t& region = to_heap_region2t(expr);
-      region.dump();
-      assert(is_constant_int2t(region.size));
-      const int n = to_constant_int2t(region.size).as_ulong();
+      const intheap_type2t &type = to_intheap_type(expr->type);
       
       std::vector<smt_astt> pt_vec;
-      for (unsigned i = 0; i < n; i++) {
-        smt_astt loc = i == 0 ? args[1] : mk_locadd(args[1], mk_smt_int(BigInt(i)));
-        smt_astt v = mk_fresh(mk_int_sort(), mk_fresh_name("tmp_val::"));
-        pt_vec.push_back(mk_pt(loc, v));
+      if (type.is_aligned)
+      {
+        for (unsigned i = 0; i < type.field_types.size(); i++) {
+          smt_astt loc = i == 0 ? args[1] : mk_locadd(args[1], mk_smt_int(BigInt(i)));
+          smt_sortt sort =
+            is_intloc_type(type.field_types[i]) ?
+              mk_intloc_sort() : mk_int_sort();
+          std::string name =
+            mk_fresh_name(
+              is_intloc_type(type.field_types[i]) ?
+                "tmp_loc::" : "tmp_val::");
+          smt_astt v = mk_fresh(sort, name);
+          pt_vec.push_back(mk_pt(loc, v));
+        }
+      }
+      else
+      {
+        // Default sort is intloc
+        pt_vec.push_back(
+          mk_pt(
+            args[1],
+            mk_fresh(mk_intloc_sort(), mk_fresh_name("tmp_loc::")
+            )
+          )
+        );
       }
       return pt_vec.size() == 1 ? pt_vec[0] : mk_uplus(pt_vec);
     }
-    case expr2t::pointer_with_region_id:
+    case expr2t::locationof_id:
     {
-      return convert_ast(to_pointer_with_region2t(expr).loc_ptr);
+      const locationof2t &locof = to_locationof2t(expr);
+      if (!is_heap_region2t(locof.heap_term))
+      {
+        log_error("We can't get a location of a non-region heap");
+        abort();
+      }
+      return convert_ast(to_heap_region2t(locof.heap_term).source_location);
+    }
+    case expr2t::fieldof_id:
+    {
+      const fieldof2t &fieldof = to_fieldof2t(expr);
+
+      if (is_constant_intheap2t(fieldof.heap_region))
+        return mk_fresh(
+          convert_sort(fieldof.type),
+          mk_fresh_name("invalid_loc_"));
+
+      if (!is_heap_region2t(fieldof.heap_region))
+      {
+        log_error("We can't get a location of a non-region heap");
+        abort();
+      }
+      if (!is_constant_int2t(fieldof.field))
+      {
+        log_error("Wrong field");
+        abort();
+      }
+      unsigned int field = to_constant_int2t(fieldof.field).value.to_uint64();
+
+      // TODO : do more analysis
+      const heap_region2t &heap_region = to_heap_region2t(fieldof.heap_region);
+      const intheap_type2t &_type = to_intheap_type(heap_region.type);
+      
+      smt_astt source_loc = convert_ast(heap_region.source_location);
+      smt_astt loc = field == 0 ?
+        source_loc : mk_locadd(source_loc, convert_ast(fieldof.field));
+
+      smt_sortt s1;
+      std::string name;
+      if (!_type.is_aligned)
+      {
+        s1 = mk_intloc_sort();
+        name = mk_fresh_name("tmp_loc::");
+      }
+      else
+      {
+        s1 = is_intloc_type(_type.field_types[field]) ? mk_intloc_sort() : mk_int_sort();
+        name = mk_fresh_name(
+          is_intloc_type(_type.field_types[field]) ? "tmp_loc::" : "tmp_val::");
+      }
+      smt_astt v1 = mk_fresh(s1, name);
+
+      assert_ast(mk_subh(mk_pt(loc, v1), convert_ast(heap_region.flag)));
+      return v1;
     }
     case expr2t::points_to_id:
     {
@@ -239,9 +312,6 @@ z3_slhv_convt::convert_slhv_opts(
     }
     case expr2t::heap_append_id:
     {
-      const heap_append2t& heap_app = to_heap_append2t(expr);
-      // TODO : fix width
-      assert(heap_app.byte_len == 4);
       smt_astt h = args[0];
       smt_astt adr = args[1];
       smt_astt val = args[2];
@@ -250,51 +320,34 @@ z3_slhv_convt::convert_slhv_opts(
     }
     case expr2t::heap_update_id:
     {
-      const heap_update2t& heap_upd = to_heap_update2t(expr);
-      // TODO : fix width
-      assert(heap_upd.byte_len == 4);
-      smt_astt h = args[0];
-      smt_astt h1 = mk_fresh(mk_intheap_sort(), mk_fresh_name("tmp_heap::"));
-      smt_astt adr = args[1];
+      const heap_update2t &heap_upd = to_heap_update2t(expr);
+      const heap_region2t &heap_region = to_heap_region2t(heap_upd.source_heap);
+      smt_astt h = convert_ast(heap_region.flag);
+
+      smt_astt source_loc = convert_ast(heap_region.source_location);
+      smt_astt field = convert_ast(heap_upd.update_field);
+      smt_astt loc = mk_locadd(source_loc, field);
       smt_astt val = args[2];
+
+      smt_astt h1 = mk_fresh(mk_intheap_sort(), mk_fresh_name("tmp_heap::"));
       smt_astt v1 = mk_fresh(val->sort, mk_fresh_name("tmp_val::"));
       // current heap state
-      smt_astt o_state = mk_eq(h, mk_uplus(mk_pt(adr, v1), h1));
+      smt_astt o_state = mk_eq(h, mk_uplus(mk_pt(loc, v1), h1));
       assert_ast(o_state);
       // new heap state
-      return mk_uplus(mk_pt(adr, val), h1);
+      return mk_uplus(mk_pt(loc, val), h1);
     }
-    case expr2t::heap_load_id:
+    case expr2t::heap_contain_id:
     {
-      const heap_load2t& heap_load = to_heap_load2t(expr);
-      // TODO : fix width
-      // assert(heap_load.byte_len == 4);
-      //current heap state
-
-      smt_astt v1;
-
-      if (is_pointer_type(heap_load.type) || is_intloc_type(heap_load.type))
-        v1 = mk_fresh(mk_intloc_sort(), mk_fresh_name("tmp_loc::"));
-      else
-        v1 = mk_fresh(mk_int_sort(), mk_fresh_name("tmp_val::"));
-
-      assert_ast(mk_subh(mk_pt(args[1], v1), args[0]));
-      return v1;
-    }
-    case expr2t::heap_contains_id:
-    {
-      const heap_contains2t& heap_ct = to_heap_contains2t(expr);
-      // TODO : fix width
-      // assert(heap_ct.byte_len == 4);
+      const heap_contain2t& heap_ct = to_heap_contain2t(expr);
       smt_astt sh;
-      if (is_symbol2t(heap_ct.hterm) ||
-          is_pointer_with_region2t(heap_ct.hterm) ||
-          is_pointer_object2t(heap_ct.hterm))
+      if (is_symbol2t(heap_ct.location) ||
+          is_pointer_object2t(heap_ct.location))
       {
         sh = mk_pt(args[0], mk_fresh(mk_int_sort(), mk_fresh_name("tmp_val::")));
         // TODO : support multiple loaded
       }
-      else if (is_points_to2t(heap_ct.hterm))
+      else if (is_points_to2t(heap_ct.location))
       {
         sh = args[0];
       }
@@ -324,23 +377,22 @@ z3_slhv_convt::convert_slhv_opts(
 
 smt_astt z3_slhv_convt::project(const expr2tc &expr)
 {
-  if (is_symbol2t(expr) ||
-      is_constant_intheap2t(expr) ||
-      is_constant_intloc2t(expr))
-    return convert_ast(expr);
-  else if (is_pointer_with_region2t(expr))
+  
+  if (is_symbol2t(expr))
     return convert_ast(expr);
   else if (is_heap_region2t(expr))
-    return convert_ast(to_heap_region2t(expr).start_loc);
-  else if (is_heap_load2t(expr))
-    return project(to_heap_load2t(expr).start_loc);
+    return this->project(to_heap_region2t(expr).source_location);
+  else if (is_locationof2t(expr))
+    return this->project(to_locationof2t(expr).heap_term);
+  else if (is_fieldof2t(expr))
+    return this->project(to_fieldof2t(expr).heap_region);
   else if (is_typecast2t(expr))
     return this->project(to_typecast2t(expr).from);
   else if (is_locadd2t(expr) || is_add2t(expr) || is_sub2t(expr))
   {
     expr2tc ptr;
     if (is_locadd2t(expr))
-      ptr = to_locadd2t(expr).loc;
+      ptr = to_locadd2t(expr).location;
     else if (is_add2t(expr))
       ptr = (is_pointer_type(to_add2t(expr).side_1) || is_intloc_type(to_add2t(expr).side_1))?
         to_add2t(expr).side_1 : to_add2t(expr).side_2;

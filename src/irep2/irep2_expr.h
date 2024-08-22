@@ -910,58 +910,51 @@ public:
   typedef esbmct::expr2t_traits<source_value_field, index_field> traits;
 };
 
+
+/* ================================ SLHV ================================ */
+
 class points_to_data : public expr2t 
 {
 public:
   points_to_data(
     const type2tc &t,
     datatype_ops::expr_ids id,
-    const expr2tc &addrloc,
-    const expr2tc &content) 
-    : expr2t(t, id), addr(addrloc), content(content)
+    const expr2tc &l,
+    const expr2tc &c) 
+    : expr2t(t, id), location(l), content(c)
   {
   }
   points_to_data(const points_to_data& ref) = default;
 
-
-  expr2tc addr;
+  expr2tc location;
   expr2tc content;
 
   // Type mangling:
-  typedef esbmct::field_traits<expr2tc, points_to_data, &points_to_data::addr>
-    points_to_data_addr_field;
+  typedef esbmct::field_traits<expr2tc, points_to_data, &points_to_data::location>
+    location_field;
   typedef esbmct::field_traits<expr2tc, points_to_data, &points_to_data::content>
-    points_to_data_content_field;
-  typedef esbmct::expr2t_traits<
-    points_to_data_addr_field,
-    points_to_data_content_field> traits;
+    content_field;
+  typedef esbmct::expr2t_traits<location_field, content_field> traits;
 };
-
 
 class uplus_data : public expr2t
 {
 public:
-
   uplus_data(
     const type2tc &t,
     datatype_ops::expr_ids id,
-    const std::vector<expr2tc> &members, 
-    unsigned int m_num) 
-    : expr2t(t, id), uplus_members(std::move(members)), member_num(m_num) 
+    const std::vector<expr2tc> &ht) 
+    : expr2t(t, id), heap_terms(ht)
   {
   }
   uplus_data(const uplus_data& ref) = default;
 
-
-  std::vector<expr2tc> uplus_members;
-  unsigned int member_num;
+  std::vector<expr2tc> heap_terms;
 
   // Type mangling:
-  typedef esbmct::field_traits<std::vector<expr2tc>, uplus_data, &uplus_data::uplus_members>
-    uplus_members_field;
-  typedef esbmct::field_traits<unsigned int, uplus_data, &uplus_data::member_num>
-    member_num_field;
-  typedef esbmct::expr2t_traits<uplus_members_field, member_num_field> traits;
+  typedef esbmct::field_traits<std::vector<expr2tc>, uplus_data, &uplus_data::heap_terms>
+    heap_terms_field;
+  typedef esbmct::expr2t_traits<heap_terms_field> traits;
 };
 
 class locadd_data : public expr2t 
@@ -970,21 +963,22 @@ public:
   locadd_data(
     const type2tc &t,
     datatype_ops::expr_ids id,
-    const expr2tc &loc,
-    const expr2tc &offset)
-    : expr2t(t, id), loc(loc), offset(offset)
+    const expr2tc &l,
+    const expr2tc &o)
+    : expr2t(t, id), location(l), offset(o)
   {
   }
   locadd_data(const locadd_data& ref) = default;
-  expr2tc loc;
+
+  expr2tc location;
   expr2tc offset;
 
   // Type mangling:
-  typedef esbmct::field_traits<expr2tc, locadd_data, &locadd_data::loc>
-    locadd_loc_field;
+  typedef esbmct::field_traits<expr2tc, locadd_data, &locadd_data::location>
+    location_field;
   typedef esbmct::field_traits<expr2tc, locadd_data, &locadd_data::offset>
-    locadd_offset_field;
-  typedef esbmct::expr2t_traits<locadd_loc_field, locadd_offset_field> traits;
+    offset_field;
+  typedef esbmct::expr2t_traits<location_field, offset_field> traits;
 };
 
 class heap_region_data : public expr2t
@@ -993,40 +987,66 @@ public:
   heap_region_data(
     const type2tc &t,
     datatype_ops::expr_ids id,
-    const expr2tc &flag,
-    const expr2tc &start_loc,
-    const expr2tc &pt_bytes,
-    const expr2tc &size,
-    bool is_split)
-    : expr2t(t, id), flag(flag),
-      start_loc(start_loc), pt_bytes(pt_bytes), size(size), is_split(is_split)
+    const expr2tc &f,
+    const expr2tc &sl)
+    : expr2t(t, id), flag(f), source_location(sl)
   {
   }
   heap_region_data(const heap_region_data& ref) = default;
 
   expr2tc flag;
-  expr2tc start_loc;
-  expr2tc pt_bytes;
-  expr2tc size;
-  bool is_split;
+  expr2tc source_location;
 
   // Type mangling:
   typedef esbmct::field_traits<expr2tc, heap_region_data, &heap_region_data::flag>
-    heap_region_flag_field;
-  typedef esbmct::field_traits<expr2tc, heap_region_data, &heap_region_data::start_loc>
-    heap_region_start_loc_field;
-  typedef esbmct::field_traits<expr2tc, heap_region_data, &heap_region_data::pt_bytes>
-    heap_region_pt_bytes_field;
-  typedef esbmct::field_traits<expr2tc, heap_region_data, &heap_region_data::size>
-    heap_region_size_field;
-  typedef esbmct::field_traits<bool, heap_region_data, &heap_region_data::is_split>
-    heap_region_is_split_field;
-  typedef esbmct::expr2t_traits<
-    heap_region_flag_field,
-    heap_region_start_loc_field,
-    heap_region_pt_bytes_field,
-    heap_region_size_field,
-    heap_region_is_split_field> traits;
+    flag_field;
+  typedef esbmct::field_traits<expr2tc, heap_region_data, &heap_region_data::source_location>
+    source_location_field;
+  typedef esbmct::expr2t_traits<flag_field, source_location_field> traits;
+};
+
+class locationof_data : public expr2t
+{
+public:
+  locationof_data(
+    const type2tc &t,
+    datatype_ops::expr_ids id,
+    const expr2tc &ht)
+    : expr2t(t, id), heap_term(ht)
+  {
+  }
+  locationof_data(const locationof_data& ref) = default;
+
+  expr2tc heap_term;
+
+  // Type mangling:
+  typedef esbmct::field_traits<expr2tc, locationof_data, &locationof_data::heap_term>
+    heap_term_field;
+  typedef esbmct::expr2t_traits<heap_term_field> traits;
+};
+
+class fieldof_data : public expr2t
+{
+public:
+  fieldof_data(
+    const type2tc &t,
+    datatype_ops::expr_ids id,
+    const expr2tc &hr,
+    const expr2tc &f)
+    : expr2t(t, id), heap_region(hr), field(f)
+  {
+  }
+  fieldof_data(const fieldof_data &ref) = default;
+
+  expr2tc heap_region;
+  expr2tc field;
+
+  // Type mangling:
+  typedef esbmct::field_traits<expr2tc, fieldof_data, &fieldof_data::heap_region>
+    heap_region_field;
+  typedef esbmct::field_traits<expr2tc, fieldof_data, &fieldof_data::field>
+    field_field;
+  typedef esbmct::expr2t_traits<heap_region_field, field_field> traits;
 };
 
 class pointer_with_region_data : public expr2t 
@@ -1052,39 +1072,27 @@ public:
   typedef esbmct::expr2t_traits<pointer_with_region_loc_ptr_field, pointer_with_region_region_field> traits;
 };
 
-class heap_free_data : public expr2t {
-public:
-  heap_free_data(
-    const type2tc &t,
-    datatype_ops::expr_ids id,
-    expr2tc pwr)
-    : expr2t(t, id), pwr(pwr)
-  {
-  }
-
-  expr2tc pwr;
-
-  typedef esbmct::field_traits<expr2tc, heap_free_data, &heap_free_data::pwr>
-    heap_free_data_pwr_field;
-  typedef esbmct::expr2t_traits<heap_free_data_pwr_field> traits;
-};
-
 class heap_load_data : public expr2t {
 public:
   heap_load_data(
     const type2tc &t,
     datatype_ops::expr_ids id,
+    const expr2tc &flag,
     const expr2tc &heap,
     const expr2tc &start_loc,
     unsigned int byte_len)
-    : expr2t(t, id), heap(heap), start_loc(start_loc), byte_len(byte_len)
+    : expr2t(t, id), flag(flag), heap(heap), start_loc(start_loc), byte_len(byte_len)
   {
   }
 
+  expr2tc flag;
   expr2tc heap;
   expr2tc start_loc;
   unsigned int byte_len;
 
+  // Type mangling:
+  typedef esbmct::field_traits<expr2tc, heap_load_data, &heap_load_data::flag>
+    heap_load_data_flag_field;
   typedef esbmct::field_traits<expr2tc, heap_load_data, &heap_load_data::heap>
     heap_load_data_heap_field;
   typedef esbmct::field_traits<expr2tc, heap_load_data, &heap_load_data::start_loc>
@@ -1092,6 +1100,7 @@ public:
   typedef esbmct::field_traits<unsigned int, heap_load_data, &heap_load_data::byte_len>
     heap_load_data_byte_len_field;
   typedef esbmct::expr2t_traits<
+    heap_load_data_flag_field,
     heap_load_data_heap_field,
     heap_load_data_start_loc_field,
     heap_load_data_byte_len_field> traits;
@@ -1103,33 +1112,25 @@ public:
   heap_update_data(
     const type2tc &t,
     datatype_ops::expr_ids id,
-    expr2tc source_val,
-    expr2tc start_addr,
-    expr2tc updated_val,
-    unsigned int byte_len)
-    : expr2t(t, id), src_heap(source_val), start_addr(start_addr), updated_val(updated_val), byte_len(byte_len)
+    const expr2tc &sh,
+    const expr2tc &uf,
+    const expr2tc &uv)
+    : expr2t(t, id), source_heap(sh), update_field(uf), update_value(uv)
   {
   }
 
-  expr2tc src_heap;
-  expr2tc start_addr;
-  expr2tc updated_val;
-  unsigned int byte_len;
+  expr2tc source_heap;
+  expr2tc update_field;
+  expr2tc update_value;
 
   // Type mangling:
-  typedef esbmct::field_traits<expr2tc, heap_update_data, &heap_update_data::src_heap>
-    heap_update_data_src_heap_field;
-  typedef esbmct::field_traits<expr2tc, heap_update_data, &heap_update_data::start_addr>
-    heap_update_data_start_addr_field;
-  typedef esbmct::field_traits<expr2tc, heap_update_data, &heap_update_data::updated_val> 
-    heap_update_data_updated_val_field;
-  typedef esbmct::field_traits<unsigned int, heap_update_data, &heap_update_data::byte_len> 
-    heap_update_data_byte_len_field;
-  typedef esbmct::expr2t_traits
-  <
-  heap_update_data_src_heap_field,  heap_update_data_start_addr_field, heap_update_data_updated_val_field, heap_update_data_byte_len_field
-  > traits;
-
+  typedef esbmct::field_traits<expr2tc, heap_update_data, &heap_update_data::source_heap>
+    source_heap_field;
+  typedef esbmct::field_traits<expr2tc, heap_update_data, &heap_update_data::update_field>
+    update_field_field;
+  typedef esbmct::field_traits<expr2tc, heap_update_data, &heap_update_data::update_value> 
+    update_value_field;
+  typedef esbmct::expr2t_traits<source_heap_field, update_field_field, update_value_field> traits;
 };
 
 class heap_append_data : public expr2t {
@@ -1137,34 +1138,21 @@ public:
   heap_append_data(
     const type2tc & t,
     datatype_ops::expr_ids id,
-    expr2tc original_heap,
-    expr2tc start_addr,
-    expr2tc create_val, 
-    unsigned int byte_len)
-    : expr2t(t, id), src_heap(original_heap), start_addr(start_addr), create_val(create_val), byte_len(byte_len)
+    const expr2tc &sh,
+    const expr2tc &ht)
+    : expr2t(t, id), source_heap(sh), heap_term(ht)
   {
   }
 
-  expr2tc src_heap;
-  expr2tc start_addr;
-  expr2tc create_val;
-  unsigned int byte_len;
+  expr2tc source_heap;
+  expr2tc heap_term;
 
-
-   // Type mangling:
-  typedef esbmct::field_traits<expr2tc, heap_append_data, &heap_append_data::src_heap>
-    heap_append_data_src_heap_field;
-  typedef esbmct::field_traits<expr2tc, heap_append_data, &heap_append_data::start_addr>
-    heap_append_data_start_addr_field;
-  typedef esbmct::field_traits<expr2tc, heap_append_data, &heap_append_data::create_val>
-    heap_append_data_create_val_field;
-  typedef esbmct::field_traits<unsigned int, heap_append_data, &heap_append_data::byte_len>
-    heap_append_data_byte_len_field;
-  typedef esbmct::expr2t_traits
-  <
-  heap_append_data_src_heap_field,  heap_append_data_start_addr_field, heap_append_data_create_val_field, heap_append_data_byte_len_field
-  > traits;
-
+  // Type mangling:
+  typedef esbmct::field_traits<expr2tc, heap_append_data, &heap_append_data::source_heap>
+    source_heap_field;
+  typedef esbmct::field_traits<expr2tc, heap_append_data, &heap_append_data::heap_term>
+    heap_term_field;
+  typedef esbmct::expr2t_traits<source_heap_field, heap_term_field> traits;
 };
 
 class heap_delete_data : public expr2t {
@@ -1172,30 +1160,21 @@ public:
   heap_delete_data(
     const type2tc & t,
     datatype_ops::expr_ids id,
-    expr2tc original_heap,
-    expr2tc del_addr,
-    unsigned int byte_len)
-    : expr2t(t, id), src_heap(original_heap), del_addr(del_addr),  byte_len(byte_len) 
+    const expr2tc &sh,
+    const expr2tc &l)
+    : expr2t(t, id), source_heap(sh), location(l) 
   {
   }
 
-  expr2tc src_heap;
-  expr2tc del_addr;
-  unsigned int byte_len;
+  expr2tc source_heap;
+  expr2tc location;
 
-
-   // Type mangling:
-  typedef esbmct::field_traits<expr2tc, heap_delete_data, &heap_delete_data::src_heap>
-    heap_delete_data_src_heap_field;
-  typedef esbmct::field_traits<expr2tc, heap_delete_data, &heap_delete_data::del_addr>
-    heap_delete_data_del_addr_field;
-  typedef esbmct::field_traits<unsigned int, heap_delete_data, &heap_delete_data::byte_len>
-    heap_delete_data_byte_len_field;
-  typedef esbmct::expr2t_traits
-  <
-  heap_delete_data_src_heap_field,  heap_delete_data_del_addr_field, heap_delete_data_byte_len_field
-  > traits;
-
+  // Type mangling:
+  typedef esbmct::field_traits<expr2tc, heap_delete_data, &heap_delete_data::source_heap>
+    source_heap_field;
+  typedef esbmct::field_traits<expr2tc, heap_delete_data, &heap_delete_data::location>
+    location_field;
+  typedef esbmct::expr2t_traits<source_heap_field, location_field> traits;
 };
 
 class heap_contains_data : public expr2t {
@@ -1203,30 +1182,24 @@ public:
   heap_contains_data(
     const type2tc &t,
     datatype_ops::expr_ids id,
-    expr2tc hterm,
-    expr2tc heap,
-    unsigned int byte_len)
-    : expr2t(t, id), hterm(hterm), heap(heap), byte_len(byte_len)
+    const expr2tc &l,
+    const expr2tc &h)
+    : expr2t(t, id), location(l), heap(h)
   {
   }
 
-  expr2tc hterm;
+  expr2tc location;
   expr2tc heap;
-  unsigned int byte_len;
 
   //Type mangling:
-  typedef esbmct::field_traits<expr2tc, heap_contains_data, &heap_contains_data::hterm>
-    heap_contains_data_hterm_field;
+  typedef esbmct::field_traits<expr2tc, heap_contains_data, &heap_contains_data::location>
+    location_field;
   typedef esbmct::field_traits<expr2tc, heap_contains_data, &heap_contains_data::heap>
-    heap_contains_data_heap_field;
-  typedef esbmct::field_traits<unsigned int, heap_contains_data, &heap_contains_data::byte_len>
-    heap_contains_data_byte_len_field;
-
-  typedef esbmct::expr2t_traits<
-    heap_contains_data_hterm_field,
-    heap_contains_data_heap_field,
-    heap_contains_data_byte_len_field> traits;
+    heap_field;
+  typedef esbmct::expr2t_traits<location_field, heap_field> traits;
 };
+
+/* ================================ SLHV ================================ */
 
 class string_ops : public expr2t
 {
@@ -1858,12 +1831,14 @@ irep_typedefs(points_to, points_to_data);
 irep_typedefs(uplus, uplus_data);
 irep_typedefs(locadd, locadd_data);
 irep_typedefs(heap_region, heap_region_data);
+irep_typedefs(locationof, locationof_data);
+irep_typedefs(fieldof, fieldof_data);
 irep_typedefs(pointer_with_region, pointer_with_region_data);
 irep_typedefs(heap_load, heap_load_data);
 irep_typedefs(heap_update, heap_update_data);
 irep_typedefs(heap_append, heap_append_data);
 irep_typedefs(heap_delete, heap_delete_data);
-irep_typedefs(heap_contains, heap_contains_data);
+irep_typedefs(heap_contain, heap_contains_data);
 irep_typedefs(isnan, bool_1op);
 irep_typedefs(overflow, overflow_ops);
 irep_typedefs(overflow_cast, overflow_cast_data);
@@ -3326,11 +3301,13 @@ public:
   static std::string field_names[esbmct::num_type_fields];
 };
 
+/* ================================ SLHV ================================ */
+
 class points_to2t : public points_to_expr_methods
 {
 public:
-  points_to2t(const expr2tc &addr, const expr2tc &content)
-    : points_to_expr_methods(get_intheap_type(), points_to_id, addr, content)
+  points_to2t(const expr2tc &location, const expr2tc &content)
+    : points_to_expr_methods(get_intheap_type(), points_to_id, location, content)
   {
   }
   points_to2t(const points_to2t &ref) = default;
@@ -3338,12 +3315,11 @@ public:
   static std::string field_names[esbmct::num_type_fields];
 };
 
-
 class uplus2t : public uplus_expr_methods
 {
 public:
-  uplus2t(std::vector<expr2tc> uplus_members)
-  : uplus_expr_methods(get_intheap_type(), uplus_id, std::move(uplus_members), uplus_members.size())
+  uplus2t(const std::vector<expr2tc> &heap_terms)
+  : uplus_expr_methods(get_intheap_type(), uplus_id, heap_terms)
   {
   }
   uplus2t(const uplus2t &ref) = default;
@@ -3354,38 +3330,60 @@ public:
 class locadd2t : public locadd_expr_methods
 {
 public:
-  locadd2t(const expr2tc &loc, const expr2tc &offset)
-  : locadd_expr_methods(get_intloc_type(), locadd_id, loc, offset)
+  locadd2t(const expr2tc &location, const expr2tc &offset)
+  : locadd_expr_methods(get_intloc_type(), locadd_id, location, offset)
   {
   }
   locadd2t(const locadd2t &ref) = default;
 
-  std::string offset_as_string() const;
-
   static std::string field_names[esbmct::num_type_fields];
 };
 
-class heap_region2t: public heap_region_expr_methods
+class heap_region2t : public heap_region_expr_methods
 {
 public:
   heap_region2t(
+    const type2tc &type,
     const expr2tc &flag,
-    const expr2tc &start_loc,
-    const expr2tc &pt_bytes,
-    const expr2tc &size,
-    bool is_split)
-  : heap_region_expr_methods(
-    get_intheap_type(), heap_region_id,
-    flag, start_loc, pt_bytes, size, is_split)
+    const expr2tc &source_location)
+    : heap_region_expr_methods(type, heap_region_id, flag, source_location)
   {
   }
   heap_region2t(const heap_region2t &ref) = default;
 
-  bool update(uint byte_len);
+  // bool update(uint byte_len);
 
   static std::string field_names[esbmct::num_type_fields];
 };
 
+class locationof2t : public locationof_expr_methods
+{
+public:
+  locationof2t(const expr2tc &heap_term)
+    : locationof_expr_methods(get_intloc_type(), locationof_id, heap_term)
+  {
+  }
+  locationof2t(const locationof2t &ref) = default;
+
+  static std::string field_names[esbmct::num_type_fields];
+};
+
+class fieldof2t : public fieldof_expr_methods
+{
+public:
+  fieldof2t(
+    const type2tc &type,
+    const expr2tc &heap_region,
+    const expr2tc &field)
+    : fieldof_expr_methods(type, fieldof_id, heap_region, field)
+  {
+  }
+  fieldof2t(const fieldof2t &ref) = default;
+
+  static std::string field_names[esbmct::num_type_fields];
+};
+
+// maybe deprecated
 class pointer_with_region2t : public pointer_with_region_expr_methods
 {
 public:
@@ -3397,17 +3395,19 @@ public:
   static std::string field_names[esbmct::num_type_fields];
 };
 
+// maybe deprecated
 class heap_load2t : public heap_load_expr_methods
 {
 public:
   heap_load2t(
-    const type2tc &type,
+    const type2tc &type, 
+    const expr2tc &flag,
     const expr2tc &heap,
     const expr2tc &start_loc,
     unsigned int byte_len)
   : heap_load_expr_methods(
     type, expr2t::heap_load_id,
-    heap, start_loc, byte_len)
+    flag, heap, start_loc, byte_len)
   {
   }
   heap_load2t(const heap_load2t& ref) = default;
@@ -3418,8 +3418,14 @@ public:
 class heap_update2t : public heap_update_expr_methods
 {
 public: 
-  heap_update2t(expr2tc source_heap, expr2tc start_addr, expr2tc updated_val, unsigned int byte_len)
-  : heap_update_expr_methods(get_intheap_type(), heap_update_id, source_heap, start_addr, updated_val, byte_len)
+  heap_update2t(
+    const type2tc &type,
+    const expr2tc &source_heap,
+    const expr2tc &update_field,
+    const expr2tc &update_value)
+    : heap_update_expr_methods(
+      type, heap_update_id,
+      source_heap, update_field, update_value)
   {
   }
   heap_update2t(const heap_update2t &ref) = default;
@@ -3430,8 +3436,12 @@ public:
 class heap_append2t : public heap_append_expr_methods
 {
 public:
-  heap_append2t(expr2tc source_heap, expr2tc start_addr, expr2tc create_val, unsigned int byte_len)
-  : heap_append_expr_methods(get_intheap_type(), heap_append_id, source_heap, start_addr, create_val, byte_len)
+  heap_append2t(
+    const expr2tc &source_heap,
+    const expr2tc &heap_term)
+  : heap_append_expr_methods(
+    get_intheap_type(), heap_append_id,
+    source_heap, heap_term)
   {
   }
   heap_append2t(const heap_append2t &ref) = default;
@@ -3442,8 +3452,11 @@ public:
 class heap_delete2t : public heap_delete_expr_methods
 {
 public:
-  heap_delete2t(expr2tc source_heap, expr2tc del_addr, unsigned int byte_len)
-  : heap_delete_expr_methods(get_intheap_type(), heap_delete_id, source_heap, del_addr, byte_len)
+  heap_delete2t(
+    const expr2tc &source_heap,
+    const expr2tc &location)
+    : heap_delete_expr_methods(
+      get_intheap_type(), heap_delete_id, source_heap, location)
   {
   }
   heap_delete2t(const heap_delete2t &ref) = default;
@@ -3451,17 +3464,20 @@ public:
   static std::string field_names[esbmct::num_type_fields];
 };
 
-class heap_contains2t : public heap_contains_expr_methods
+class heap_contain2t : public heap_contain_expr_methods
 {
 public:
-  heap_contains2t(expr2tc hterm, expr2tc heap, unsigned int byte_len)
-  : heap_contains_expr_methods(get_bool_type(), heap_contains_id, hterm, heap, byte_len)
+  heap_contain2t(
+    const expr2tc &location, const expr2tc &heap)
+    : heap_contain_expr_methods(get_bool_type(), heap_contain_id, location, heap)
   {
   }
-  heap_contains2t(const heap_contains2t &ref) = default;
+  heap_contain2t(const heap_contain2t &ref) = default;
 
   static std::string field_names[esbmct::num_type_fields];
 };
+
+/* ================================ SLHV ================================ */
 
 /** Is operand not-a-number. Used to implement C library isnan function for
  *  float/double values. Boolean result. @extends arith_1op */

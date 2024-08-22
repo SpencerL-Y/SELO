@@ -333,20 +333,24 @@ smt_astt smt_convt::convert_ast(const expr2tc &expr)
 
   log_status("begin convert expr");
   expr->dump();
+  log_status("done");
 
   smt_astt a;
+
   switch (expr->expr_id)
   {
   case expr2t::constant_intheap_id:
   case expr2t::constant_intloc_id:
   case expr2t::heap_region_id:
+  case expr2t::locationof_id:
+  case expr2t::fieldof_id:
   case expr2t::pointer_with_region_id:
   case expr2t::points_to_id:
   case expr2t::uplus_id:
   case expr2t::locadd_id:
   case expr2t::heap_update_id:
   case expr2t::heap_load_id:
-  case expr2t::heap_contains_id:
+  case expr2t::heap_contain_id:
   case expr2t::heap_append_id:
   case expr2t::heap_delete_id: {
     a = convert_slhv_opts(expr, args); 

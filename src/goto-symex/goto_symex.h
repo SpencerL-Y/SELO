@@ -750,14 +750,13 @@ protected:
   
   /**
    *  This method is used when we need to assign a value
-   *  to a heap_load, which is obatained via load `byte_len`
-   *  bytes in a heap(SLHV).
-   *  @param lhs Heap(points-to) to assign to
+   *  to a field of a heap region
+   *  @param lhs field of a region
    *  @param full_lhs The original assignment symbol
    *  @param rhs Value to assign to lhs
    *  @param guard Assignment guard.
    */
-  void symex_assign_heap_load(
+  void symex_assign_fieldof(
     const expr2tc &lhs,
     const expr2tc &full_lhs,
     expr2tc &rhs,
@@ -970,11 +969,10 @@ protected:
   dump_internal_state(const std::list<struct internal_item> &data) override;
   bool is_live_variable(const expr2tc &sym) override;
 
-  void update_regions(const expr2tc &region) override;
-  void update_heap_region_rec(expr2tc &expr, const expr2tc &region) override;
-  std::string get_loaded_value_flag(const expr2tc &expr) override;
+  void update_heap_type(const expr2tc &flag) override;
+  void update_heap_type_rec(expr2tc &expr, const symbol2t &flag) override;
   std::string get_nondet_id(std::string prefix = "") override;
-  irep_idt get_alooc_size_heap_name() override;
+  irep_idt get_alloc_size_heap_name() override;
 };
 
 #endif

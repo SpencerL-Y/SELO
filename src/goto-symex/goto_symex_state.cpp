@@ -67,15 +67,21 @@ void goto_symex_statet::initialize(
 bool goto_symex_statet::constant_propagation(const expr2tc &expr) const
 {
   // SLHV propagation
-  if (is_pointer_with_region2t(expr) ||
-      is_constant_intheap2t(expr) ||
-      is_constant_intloc2t(expr))
+  if (is_constant_intheap2t(expr) ||
+      is_constant_intloc2t(expr) ||
+      is_heap_region2t(expr))
     return true;
+
   if (is_locadd2t(expr))
   {
     locadd2t locadd = to_locadd2t(expr);
-    return constant_propagation(locadd.loc) &&
+    return constant_propagation(locadd.location) &&
       constant_propagation(locadd.offset);
+  }
+
+  if (is_locationof2t(expr))
+  {
+    return constant_propagation(to_locationof2t(expr).heap_term);
   }
 
   if (is_array_type(expr))
@@ -269,24 +275,22 @@ void goto_symex_statet::rename(expr2tc &expr)
     address_of2t &addrof = to_address_of2t(expr);
     rename_address(addrof.ptr_obj);
   }
+  else if (is_heap_region2t(expr))
+  {
+    // Don't replace flag with heap region
+    // Get the newest symbol
+    heap_region2t &heap_region = to_heap_region2t(expr);
+    
+    // rename location
+    rename(heap_region.source_location);
+
+    // use the newest l2 symbol
+    level2.get_ident_name(heap_region.flag);
+  }
   else
   {
     // do this recursively
     expr->Foreach_operand([this](expr2tc &e) { rename(e); });
-  }
-
-  if (is_pointer_with_region2t(expr))
-  {
-    pointer_with_region2t &pwr = to_pointer_with_region2t(expr);
-    if (is_pointer_with_region2t(pwr.loc_ptr))
-      pwr.loc_ptr = to_pointer_with_region2t(pwr.loc_ptr).loc_ptr;
-  }
-
-  if (is_heap_region2t(expr))
-  {
-    heap_region2t &hr = to_heap_region2t(expr);
-    if (is_pointer_with_region2t(hr.start_loc))
-      hr.start_loc = to_pointer_with_region2t(hr.start_loc).loc_ptr;
   }
 }
 

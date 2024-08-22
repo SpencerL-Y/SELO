@@ -12,7 +12,7 @@ bool symex_slicet::get_symbols(const expr2tc &expr)
 {
   bool res = false;
   if (is_heap_region2t(expr))
-    return get_symbols<Add>(to_heap_region2t(expr).start_loc);
+    return get_symbols<Add>(to_heap_region2t(expr).source_location);
   else if (is_pointer_with_region2t(expr))
     return get_symbols<Add>(to_pointer_with_region2t(expr).loc_ptr);
   else
