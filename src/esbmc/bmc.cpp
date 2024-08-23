@@ -646,24 +646,7 @@ smt_convt::resultt bmct::run_thread(std::shared_ptr<symex_target_equationt> &eq)
     {
       runtime_solver =
         std::unique_ptr<smt_convt>(create_solver("", ns, options));
-      show_vcc(*eq);
-      // log_status("smt_convt created");
-      // if (options.get_bool_option("z3-slhv")) {
-      //   show_vcc(*eq);
-      //   generate_smt_from_equation(*runtime_solver, *eq);
-      //   return smt_convt::P_SMTLIB;
-      // }
     }
-
-    // if (!options.get_bool_option("smt-during-symex") && options.get_bool_option("z3-slhv")) {
-
-    //   log_status("enter branch dealing with slhv encoding");
-    //   z3_slhv_convt* slhv_conv = new z3_slhv_convt(ns, options);
-    //   slhv_converter = std::unique_ptr<z3_slhv_convt>(slhv_conv);
-
-    //   std::string smt_str = generate_slhv_smt_from_equation(*slhv_converter, *eq);
-    //   return smt_convt::P_SMTLIB;
-    // }
 
     if (
       options.get_bool_option("multi-property") &&

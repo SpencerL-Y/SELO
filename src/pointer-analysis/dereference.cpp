@@ -485,8 +485,6 @@ expr2tc dereferencet::dereference(
     e->dump();
     log_status("----");
   }
-  // now build big case split
-  // only "good" objects
 
   /* If the value-set contains unknown or invalid, we cannot be sure it contains
    * all possible values and we have to add a fallback symbol in case all guards
@@ -823,13 +821,13 @@ expr2tc dereferencet::build_reference_to(
         // Do alignment
         intheap_type2t &_type = to_intheap_type(heap_region.type);
         bool has_changed = _type.do_alignment(access_sz);
-        if (false)
+        if (has_changed)
         {
           to_symbol2t(heap_region.flag).type = heap_region.type;
           dereference_callback.update_heap_type(heap_region.flag);
         }
       }
-      pointer_guard = same_object2tc(deref_expr, value);
+      pointer_guard = same_object2tc(deref_expr, locationof2tc(value));
       tmp_guard.add(pointer_guard);
     }
     else

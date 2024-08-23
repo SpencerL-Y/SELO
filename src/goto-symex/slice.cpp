@@ -11,10 +11,10 @@ template <bool Add>
 bool symex_slicet::get_symbols(const expr2tc &expr)
 {
   bool res = false;
+  if (is_locationof2t(expr)) return false;
+  
   if (is_heap_region2t(expr))
-    return get_symbols<Add>(to_heap_region2t(expr).source_location);
-  else if (is_pointer_with_region2t(expr))
-    return get_symbols<Add>(to_pointer_with_region2t(expr).loc_ptr);
+    return get_symbols<Add>(to_heap_region2t(expr).flag);
   else
   {
     // Recursively look if any of the operands has a inner symbol

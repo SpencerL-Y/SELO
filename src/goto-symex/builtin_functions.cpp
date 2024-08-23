@@ -282,17 +282,6 @@ expr2tc goto_symext::symex_mem(
     }
     to_intheap_type(heap_type).is_region = true;
 
-    // uint total_bytes = to_constant_int2t(bytes).value.to_uint64();
-    // uint pt_bytes = type.get()->get_width() / 8;
-    // uint size = total_bytes / pt_bytes;
-    // if (pt_bytes == 1)
-    // {
-    //   pt_bytes = total_bytes;
-    //   size = 1;
-    // }
-    // expr2tc region_pt_bytes = constant_int2tc(get_uint64_type(), BigInt(pt_bytes));
-    // expr2tc region_size = constant_int2tc(get_uint64_type(), BigInt(size));
-
     symbol.type.dynamic(true);
     symbol.mode = "C";
     new_context.add(symbol);
@@ -319,12 +308,11 @@ expr2tc goto_symext::symex_mem(
     log_status("symex assign in symex_mem: allocated_heap = heaplet");
     symex_assign(code_assign2tc(rhs_heap, rhs_region));
 
-    // // link pointer variable and heap variable
-    // expr2tc pwr = pointer_with_region2tc(rhs_base_loc, rhs_heap);
-    // track_new_pointer(
-    //   rhs_base_loc,
-    //   get_intheap_type(),
-    //   gen_ulong(total_bytes));
+    // link pointer variable and heap variable
+    track_new_pointer(
+      rhs_base_loc,
+      get_intheap_type(),
+      gen_ulong(to_intheap_type(heap_type).total_bytes));
 
     dynamic_memory.emplace_back(
       rhs_heap,
@@ -336,15 +324,6 @@ expr2tc goto_symext::symex_mem(
     log_status("create valueset base loc symbol and assign");
     symex_assign(code_assign2tc(lhs, locationof2tc(rhs_region)));
 
-    // if (is_heap_load2t(lhs))
-    // {
-    //   guardt g;
-    //   symex_assign_heap_load(lhs, lhs, pwr, pwr, g, false);
-    // }
-    // else
-    // {
-    //   symex_assign(code_assign2tc(lhs, pwr));
-    // }
     return expr2tc();
   }
 }
@@ -380,9 +359,7 @@ void goto_symext::track_new_pointer(
 
     symex_assign(code_assign2tc(sz_index_expr, object_size_exp), true);
   } else {
-    type2tc allocsize_heap_type = get_intheap_type();
-    allocsize_heap_type->dump();
-    expr2tc allocsize_symbol = symbol2tc(allocsize_heap_type, alloc_size_heap_name);
+    expr2tc allocsize_symbol = symbol2tc(get_intheap_type(), alloc_size_heap_name);
     // TODO SLHV: add non-constant size later
     assert(is_constant_int2t(size));
 

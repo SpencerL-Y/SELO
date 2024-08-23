@@ -568,10 +568,15 @@ void value_sett::get_value_set_rec(
   if (is_constant_intloc2t(expr) || is_constant_intheap2t(expr) ||
       is_heap_region2t(expr) || is_heap_append2t(expr))
   {
-    log_status("get value set rec: SLHV");
     expr2tc new_object = expr;
     insert(dest, new_object, BigInt(0));
     return;
+  }
+
+  if (is_points_to2t(expr))
+  {
+    log_status("finish get_value_set_rec points_to");
+    abort();
   }
 
   if (is_locadd2t(expr))
@@ -585,7 +590,7 @@ void value_sett::get_value_set_rec(
   if (is_locationof2t(expr))
   {
     get_value_set_rec(
-      to_locationof2t(expr).heap_term,
+      to_locationof2t(expr).source_region,
       dest, suffix, original_type
     );
     return;
@@ -620,24 +625,6 @@ void value_sett::get_value_set_rec(
     log_status("finish get_value_set_rec heap_update");
     abort();
   }
-
-  // if (is_pointer_with_region2t(expr))
-  // {
-  //   get_value_set_rec(
-  //     to_pointer_with_region2t(expr).region,
-  //     dest, suffix, original_type
-  //   );
-  //   return;
-  // }
-
-  // if (is_heap_load2t(expr))
-  // {
-  //   get_value_set_rec(
-  //     to_heap_load2t(expr).flag,
-  //     dest, suffix, original_type
-  //   );
-  //   return;
-  // }
 
   if (is_add2t(expr) || is_sub2t(expr))
   {
@@ -1254,9 +1241,9 @@ void value_sett::assign(
     {
       const heap_update2t &heap_upd = to_heap_update2t(rhs);
       expr2tc lhs_field = 
-        fieldof2tc(rhs->type, heap_upd.source_heap, heap_upd.update_field);
+        fieldof2tc(rhs->type, heap_upd.source_region, heap_upd.update_field);
       assign(lhs_field, heap_upd.update_value, true);
-      return; 
+      return;
     }
   }
 

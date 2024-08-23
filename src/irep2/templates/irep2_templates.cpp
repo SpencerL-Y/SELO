@@ -171,15 +171,11 @@ std::string locadd2t::field_names[esbmct::num_type_fields] =
 std::string heap_region2t::field_names[esbmct::num_type_fields] = 
   {"flag", "source_location", "", "", ""};
 std::string locationof2t::field_names[esbmct::num_type_fields] =
-  {"heap_term", "", "", "", ""};
+  {"source_region", "", "", "", ""};
 std::string fieldof2t::field_names[esbmct::num_type_fields] =
   {"heap_region", "field", "", "", ""};
-std::string pointer_with_region2t::field_names[esbmct::num_type_fields] = 
-  {"loc_ptr", "region", "", "", ""};
-std::string heap_load2t::field_names[esbmct::num_type_fields] = 
-  {"src_heap", "start_loc", "byte_len", "", ""};
 std::string heap_update2t::field_names[esbmct::num_type_fields] = 
-  {"source_heap", "update_field", "update_val", "", ""};
+  {"source_region", "update_field", "update_val", "", ""};
 std::string heap_append2t::field_names[esbmct::num_type_fields] = 
   {"source_heap", "heap_term", "", "",  ""};
 std::string heap_delete2t::field_names[esbmct::num_type_fields] = 

@@ -63,6 +63,7 @@ smt_convt::resultt z3_slhv_convt::dec_solve() {
     for(z3::expr expr : solver.assertions()) {
       out << expr.to_string() << '\n';
     }
+    out.close();
   }
 
   z3::check_result result = solver.check();
@@ -200,7 +201,6 @@ z3_slhv_convt::convert_slhv_opts(
       return mk_nil();
     case expr2t::heap_region_id:
     {
-      log_status("convert heap region");
       const intheap_type2t &type = to_intheap_type(expr->type);
       
       std::vector<smt_astt> pt_vec;
@@ -235,59 +235,12 @@ z3_slhv_convt::convert_slhv_opts(
     case expr2t::locationof_id:
     {
       const locationof2t &locof = to_locationof2t(expr);
-      if (!is_heap_region2t(locof.heap_term))
+      if (!is_heap_region2t(locof.source_region))
       {
         log_error("We can't get a location of a non-region heap");
         abort();
       }
-      return convert_ast(to_heap_region2t(locof.heap_term).source_location);
-    }
-    case expr2t::fieldof_id:
-    {
-      const fieldof2t &fieldof = to_fieldof2t(expr);
-
-      if (is_constant_intheap2t(fieldof.heap_region))
-        return mk_fresh(
-          convert_sort(fieldof.type),
-          mk_fresh_name("invalid_loc_"));
-
-      if (!is_heap_region2t(fieldof.heap_region))
-      {
-        log_error("We can't get a location of a non-region heap");
-        abort();
-      }
-      if (!is_constant_int2t(fieldof.field))
-      {
-        log_error("Wrong field");
-        abort();
-      }
-      unsigned int field = to_constant_int2t(fieldof.field).value.to_uint64();
-
-      // TODO : do more analysis
-      const heap_region2t &heap_region = to_heap_region2t(fieldof.heap_region);
-      const intheap_type2t &_type = to_intheap_type(heap_region.type);
-      
-      smt_astt source_loc = convert_ast(heap_region.source_location);
-      smt_astt loc = field == 0 ?
-        source_loc : mk_locadd(source_loc, convert_ast(fieldof.field));
-
-      smt_sortt s1;
-      std::string name;
-      if (!_type.is_aligned)
-      {
-        s1 = mk_intloc_sort();
-        name = mk_fresh_name("tmp_loc::");
-      }
-      else
-      {
-        s1 = is_intloc_type(_type.field_types[field]) ? mk_intloc_sort() : mk_int_sort();
-        name = mk_fresh_name(
-          is_intloc_type(_type.field_types[field]) ? "tmp_loc::" : "tmp_val::");
-      }
-      smt_astt v1 = mk_fresh(s1, name);
-
-      assert_ast(mk_subh(mk_pt(loc, v1), convert_ast(heap_region.flag)));
-      return v1;
+      return convert_ast(to_heap_region2t(locof.source_region).source_location);
     }
     case expr2t::points_to_id:
     {
@@ -313,39 +266,17 @@ z3_slhv_convt::convert_slhv_opts(
     case expr2t::heap_append_id:
     {
       smt_astt h = args[0];
-      smt_astt adr = args[1];
-      smt_astt val = args[2];
+      smt_astt t = args[1];
       // new heap state
-      return mk_uplus(h, mk_pt(adr, val));
-    }
-    case expr2t::heap_update_id:
-    {
-      const heap_update2t &heap_upd = to_heap_update2t(expr);
-      const heap_region2t &heap_region = to_heap_region2t(heap_upd.source_heap);
-      smt_astt h = convert_ast(heap_region.flag);
-
-      smt_astt source_loc = convert_ast(heap_region.source_location);
-      smt_astt field = convert_ast(heap_upd.update_field);
-      smt_astt loc = mk_locadd(source_loc, field);
-      smt_astt val = args[2];
-
-      smt_astt h1 = mk_fresh(mk_intheap_sort(), mk_fresh_name("tmp_heap::"));
-      smt_astt v1 = mk_fresh(val->sort, mk_fresh_name("tmp_val::"));
-      // current heap state
-      smt_astt o_state = mk_eq(h, mk_uplus(mk_pt(loc, v1), h1));
-      assert_ast(o_state);
-      // new heap state
-      return mk_uplus(mk_pt(loc, val), h1);
+      return mk_uplus(h, t);
     }
     case expr2t::heap_contain_id:
     {
       const heap_contain2t& heap_ct = to_heap_contain2t(expr);
       smt_astt sh;
-      if (is_symbol2t(heap_ct.location) ||
-          is_pointer_object2t(heap_ct.location))
+      if (is_symbol2t(heap_ct.location) || is_pointer_object2t(heap_ct.location))
       {
         sh = mk_pt(args[0], mk_fresh(mk_int_sort(), mk_fresh_name("tmp_val::")));
-        // TODO : support multiple loaded
       }
       else if (is_points_to2t(heap_ct.location))
       {
@@ -353,20 +284,25 @@ z3_slhv_convt::convert_slhv_opts(
       }
       return mk_subh(sh, args[1]);
     }
+    case expr2t::fieldof_id:
+    case expr2t::heap_update_id:
     case expr2t::heap_delete_id:
     {
-      smt_astt h1 = mk_fresh(mk_intheap_sort(), mk_fresh_name("tmp_heap::"));
-      smt_astt v1 = mk_fresh(mk_int_sort(), mk_fresh_name("tmp_val::"));
-      assert_ast(mk_eq(args[0], mk_uplus(h1, mk_pt(args[1], v1))));
-      return h1;
+      z3_slhv_convt::smt_ast_pair sap = convert_opt_without_assert(expr);
+      assert_ast(sap.first);
+      return sap.second;
     }
     case expr2t::same_object_id:
     {
       // Do project for SLHV
       const same_object2t& same = to_same_object2t(expr);
-      smt_astt p1 = this->project(same.side_1);
-      smt_astt p2 = this->project(same.side_2);
-      return mk_eq(p1, p2);
+      z3_slhv_convt::smt_ast_pair p1 = this->project(same.side_1);
+      z3_slhv_convt::smt_ast_pair p2 = this->project(same.side_2);
+      
+      smt_astt cond = mk_and(p1.first, p2.first);
+      smt_astt eq = mk_eq(p1.second, p2.second);
+
+      return mk_and(cond, eq);
     }
     default: {
       log_status("Invalid SLHV operations!!!");
@@ -375,21 +311,118 @@ z3_slhv_convt::convert_slhv_opts(
   }
 }
 
-smt_astt z3_slhv_convt::project(const expr2tc &expr)
+z3_slhv_convt::smt_ast_pair
+z3_slhv_convt::convert_opt_without_assert(const expr2tc &expr)
 {
-  
+  switch (expr->expr_id)
+  {
+    case expr2t::fieldof_id:
+    {
+      const fieldof2t &fieldof = to_fieldof2t(expr);
+
+      if (!is_heap_region2t(fieldof.heap_region))
+      {
+        log_error("We can't get a location of a non-region heap");
+        abort();
+      }
+      if (!is_constant_int2t(fieldof.field))
+      {
+        log_error("Wrong field");
+        abort();
+      }
+      if (is_constant_intheap2t(fieldof.heap_region))
+        return std::make_pair(
+          mk_smt_bool(true),
+          mk_fresh(convert_sort(fieldof.type), mk_fresh_name("invalid_loc_")));
+
+      unsigned int field = to_constant_int2t(fieldof.field).value.to_uint64();
+
+      const heap_region2t &heap_region = to_heap_region2t(fieldof.heap_region);
+      const intheap_type2t &_type = to_intheap_type(heap_region.type);
+      
+      smt_astt source_loc = convert_ast(heap_region.source_location);
+      smt_astt loc = field == 0 ?
+        source_loc : mk_locadd(source_loc, convert_ast(fieldof.field));
+
+      smt_sortt s1;
+      std::string name;
+      if (!_type.is_aligned)
+      {
+        s1 = mk_intloc_sort();
+        name = mk_fresh_name("tmp_loc::");
+      }
+      else
+      {
+        s1 = is_intloc_type(_type.field_types[field]) ? mk_intloc_sort() : mk_int_sort();
+        name = mk_fresh_name(
+          is_intloc_type(_type.field_types[field]) ? "tmp_loc::" : "tmp_val::");
+      }
+      smt_astt v1 = mk_fresh(s1, name);
+
+      smt_astt assert_expr = mk_subh(mk_pt(loc, v1), convert_ast(heap_region.flag));
+      return std::make_pair(assert_expr, v1);
+    }
+    case expr2t::heap_update_id:
+    {
+      const heap_update2t &heap_upd = to_heap_update2t(expr);
+      if (!is_heap_region2t(heap_upd.source_region))
+      {
+        log_error("Do not support heap update for other heap terms");
+        abort();
+      }
+
+      const heap_region2t &heap_region = to_heap_region2t(heap_upd.source_region);
+
+      smt_astt h = convert_ast(heap_region.flag);
+      smt_astt source_loc = convert_ast(heap_region.source_location);
+      smt_astt field = convert_ast(heap_upd.update_field);
+      smt_astt loc = mk_locadd(source_loc, field);
+      smt_astt val = convert_ast(heap_upd.update_value);
+
+      smt_astt h1 = mk_fresh(mk_intheap_sort(), mk_fresh_name("tmp_heap::"));
+      smt_astt v1 = mk_fresh(val->sort, mk_fresh_name("tmp_val::"));
+
+      // current heap state
+      smt_astt assert_expr = mk_eq(h, mk_uplus(mk_pt(loc, v1), h1));
+
+      // new heap state
+      return std::make_pair(assert_expr,  mk_uplus(mk_pt(loc, val), h1));
+    }
+    case expr2t::heap_delete_id:
+    {
+      const heap_delete2t &heap_del = to_heap_delete2t(expr);
+
+      smt_astt h = convert_ast(heap_del.source_heap);
+      smt_astt l = convert_ast(heap_del.location);
+
+      smt_astt h1 = mk_fresh(mk_intheap_sort(), mk_fresh_name("tmp_heap::"));
+      smt_astt v1 = mk_fresh(mk_int_sort(), mk_fresh_name("tmp_val::"));
+      smt_astt assert_expr = mk_eq(h, mk_uplus(h1, mk_pt(l, v1)));
+      
+      return std::make_pair(assert_expr, v1);
+    }
+    default: {
+      return std::make_pair(mk_smt_bool(true), convert_ast(expr));
+    }
+  }
+}
+
+z3_slhv_convt::smt_ast_pair
+z3_slhv_convt::project(const expr2tc &expr)
+{
   if (is_symbol2t(expr))
-    return convert_ast(expr);
+    return convert_opt_without_assert(expr);
   else if (is_heap_region2t(expr))
     return this->project(to_heap_region2t(expr).source_location);
   else if (is_locationof2t(expr))
-    return this->project(to_locationof2t(expr).heap_term);
+    return this->project(to_locationof2t(expr).source_region);
   else if (is_fieldof2t(expr))
-    return this->project(to_fieldof2t(expr).heap_region);
+    return convert_opt_without_assert(expr);
   else if (is_typecast2t(expr))
     return this->project(to_typecast2t(expr).from);
   else if (is_locadd2t(expr) || is_add2t(expr) || is_sub2t(expr))
   {
+    // TODO : fix
     expr2tc ptr;
     if (is_locadd2t(expr))
       ptr = to_locadd2t(expr).location;

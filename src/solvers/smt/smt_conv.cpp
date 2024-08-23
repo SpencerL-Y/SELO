@@ -315,6 +315,10 @@ smt_astt smt_convt::convert_ast(const expr2tc &expr)
   case expr2t::pointer_offset_id:
   case expr2t::pointer_object_id:
   case expr2t::pointer_capability_id:
+  
+  case expr2t::fieldof_id:
+  case expr2t::heap_update_id:
+  case expr2t::heap_delete_id:
     break; // Don't convert their operands
 
   default:
@@ -344,12 +348,10 @@ smt_astt smt_convt::convert_ast(const expr2tc &expr)
   case expr2t::heap_region_id:
   case expr2t::locationof_id:
   case expr2t::fieldof_id:
-  case expr2t::pointer_with_region_id:
   case expr2t::points_to_id:
   case expr2t::uplus_id:
   case expr2t::locadd_id:
   case expr2t::heap_update_id:
-  case expr2t::heap_load_id:
   case expr2t::heap_contain_id:
   case expr2t::heap_append_id:
   case expr2t::heap_delete_id: {

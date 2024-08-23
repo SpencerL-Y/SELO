@@ -80,8 +80,6 @@ static const char *expr_names[] = {
   "heap_region",
   "locationof",
   "fieldof",
-  "pointer_with_region",
-  "heap_load",
   "heap_update",
   "heap_append",
   "heap_delete",

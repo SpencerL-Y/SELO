@@ -80,9 +80,7 @@ bool goto_symex_statet::constant_propagation(const expr2tc &expr) const
   }
 
   if (is_locationof2t(expr))
-  {
-    return constant_propagation(to_locationof2t(expr).heap_term);
-  }
+    return constant_propagation(to_locationof2t(expr).source_region);
 
   if (is_array_type(expr))
   {

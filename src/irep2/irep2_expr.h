@@ -1012,15 +1012,15 @@ public:
     const type2tc &t,
     datatype_ops::expr_ids id,
     const expr2tc &ht)
-    : expr2t(t, id), heap_term(ht)
+    : expr2t(t, id), source_region(ht)
   {
   }
   locationof_data(const locationof_data& ref) = default;
 
-  expr2tc heap_term;
+  expr2tc source_region;
 
   // Type mangling:
-  typedef esbmct::field_traits<expr2tc, locationof_data, &locationof_data::heap_term>
+  typedef esbmct::field_traits<expr2tc, locationof_data, &locationof_data::source_region>
     heap_term_field;
   typedef esbmct::expr2t_traits<heap_term_field> traits;
 };
@@ -1049,63 +1049,6 @@ public:
   typedef esbmct::expr2t_traits<heap_region_field, field_field> traits;
 };
 
-class pointer_with_region_data : public expr2t 
-{
-public:
-  pointer_with_region_data(
-    const type2tc &t,
-    datatype_ops::expr_ids id,
-    expr2tc loc_ptr,
-    expr2tc region)
-    : expr2t(t, id), loc_ptr(loc_ptr), region(region)
-  {
-  }
-
-  expr2tc loc_ptr;
-  expr2tc region;
-
-  // Type mangling:
-  typedef esbmct::field_traits<expr2tc, pointer_with_region_data, &pointer_with_region_data::loc_ptr>
-    pointer_with_region_loc_ptr_field;
-  typedef esbmct::field_traits<expr2tc, pointer_with_region_data, &pointer_with_region_data::region>
-    pointer_with_region_region_field;
-  typedef esbmct::expr2t_traits<pointer_with_region_loc_ptr_field, pointer_with_region_region_field> traits;
-};
-
-class heap_load_data : public expr2t {
-public:
-  heap_load_data(
-    const type2tc &t,
-    datatype_ops::expr_ids id,
-    const expr2tc &flag,
-    const expr2tc &heap,
-    const expr2tc &start_loc,
-    unsigned int byte_len)
-    : expr2t(t, id), flag(flag), heap(heap), start_loc(start_loc), byte_len(byte_len)
-  {
-  }
-
-  expr2tc flag;
-  expr2tc heap;
-  expr2tc start_loc;
-  unsigned int byte_len;
-
-  // Type mangling:
-  typedef esbmct::field_traits<expr2tc, heap_load_data, &heap_load_data::flag>
-    heap_load_data_flag_field;
-  typedef esbmct::field_traits<expr2tc, heap_load_data, &heap_load_data::heap>
-    heap_load_data_heap_field;
-  typedef esbmct::field_traits<expr2tc, heap_load_data, &heap_load_data::start_loc>
-    heap_load_data_start_loc_field;
-  typedef esbmct::field_traits<unsigned int, heap_load_data, &heap_load_data::byte_len>
-    heap_load_data_byte_len_field;
-  typedef esbmct::expr2t_traits<
-    heap_load_data_flag_field,
-    heap_load_data_heap_field,
-    heap_load_data_start_loc_field,
-    heap_load_data_byte_len_field> traits;
-};
-
 class heap_update_data : public expr2t
 {
 public:
@@ -1115,16 +1058,16 @@ public:
     const expr2tc &sh,
     const expr2tc &uf,
     const expr2tc &uv)
-    : expr2t(t, id), source_heap(sh), update_field(uf), update_value(uv)
+    : expr2t(t, id), source_region(sh), update_field(uf), update_value(uv)
   {
   }
 
-  expr2tc source_heap;
+  expr2tc source_region;
   expr2tc update_field;
   expr2tc update_value;
 
   // Type mangling:
-  typedef esbmct::field_traits<expr2tc, heap_update_data, &heap_update_data::source_heap>
+  typedef esbmct::field_traits<expr2tc, heap_update_data, &heap_update_data::source_region>
     source_heap_field;
   typedef esbmct::field_traits<expr2tc, heap_update_data, &heap_update_data::update_field>
     update_field_field;
@@ -1833,8 +1776,6 @@ irep_typedefs(locadd, locadd_data);
 irep_typedefs(heap_region, heap_region_data);
 irep_typedefs(locationof, locationof_data);
 irep_typedefs(fieldof, fieldof_data);
-irep_typedefs(pointer_with_region, pointer_with_region_data);
-irep_typedefs(heap_load, heap_load_data);
 irep_typedefs(heap_update, heap_update_data);
 irep_typedefs(heap_append, heap_append_data);
 irep_typedefs(heap_delete, heap_delete_data);
@@ -3359,8 +3300,8 @@ public:
 class locationof2t : public locationof_expr_methods
 {
 public:
-  locationof2t(const expr2tc &heap_term)
-    : locationof_expr_methods(get_intloc_type(), locationof_id, heap_term)
+  locationof2t(const expr2tc &source_region)
+    : locationof_expr_methods(get_intloc_type(), locationof_id, source_region)
   {
   }
   locationof2t(const locationof2t &ref) = default;
@@ -3379,38 +3320,6 @@ public:
   {
   }
   fieldof2t(const fieldof2t &ref) = default;
-
-  static std::string field_names[esbmct::num_type_fields];
-};
-
-// maybe deprecated
-class pointer_with_region2t : public pointer_with_region_expr_methods
-{
-public:
-  pointer_with_region2t(expr2tc loc_ptr, expr2tc region)
-  : pointer_with_region_expr_methods(get_intloc_type(), pointer_with_region_id, loc_ptr, region)
-  {
-  }
-
-  static std::string field_names[esbmct::num_type_fields];
-};
-
-// maybe deprecated
-class heap_load2t : public heap_load_expr_methods
-{
-public:
-  heap_load2t(
-    const type2tc &type, 
-    const expr2tc &flag,
-    const expr2tc &heap,
-    const expr2tc &start_loc,
-    unsigned int byte_len)
-  : heap_load_expr_methods(
-    type, expr2t::heap_load_id,
-    flag, heap, start_loc, byte_len)
-  {
-  }
-  heap_load2t(const heap_load2t& ref) = default;
 
   static std::string field_names[esbmct::num_type_fields];
 };

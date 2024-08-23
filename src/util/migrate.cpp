@@ -2649,7 +2649,7 @@ exprt migrate_expr_back(const expr2tc &ref)
     const locationof2t &ref2 = to_locationof2t(ref);
     typet thetype = migrate_type_back(ref->type);
     exprt locationof("locationof", thetype);
-    locationof.copy_to_operands(migrate_expr_back(ref2.heap_term));
+    locationof.copy_to_operands(migrate_expr_back(ref2.source_region));
     return locationof;
   }
   case expr2t::fieldof_id:
@@ -2661,31 +2661,12 @@ exprt migrate_expr_back(const expr2tc &ref)
     fieldof.copy_to_operands(migrate_expr_back(ref2.field));
     return fieldof;
   }
-  case expr2t::pointer_with_region_id:
-  {
-    const pointer_with_region2t &ref2 = to_pointer_with_region2t(ref);
-    typet thetype = migrate_type_back(ref->type);
-    exprt pointer_with_region("pointer_with_region", thetype);
-    pointer_with_region.copy_to_operands(migrate_expr_back(ref2.loc_ptr));
-    pointer_with_region.copy_to_operands(migrate_expr_back(ref2.region));
-    return pointer_with_region;
-  }
-  case expr2t::heap_load_id:
-  {
-    const heap_load2t& ref2 = to_heap_load2t(ref);
-    typet thetype = migrate_type_back(ref->type);
-    exprt heap_load("heap_load", thetype);
-    // heap_load.copy_to_operands(migrate_expr_back(ref2.heap));
-    // heap_load.copy_to_operands(migrate_expr_back(ref2.source_location));
-    // heap_load.set("byte_len", irep_idt(std::to_string(ref2.byte_len)));
-    return heap_load;
-  }
   case expr2t::heap_update_id:
   {
     const heap_update2t &ref2 = to_heap_update2t(ref);
     typet thetype = migrate_type_back(ref->type);
     exprt heap_update("heap_update", thetype);
-    heap_update.copy_to_operands(migrate_expr_back(ref2.source_heap));
+    heap_update.copy_to_operands(migrate_expr_back(ref2.source_region));
     heap_update.copy_to_operands(migrate_expr_back(ref2.update_field));
     heap_update.copy_to_operands(migrate_expr_back(ref2.update_value));
     return heap_update;
