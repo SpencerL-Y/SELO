@@ -500,13 +500,30 @@ expr2tc dereferencet::dereference(
   expr2tc value;
   if (!known_exhaustive)
     value = make_failed_symbol(type);
+  
+  // TODO : fix
+  // Extract base location ad offset from locadd
+  expr2tc new_src = src;
+  expr2tc offset = lexical_offset;
+  if (is_locadd2t(src))
+  {
+    new_src = to_locadd2t(src).get_base_location();
+    expr2tc off_from_src = to_locadd2t(src).get_offset();
+    if (is_nil_expr(offset))
+      offset = off_from_src;
+    else
+      offset = add2tc(offset->type, offset, off_from_src);
+    expr2tc simp = offset->simplify();
+    if (!is_nil_expr(simp))
+      offset = simp;
+  }
 
   for (const expr2tc &target : points_to_set)
   {
     expr2tc new_value, pointer_guard;
 
     new_value = build_reference_to(
-      target, mode, src, type, guard, lexical_offset, pointer_guard);
+      target, mode, new_src, type, guard, offset, pointer_guard);
 
     if (is_nil_expr(new_value))
       continue;
@@ -809,6 +826,8 @@ expr2tc dereferencet::build_reference_to(
     value->dump();
     deref_expr->dump();
     type->dump();
+    if (!is_nil_expr(lexical_offset))
+      lexical_offset->dump();
 
     guardt tmp_guard(guard);
     if (is_heap_region2t(value))
@@ -898,11 +917,15 @@ expr2tc dereferencet::build_reference_to(
     }
     else
     {
+      log_status("set final offset");
+      final_offset->dump();
       if (!is_nil_expr(lexical_offset))
         final_offset = add2tc(final_offset->type, final_offset, lexical_offset);
 
-      if (!is_constant_int2t(final_offset))
-        final_offset = final_offset.simplify();
+      expr2tc simp = final_offset->simplify();
+      if (!is_nil_expr(simp)) final_offset = simp;
+
+      final_offset->dump();
     }
 
     // If we're in internal mode, collect all of our data into one struct, insert
@@ -1274,6 +1297,7 @@ void dereferencet::build_reference_slhv(
   if(is_scalar_type(type)) {
     if (!is_constant_int2t(offset))
     {
+      // TODO : support
       log_error("Do not support non-constant offset");
       abort();
     }
@@ -1282,7 +1306,15 @@ void dereferencet::build_reference_slhv(
     heap_region2t& heap_region = to_heap_region2t(value);
 
     intheap_type2t &_type = to_intheap_type(heap_region.type);
-    if (_type.set_field_type(field, type))
+    if (field >= _type.field_types.size())
+    {
+      expr2tc sym = symbol2tc(
+        type, 
+        dereference_callback.get_nondet_id("undefined_behavior_var"));
+      value = sym;
+      return;
+    }
+    else if (_type.set_field_type(field, type))
     {
       heap_region.flag->type = heap_region.type;
       dereference_callback.update_heap_type(heap_region.flag);

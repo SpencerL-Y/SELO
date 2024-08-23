@@ -3277,6 +3277,11 @@ public:
   }
   locadd2t(const locadd2t &ref) = default;
 
+  expr2tc do_simplify() const override;
+
+  expr2tc get_base_location() const;
+  expr2tc get_offset() const;
+
   static std::string field_names[esbmct::num_type_fields];
 };
 
@@ -3291,8 +3296,6 @@ public:
   {
   }
   heap_region2t(const heap_region2t &ref) = default;
-
-  // bool update(uint byte_len);
 
   static std::string field_names[esbmct::num_type_fields];
 };

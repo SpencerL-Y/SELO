@@ -400,6 +400,8 @@ public:
     bool is_aligned)
     : intheap_type_methods(intheap_id, field_types, total_bytes, is_region, is_aligned)
   {
+    if (is_region && this->field_types.empty())
+      this->field_types.push_back(empty_type2tc());
   }
   intheap_type2t(const intheap_type2t &ref) = default;
   unsigned int get_width() const override;

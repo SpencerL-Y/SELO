@@ -439,60 +439,6 @@ void with2t::assert_consistency() const
   assert(type == source_value->type);
 }
 
-// bool heap_region2t::update(uint byte_len)
-// {
-//   uint old_bytes = to_constant_int2t(field_bytes).value.to_uint64();
-//   uint old_size = to_constant_int2t(size).value.to_uint64();
-
-//   assert(old_bytes * old_size % byte_len == 0);
-//   // TODO: allow to split only one time
-//   if (is_aligned) {
-//     assert(byte_len == old_bytes);
-//     return false;
-//   }
-
-//   uint new_bytes = byte_len;
-//   uint new_size;
-//   if (byte_len != old_bytes)
-//   {
-//     new_size = old_bytes * old_size / byte_len;
-//     is_aligned = true;
-//     field_bytes = constant_int2tc(get_uint64_type(), BigInt(new_bytes));
-//     size = constant_int2tc(get_uint64_type(), BigInt(new_size));
-//     return true;
-//   }
-//   return false;
-// }
-
-// std::string locadd2t::offset_as_string() const
-// {
-//   if (is_symbol2t(offset))
-//     return to_symbol2t(offset).get_symbol_name();
-//   else if (is_neg2t(offset))
-//   {
-//     neg2t off = to_neg2t(offset);
-//     expr2tc val = off.value.simplify();
-//     if (!is_constant_int2t(val))
-//     {
-//       log_error("Doe no support for offset_as_string of neg");
-//       abort();
-//     }
-//     return std::string("-")
-//       + std::to_string(to_constant_int2t(val).value.to_int64());
-//   }
-//   else
-//   {
-//     expr2tc off = offset;
-//     if (!is_constant_int2t(off)) off = off.simplify();
-//     if (!is_constant_int2t(off))
-//     {
-//       log_error("Doe no support for offset_as_string");
-//       abort();
-//     }
-//     return std::to_string(to_constant_int2t(off).value.to_int64());
-//   }
-// }
-
 const expr2tc &object_descriptor2t::get_root_object() const
 {
   const expr2tc *tmp = &object;
@@ -539,4 +485,19 @@ arith_2ops::arith_2ops(
   }
   // TODO: Add consistency checks for vectors
 #endif
+}
+
+expr2tc locadd2t::get_base_location() const
+{
+  if (is_locadd2t(location))
+    return to_locadd2t(location).get_base_location();
+  return location;
+}
+
+expr2tc locadd2t::get_offset() const
+{
+  expr2tc off = offset;
+  if (is_locadd2t(location))
+    off = add2tc(off->type, off, to_locadd2t(location).get_offset());
+  return off;
 }

@@ -1060,6 +1060,27 @@ expr2tc index2t::do_simplify() const
   return expr2tc();
 }
 
+expr2tc locadd2t::do_simplify() const
+{
+  expr2tc src_loc = location;
+  expr2tc off = offset;
+
+  while(is_locadd2t(src_loc))
+  {
+    off = add2tc(off->type, off, to_locadd2t(src_loc).offset);
+    src_loc = to_locadd2t(src_loc).location;
+  }
+
+  if (!is_constant_int2t(off))
+    off = off->simplify();
+
+  if (src_loc != location &&
+      off != offset && !is_nil_expr(off))
+    return locadd2tc(src_loc, off);
+
+  return expr2tc();
+}
+
 expr2tc not2t::do_simplify() const
 {
   expr2tc simp = try_simplification(value);

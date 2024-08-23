@@ -201,19 +201,20 @@ z3_slhv_convt::convert_slhv_opts(
       return mk_nil();
     case expr2t::heap_region_id:
     {
-      const intheap_type2t &type = to_intheap_type(expr->type);
+      const intheap_type2t &_type = to_intheap_type(expr->type);
       
       std::vector<smt_astt> pt_vec;
-      if (type.is_aligned)
+      if (_type.is_aligned)
       {
-        for (unsigned i = 0; i < type.field_types.size(); i++) {
+        for (unsigned i = 0; i < _type.field_types.size(); i++)
+        {
           smt_astt loc = i == 0 ? args[1] : mk_locadd(args[1], mk_smt_int(BigInt(i)));
           smt_sortt sort =
-            is_intloc_type(type.field_types[i]) ?
+            is_intloc_type(_type.field_types[i]) ?
               mk_intloc_sort() : mk_int_sort();
           std::string name =
             mk_fresh_name(
-              is_intloc_type(type.field_types[i]) ?
+              is_intloc_type(_type.field_types[i]) ?
                 "tmp_loc::" : "tmp_val::");
           smt_astt v = mk_fresh(sort, name);
           pt_vec.push_back(mk_pt(loc, v));
@@ -399,7 +400,7 @@ z3_slhv_convt::convert_opt_without_assert(const expr2tc &expr)
       smt_astt v1 = mk_fresh(mk_int_sort(), mk_fresh_name("tmp_val::"));
       smt_astt assert_expr = mk_eq(h, mk_uplus(h1, mk_pt(l, v1)));
       
-      return std::make_pair(assert_expr, v1);
+      return std::make_pair(assert_expr, h1);
     }
     default: {
       return std::make_pair(mk_smt_bool(true), convert_ast(expr));

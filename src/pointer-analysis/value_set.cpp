@@ -581,10 +581,23 @@ void value_sett::get_value_set_rec(
 
   if (is_locadd2t(expr))
   {
-    const locadd2t& locadd = to_locadd2t(expr);
-    assert(is_intloc_type(locadd.location));
-    abort();
-    // TODO
+    expr2tc simp = expr;
+
+    if (!is_symbol2t(to_locadd2t(simp).location) ||
+        !is_constant_int2t(to_locadd2t(simp).offset))
+      simp = simp->simplify();
+    
+    if (!is_symbol2t(to_locadd2t(simp).location) ||
+        !is_constant_int2t(to_locadd2t(simp).offset))
+    {
+      log_error("Do not support dynamic pointer arithmetic");
+      abort();
+    }
+    
+    const locadd2t &locadd = to_locadd2t(simp);
+
+    get_value_set_rec(locadd.location, dest, suffix, original_type);
+    return;
   }
 
   if (is_locationof2t(expr))

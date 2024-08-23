@@ -137,6 +137,7 @@ void goto_symext::symex_assign(
   const guardt &guard)
 {
   log_status("xxxxxxxxxxxx symex assign: ");
+  code_assign->dump();
 
   const code_assign2t &code = to_code_assign2t(code_assign);
   expr2tc assign_target = code.target;
@@ -188,6 +189,13 @@ void goto_symext::symex_assign(
   {
     replace_null(lhs);
     replace_null(rhs);
+
+    log_status("here");
+
+    replace_by_locadd(lhs);
+    log_status("here");
+    replace_by_locadd(rhs);
+    log_status("here");
   }
 
   log_status("symex assign lhs : ------------- ");
@@ -947,5 +955,36 @@ void goto_symext::replace_null(expr2tc &expr)
       if (!is_nil_expr(e))
         replace_null(e);
     });
+  }
+}
+
+void goto_symext::replace_by_locadd(expr2tc &expr)
+{
+  if (is_nil_expr(expr)) return;
+
+  expr->Foreach_operand([this](expr2tc &e) { replace_by_locadd(e); });
+
+  if (is_add2t(expr) || is_sub2t(expr))
+  {
+    expr2tc side_1 = is_add2t(expr) ? to_add2t(expr).side_1 : to_sub2t(expr).side_1;
+    expr2tc side_2 = is_add2t(expr) ? to_add2t(expr).side_2 : to_sub2t(expr).side_2;
+    
+    if (is_pointer_type(side_2) || is_intloc_type(side_2))
+      std::swap(side_1, side_2);
+    
+    if (is_pointer_type(side_2) || is_intloc_type(side_2))
+    {
+      log_error("Wrong pointer arithmetic");
+      abort();
+    }
+
+    if (is_sub2t(expr)) side_2 = neg2tc(side_2->type, side_2);
+
+    expr2tc locadd = locadd2tc(side_1, side_2);
+    do_simplify(locadd);
+
+    locadd->dump();
+    
+    expr = locadd;
   }
 }

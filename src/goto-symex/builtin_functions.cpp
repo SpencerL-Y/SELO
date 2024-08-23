@@ -268,8 +268,7 @@ expr2tc goto_symext::symex_mem(
     else
     {
       expr2tc bytes = size;
-      if (!is_constant_int2t(bytes)) 
-        bytes = bytes->simplify();
+      do_simplify(bytes);
       if (is_constant_int2t(bytes))
       {
         heap_type = get_intheap_type(to_constant_int2t(bytes).value.to_uint64());
