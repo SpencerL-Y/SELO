@@ -809,7 +809,7 @@ protected:
    *  Replace member, indexof ... by locadd
    *  @param expr Expr to a location.
    */
-  void replace_by_locadd(expr2tc &expr);
+  void replace_pointer_airth(expr2tc &expr);
 
   /**
    *  Fetch reference to global dynamic object counter.

@@ -2657,7 +2657,7 @@ exprt migrate_expr_back(const expr2tc &ref)
     const fieldof2t &ref2 = to_fieldof2t(ref);
     typet thetype = migrate_type_back(ref->type);
     exprt fieldof("fieldof", thetype);
-    fieldof.copy_to_operands(migrate_expr_back(ref2.heap_region));
+    fieldof.copy_to_operands(migrate_expr_back(ref2.source_region));
     fieldof.copy_to_operands(migrate_expr_back(ref2.field));
     return fieldof;
   }

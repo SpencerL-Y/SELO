@@ -190,12 +190,8 @@ void goto_symext::symex_assign(
     replace_null(lhs);
     replace_null(rhs);
 
-    log_status("here");
-
-    replace_by_locadd(lhs);
-    log_status("here");
-    replace_by_locadd(rhs);
-    log_status("here");
+    replace_pointer_airth(lhs);
+    replace_pointer_airth(rhs);
   }
 
   log_status("symex assign lhs : ------------- ");
@@ -910,14 +906,14 @@ void goto_symext::symex_assign_fieldof(
   assert(is_scalar_type(rhs));
 
   const fieldof2t& fieldof = to_fieldof2t(lhs);
-  const heap_region2t &heap_region = to_heap_region2t(fieldof.heap_region);
+  const heap_region2t &heap_region = to_heap_region2t(fieldof.source_region);
 
   expr2tc update_heap =
-    heap_update2tc(heap_region.type, fieldof.heap_region, fieldof.field, rhs);
+    heap_update2tc(heap_region.type, fieldof.source_region, fieldof.field, rhs);
 
   symex_assign_rec(
     heap_region.flag,
-    fieldof.heap_region,
+    fieldof.source_region,
     update_heap,
     update_heap,
     guard, hidden);
@@ -958,11 +954,11 @@ void goto_symext::replace_null(expr2tc &expr)
   }
 }
 
-void goto_symext::replace_by_locadd(expr2tc &expr)
+void goto_symext::replace_pointer_airth(expr2tc &expr)
 {
   if (is_nil_expr(expr)) return;
 
-  expr->Foreach_operand([this](expr2tc &e) { replace_by_locadd(e); });
+  expr->Foreach_operand([this](expr2tc &e) { replace_pointer_airth(e); });
 
   if (is_add2t(expr) || is_sub2t(expr))
   {
@@ -982,9 +978,19 @@ void goto_symext::replace_by_locadd(expr2tc &expr)
 
     expr2tc locadd = locadd2tc(side_1, side_2);
     do_simplify(locadd);
-
-    locadd->dump();
     
     expr = locadd;
+  }
+
+  if (is_member2t(expr))
+  {
+    // replaced by fieldof
+    const member2t &member = to_member2t(expr);
+
+    const struct_type2t &struct_type = to_struct_type(member.source_value->type);
+
+    expr2tc field = gen_ulong(struct_type.get_component_number(member.member));
+    
+    expr = fieldof2tc(member.type, member.source_value, field);
   }
 }

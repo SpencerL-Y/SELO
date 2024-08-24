@@ -173,6 +173,7 @@ void dereferencet::dereference_expr(expr2tc &expr, guardt &guard, modet mode)
     expr = result;
     break;
   }
+  case expr2t::fieldof_id:
   case expr2t::index_id:
   case expr2t::member_id:
   {
@@ -437,6 +438,27 @@ expr2tc dereferencet::dereference_expr_nonscalar(
       u.datatype_members.front(), guard, mode, base);
   }
 
+  if (is_fieldof2t(expr))
+  {
+    fieldof2t &fieldof = to_fieldof2t(expr);
+
+    if (!is_dereference2t(fieldof.source_region))
+    {
+      log_error("Do not support struct in struct yet");
+      abort();
+    }
+
+    dereference2t &deref = to_dereference2t(fieldof.source_region);
+
+    // Get the heap region
+    dereference_expr(deref.value, guard, dereferencet::READ);
+
+    expr2tc offset_to_scalar = fieldof.field;
+    simplify(offset_to_scalar);
+
+    return dereference(deref.value, base->type, guard, mode, offset_to_scalar);
+  }
+
   // there should be no sudden transition back to scalars, except through
   // dereferences. Return nil to indicate that there was no dereference at
   // the bottom of this.
@@ -503,6 +525,7 @@ expr2tc dereferencet::dereference(
   
   // TODO : fix
   // Extract base location ad offset from locadd
+  // In SLHV, all offset is in word-level
   expr2tc new_src = src;
   expr2tc offset = lexical_offset;
   if (is_locadd2t(src))
@@ -871,6 +894,9 @@ expr2tc dereferencet::build_reference_to(
 
     // Value set tracking emits objects with some cruft built on top of them.
     value = get_base_object(value);
+
+    value->dump();
+    type->dump();
 
     // Final offset computations start here
     expr2tc final_offset = o.offset;
@@ -1293,6 +1319,7 @@ void dereferencet::build_reference_slhv(
   value->dump();
   guard.dump();
   offset->dump();
+  type->dump();
   assert(is_heap_region2t(value));
   if(is_scalar_type(type)) {
     if (!is_constant_int2t(offset))
@@ -1304,23 +1331,28 @@ void dereferencet::build_reference_slhv(
      
     unsigned int field = to_constant_int2t(offset).value.to_uint64();
     heap_region2t& heap_region = to_heap_region2t(value);
-
     intheap_type2t &_type = to_intheap_type(heap_region.type);
-    if (field >= _type.field_types.size())
+
+    unsigned int access_sz = type_byte_size(type, &ns).to_uint64();
+    // heap region as a value
+    if (field == 0 && access_sz == _type.total_bytes) return;
+    
+    if (field >= _type.field_types.size() ||
+      access_sz != _type.total_bytes / _type.field_types.size())
     {
+      // Out of bound or unaligned
       expr2tc sym = symbol2tc(
         type, 
         dereference_callback.get_nondet_id("undefined_behavior_var"));
       value = sym;
       return;
     }
-    else if (_type.set_field_type(field, type))
+  
+    if (_type.set_field_type(field, type))
     {
       heap_region.flag->type = heap_region.type;
       dereference_callback.update_heap_type(heap_region.flag);
     }
-
-    expr2tc heap = heap_region.flag;
 
     value = fieldof2tc(type, value, gen_ulong(field));
   } else {

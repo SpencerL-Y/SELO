@@ -1033,16 +1033,16 @@ public:
     datatype_ops::expr_ids id,
     const expr2tc &hr,
     const expr2tc &f)
-    : expr2t(t, id), heap_region(hr), field(f)
+    : expr2t(t, id), source_region(hr), field(f)
   {
   }
   fieldof_data(const fieldof_data &ref) = default;
 
-  expr2tc heap_region;
+  expr2tc source_region;
   expr2tc field;
 
   // Type mangling:
-  typedef esbmct::field_traits<expr2tc, fieldof_data, &fieldof_data::heap_region>
+  typedef esbmct::field_traits<expr2tc, fieldof_data, &fieldof_data::source_region>
     heap_region_field;
   typedef esbmct::field_traits<expr2tc, fieldof_data, &fieldof_data::field>
     field_field;

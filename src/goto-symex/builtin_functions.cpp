@@ -110,7 +110,7 @@ expr2tc goto_symext::symex_mem(
   const expr2tc &lhs,
   const sideeffect2t &code)
 {
-  log_status("symex_mem start: ");
+  log_status(" ------------------- symex_mem --------------------------- ");
   lhs->dump();
   code.dump();
 
@@ -121,11 +121,6 @@ expr2tc goto_symext::symex_mem(
   type2tc type = code.alloctype;
   expr2tc size = code.size;
   bool size_is_one = false;
-
-  log_status("alloctype : ");
-  type->dump();
-  log_status("size : ");
-  size->dump();
 
   if (is_nil_type(type))
     type = char_type2();
@@ -259,27 +254,22 @@ expr2tc goto_symext::symex_mem(
 
     symbol.type = typet(typet::t_intheap);
 
-    type2tc heap_type;
-    if (size_is_one)
+
+    unsigned int bytes = type_byte_size(type).to_uint64();
+    type2tc heap_type = get_intheap_type(bytes);
+
+    intheap_type2t &_heap_type = to_intheap_type(heap_type); 
+    _heap_type.is_region = true;
+    if (is_struct_type(type))
     {
-      heap_type = get_intheap_type(type_byte_size(type).to_uint64());
-      to_intheap_type(heap_type).is_aligned = true;
+      struct_type2t &_type = to_struct_type(type);
+      _heap_type.is_aligned = true;
+      _heap_type.field_types.clear();
+      for(auto inner_type : _type.get_structure_members())
+        _heap_type.field_types.push_back(
+          is_pointer_type(inner_type) ? get_intloc_type() : get_int64_type()
+        );
     }
-    else
-    {
-      expr2tc bytes = size;
-      do_simplify(bytes);
-      if (is_constant_int2t(bytes))
-      {
-        heap_type = get_intheap_type(to_constant_int2t(bytes).value.to_uint64());
-      }
-      else
-      {
-        log_error("Do not support dynamic size");
-        abort();
-      }
-    }
-    to_intheap_type(heap_type).is_region = true;
 
     symbol.type.dynamic(true);
     symbol.mode = "C";

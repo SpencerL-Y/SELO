@@ -321,7 +321,7 @@ z3_slhv_convt::convert_opt_without_assert(const expr2tc &expr)
     {
       const fieldof2t &fieldof = to_fieldof2t(expr);
 
-      if (!is_heap_region2t(fieldof.heap_region))
+      if (!is_heap_region2t(fieldof.source_region))
       {
         log_error("We can't get a location of a non-region heap");
         abort();
@@ -331,14 +331,14 @@ z3_slhv_convt::convert_opt_without_assert(const expr2tc &expr)
         log_error("Wrong field");
         abort();
       }
-      if (is_constant_intheap2t(fieldof.heap_region))
+      if (is_constant_intheap2t(fieldof.source_region))
         return std::make_pair(
           mk_smt_bool(true),
           mk_fresh(convert_sort(fieldof.type), mk_fresh_name("invalid_loc_")));
 
       unsigned int field = to_constant_int2t(fieldof.field).value.to_uint64();
 
-      const heap_region2t &heap_region = to_heap_region2t(fieldof.heap_region);
+      const heap_region2t &heap_region = to_heap_region2t(fieldof.source_region);
       const intheap_type2t &_type = to_intheap_type(heap_region.type);
       
       smt_astt source_loc = convert_ast(heap_region.source_location);

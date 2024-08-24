@@ -566,17 +566,14 @@ void value_sett::get_value_set_rec(
   }
   // SLHV:
   if (is_constant_intloc2t(expr) || is_constant_intheap2t(expr) ||
-      is_heap_region2t(expr) || is_heap_append2t(expr))
+      is_heap_append2t(expr) || is_heap_delete2t(expr) ||
+      // heap_region as a constant
+      // deref a heap region use fieldof(region, 0)
+      is_heap_region2t(expr))
   {
     expr2tc new_object = expr;
     insert(dest, new_object, BigInt(0));
     return;
-  }
-
-  if (is_points_to2t(expr))
-  {
-    log_status("finish get_value_set_rec points_to");
-    abort();
   }
 
   if (is_locadd2t(expr))
@@ -612,7 +609,7 @@ void value_sett::get_value_set_rec(
   if (is_fieldof2t(expr))
   {
     const fieldof2t &fieldof = to_fieldof2t(expr);
-    const heap_region2t &heap_region = to_heap_region2t(fieldof.heap_region);
+    const heap_region2t &heap_region = to_heap_region2t(fieldof.source_region);
     expr2tc field = fieldof.field;
 
     if (!is_constant_int2t(field))
@@ -621,21 +618,21 @@ void value_sett::get_value_set_rec(
       abort();
     }
 
-    std::string str_field =
-      std::to_string(to_constant_int2t(field).value.to_uint64()); 
+    unsigned int _field = to_constant_int2t(field).value.to_uint64();
 
     get_value_set_rec(
       heap_region.flag,
       dest,
-      "::field::" + str_field + "::" + suffix,
+      "::field::" + std::to_string(_field) + "::" + suffix,
       original_type
     );
     return;
   }
 
-  if (is_heap_update2t(expr))
+  if (is_heap_update2t(expr) || is_points_to2t(expr))
   {
-    log_status("finish get_value_set_rec heap_update");
+    expr->dump();
+    log_status("fini get_value_set_rec heap_update");
     abort();
   }
 
@@ -1421,15 +1418,15 @@ void value_sett::assign_rec(
       log_error("Do not support dynamic offset yet");
       abort();
     }
-    std::string str_field =
-      std::to_string(to_constant_int2t(field).value.to_uint64());
 
-    const heap_region2t &heap_region = to_heap_region2t(fieldof.heap_region);
+    unsigned int _field = to_constant_int2t(field).value.to_uint64();
+
+    const heap_region2t &heap_region = to_heap_region2t(fieldof.source_region);
 
     assign_rec(
       heap_region.flag,
       values_rhs,
-      "::field::" + str_field + "::" + suffix,
+      "::field::" + std::to_string(_field) + "::" + suffix,
       add_to_sets);
   }
   else if (
