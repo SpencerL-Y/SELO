@@ -11,8 +11,12 @@ template <bool Add>
 bool symex_slicet::get_symbols(const expr2tc &expr)
 {
   bool res = false;
+
+  // locationof only has heap_region as oprend
+  // the location of heap_region is completely fresh
+  // and is not being used in symbolic execution
   if (is_locationof2t(expr)) return false;
-  
+
   if (is_heap_region2t(expr))
     return get_symbols<Add>(to_heap_region2t(expr).flag);
   else

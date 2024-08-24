@@ -625,8 +625,11 @@ smt_convt::resultt bmct::run_thread(std::shared_ptr<symex_target_equationt> &eq)
 
     if (options.get_bool_option("show-vcc"))
     {
-      show_vcc(*eq);
-      return smt_convt::P_SMTLIB;
+      // show_vcc(*eq);
+      // return smt_convt::P_SMTLIB;
+      const std::string &output_file = options.get_option("output");
+      if (!output_file.empty() && output_file != "-")
+        std::ofstream(output_file.c_str()) << "";
     }
 
     if (result.remaining_claims == 0)
@@ -652,6 +655,8 @@ smt_convt::resultt bmct::run_thread(std::shared_ptr<symex_target_equationt> &eq)
       options.get_bool_option("multi-property") &&
       options.get_bool_option("base-case"))
       return multi_property_check(*eq, result.remaining_claims);
+
+    if (options.get_bool_option("show-vcc")) show_vcc(*eq);
 
     return run_decision_procedure(*runtime_solver, *eq);
   }
@@ -732,8 +737,6 @@ smt_convt::resultt bmct::multi_property_check(
                        &is_fail_fast,
                        &fail_fast_limit,
                        &fail_fast_cnt](const size_t &i) {
-
-    log_status("begin to check claim {}", i);
     
     //"multi-fail-fast n": stop after first n SATs found.
     if (is_fail_fast && fail_fast_cnt >= fail_fast_limit)
@@ -773,7 +776,8 @@ smt_convt::resultt bmct::multi_property_check(
     if (!options.get_bool_option("no-slice"))
       slicer.run(local_eq.SSA_steps);
 
-    show_vcc(local_eq);
+    if (options.get_bool_option("show-vcc"))
+      show_vcc(local_eq);
 
     // Initialize a solver
     std::unique_ptr<smt_convt> runtime_solver(create_solver("", ns, options));
