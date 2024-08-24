@@ -961,11 +961,18 @@ expr2tc dereferencet::build_reference_to(
     {
       dereference_callbackt::internal_item internal;
       internal.object = value;
-      // Converting offset to bytes
-      internal.offset = typecast2tc(
-        signed_size_type2(),
-        div2tc(
-          final_offset->type, final_offset, gen_long(final_offset->type, 8)));
+
+      if (use_old_encoding)
+      {
+        // Converting offset to bytes
+        internal.offset = typecast2tc(
+          signed_size_type2(),
+          div2tc(
+            final_offset->type, final_offset, gen_long(final_offset->type, 8)));
+      }
+      else
+        internal.offset = final_offset;
+      
       internal.guard = pointer_guard;
       internal_items.push_back(internal);
       return expr2tc();

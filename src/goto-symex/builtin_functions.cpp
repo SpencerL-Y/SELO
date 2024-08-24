@@ -254,10 +254,16 @@ expr2tc goto_symext::symex_mem(
 
     symbol.type = typet(typet::t_intheap);
 
+    expr2tc _total_bytes = code.operand;
+    do_simplify(_total_bytes);
+    if (!is_constant_int2t(_total_bytes))
+    {
+      log_status("Do not support dynamic size");
+      abort();
+    }
+    unsigned int bytes = to_constant_int2t(_total_bytes).value.to_uint64();
 
-    unsigned int bytes = type_byte_size(type).to_uint64();
     type2tc heap_type = get_intheap_type(bytes);
-
     intheap_type2t &_heap_type = to_intheap_type(heap_type); 
     _heap_type.is_region = true;
     if (is_struct_type(type))
@@ -291,6 +297,9 @@ expr2tc goto_symext::symex_mem(
     new_context.add(heap_region_loc);
 
     expr2tc rhs_base_loc = symbol2tc(get_intloc_type(), heap_region_loc.id);
+    // rhs_base_loc do not change during its lifetime
+    // use l2 symbol, do not need to be renamed
+    cur_state->rename(rhs_base_loc);
 
     expr2tc rhs_region = heap_region2tc(heap_type, rhs_heap, rhs_base_loc);
     
@@ -445,29 +454,28 @@ void goto_symext::symex_free(const expr2tc &expr)
     expr2tc falsity = gen_false_expr();
     symex_assign(code_assign2tc(valid_index_expr, falsity), true);
   } else {
-    expr2tc freed_pointer;
-    expr2tc freed_heap;
+    expr2tc free_ptr = code.operand;
+    expr2tc is_src_loc = gen_false_expr();
+    // set each heap region to empty, guarded by item.gurad
     for(auto const& item : internal_deref_items)
     {
       assert(is_heap_region2t(item.object));
       const heap_region2t& heap_region = to_heap_region2t(item.object);
-      if(is_nil_expr(freed_pointer)) {
-        freed_pointer = heap_region.source_location;
-        freed_heap = heap_region.flag; 
-      } else {
-        freed_pointer =
-          if2tc(freed_pointer->type, item.guard, heap_region.source_location, freed_pointer);
-        freed_heap = 
-          if2tc(get_intheap_type(), item.guard, heap_region.flag, freed_heap);
-      }
-
+      expr2tc free_heap = heap_region.flag;
+      expr2tc free_loc = heap_region.source_location;
       expr2tc emp_heap = gen_emp();
-      log_status("symex free freed_heap emp_heap");
-      symex_assign(code_assign2tc(freed_heap, emp_heap));
-      expr2tc alloc_size_heap_symbol = symbol2tc(get_intheap_type(), alloc_size_heap_name);
-      expr2tc heap_deleted = heap_delete2tc(alloc_size_heap_symbol, freed_pointer);
-      symex_assign(code_assign2tc(alloc_size_heap_symbol, heap_deleted));
+
+      expr2tc _is_src_loc = equality2tc(free_ptr, free_loc);
+      is_src_loc = or2tc(is_src_loc, _is_src_loc);
+      
+      guardt g; g.add(_is_src_loc);
+      symex_assign(code_assign2tc(free_heap, emp_heap), false, g);
     }
+    // delete the pointer in alloc_size heap
+    expr2tc alloc_size_heap = symbol2tc(get_intheap_type(), alloc_size_heap_name);
+    expr2tc new_heap = heap_delete2tc(alloc_size_heap, free_ptr);
+    guardt g; g.add(is_src_loc);
+    symex_assign(code_assign2tc(alloc_size_heap, new_heap), false, g);
   }
 
   log_status("xxxxxxx symex free done");

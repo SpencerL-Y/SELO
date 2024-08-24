@@ -210,6 +210,13 @@ void goto_symex_statet::assignment(expr2tc &lhs, const expr2tc &rhs)
   expr2tc l1_lhs = lhs;
 
   expr2tc const_value = constant_propagation(rhs) ? rhs : expr2tc();
+  
+  // Each heap region has only one unique flag that does not change
+  // during its lifetime. The l1 version of flag is the representation.
+  // For constant_propagation, all heap regions should hold their flag. 
+  if (is_heap_region2t(const_value))
+    level2.get_original_name(to_heap_region2t(const_value).flag);
+
   level2.make_assignment(lhs, const_value, rhs);
 
   if (use_value_set)
@@ -273,22 +280,21 @@ void goto_symex_statet::rename(expr2tc &expr)
     address_of2t &addrof = to_address_of2t(expr);
     rename_address(addrof.ptr_obj);
   }
-  else if (is_heap_region2t(expr))
-  {
-    // Don't replace flag with heap region
-    // Get the newest symbol
-    heap_region2t &heap_region = to_heap_region2t(expr);
-    
-    // rename location
-    rename(heap_region.source_location);
-
-    // use the newest l2 symbol
-    level2.get_ident_name(heap_region.flag);
-  }
-  else
+  else if (!is_heap_region2t(expr))
   {
     // do this recursively
     expr->Foreach_operand([this](expr2tc &e) { rename(e); });
+  }
+
+  // If we get a heap region from a symbol,
+  // then set the flag to the newest one.
+  // It is redundant from symex, but is clear for display
+  if (is_heap_region2t(expr))
+  {
+    // Only need to rename flag to l2 since source location
+    // already has l2 name.
+    heap_region2t &heap_region = to_heap_region2t(expr);
+    level2.get_ident_name(heap_region.flag);
   }
 }
 

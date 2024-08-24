@@ -369,14 +369,14 @@ void goto_symext::symex_assign_symbol(
   guardt &guard,
   const bool hidden)
 {
+  // put assignment guard in rhs
+  if (!guard.is_true())
+    rhs = if2tc(rhs->type, guard.as_expr(), rhs, lhs);
+
   log_status("lhs:");
   lhs->dump();
   log_status("rhs:");
   rhs->dump();
-
-  // put assignment guard in rhs
-  if (!guard.is_true())
-    rhs = if2tc(rhs->type, guard.as_expr(), rhs, lhs);
 
   cur_state->rename(rhs);
   do_simplify(rhs);

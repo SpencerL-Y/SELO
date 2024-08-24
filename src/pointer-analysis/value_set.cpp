@@ -1252,7 +1252,7 @@ void value_sett::assign(
       const heap_update2t &heap_upd = to_heap_update2t(rhs);
       expr2tc lhs_field = 
         fieldof2tc(rhs->type, heap_upd.source_region, heap_upd.update_field);
-      assign(lhs_field, heap_upd.update_value, true);
+      assign(lhs_field, heap_upd.update_value, add_to_sets);
       return;
     }
   }
