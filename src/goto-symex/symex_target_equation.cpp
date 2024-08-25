@@ -190,6 +190,7 @@ void symex_target_equationt::convert_internal_step(
 
   if (step.is_assume() || step.is_assert())
   {
+    // step.cond_ast = false_val;
     log_status("step is_assume || step is_assert");
     expr2tc tmp(step.cond);
     step.cond_ast = smt_conv.convert_ast(tmp);

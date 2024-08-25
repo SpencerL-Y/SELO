@@ -794,8 +794,6 @@ smt_convt::resultt bmct::multi_property_check(
     fine_timet sat_stop = current_time();
     log_status(
       "Runtime decision procedure: {}s", time2string(sat_stop - sat_start));
-    
-    log_status("Result : {}", (result == smt_convt::P_SATISFIABLE));
 
     // If an assertion instance is verified to be violated
     if (result == smt_convt::P_SATISFIABLE)

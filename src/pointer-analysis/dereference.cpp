@@ -527,6 +527,7 @@ expr2tc dereferencet::dereference(
   // Extract base location ad offset from locadd
   // In SLHV, all offset is in word-level
   expr2tc new_src = src;
+  // TODO : rename new_src by constant to get offset
   expr2tc offset = lexical_offset;
   if (is_locadd2t(src))
   {
@@ -675,8 +676,10 @@ expr2tc dereferencet::build_reference_to(
   const expr2tc &lexical_offset,
   expr2tc &pointer_guard)
 {
-  log_status("build reference to for:");
+  log_status(" =================== build reference to =================== ");
   what->dump();
+  deref_expr->dump();
+
   expr2tc value;
   pointer_guard = gen_false_expr();
 
@@ -841,10 +844,6 @@ expr2tc dereferencet::build_reference_to(
   } else {
     value = object;
 
-    // Produce a guard that the dereferenced pointer points at this object.
-    // type2tc ptr_type = pointer_type2tc(object->type);
-    // expr2tc obj_ptr = typecast2tc(ptr_type, object);
-
     log_status("before building pointer guard");
     value->dump();
     deref_expr->dump();
@@ -878,7 +877,6 @@ expr2tc dereferencet::build_reference_to(
       abort();
     }
 
-
     log_status("generated pointer guard:");
     pointer_guard->dump();
 
@@ -895,64 +893,27 @@ expr2tc dereferencet::build_reference_to(
     // Value set tracking emits objects with some cruft built on top of them.
     value = get_base_object(value);
 
-    value->dump();
-    type->dump();
-
     // Final offset computations start here
     expr2tc final_offset = o.offset;
+
+    if (!is_constant_int2t(final_offset) ||
+        to_constant_int2t(final_offset).value.to_uint64() != 0)
+    {
+      log_error("Wrong offset for object");
+      abort();
+    }
+
   #if 0
     // FIXME: benchmark this, on tacas.
     dereference_callback.rename(final_offset);
   #endif
 
-    // If offset is unknown, or whatever, we have to consider it
-    // nondeterministic, and let the reference builders deal with it.
+    // maybe used later
     unsigned int alignment = o.alignment;
 
-    bool use_old_encoding = !options.get_bool_option("z3-slhv");
-    if (use_old_encoding)
-    {
-      if (!is_constant_int2t(final_offset))
-      {
-        assert(alignment != 0);
-
-        /* The expression being dereferenced doesn't need to be just a symbol: it
-        * might have all kind of things messing with alignment in there. */
-        if (!is_symbol2t(deref_expr))
-        {
-          alignment = 1;
-        }
-
-        final_offset =
-          pointer_offset2tc(get_int_type(config.ansi_c.address_width), deref_expr);
-      }
-
-      type2tc offset_type = bitsize_type2();
-      if (final_offset->type != offset_type)
-        final_offset = typecast2tc(offset_type, final_offset);
-
-      // Converting final_offset from bytes to bits!
-      final_offset =
-        mul2tc(final_offset->type, final_offset, gen_long(final_offset->type, 8));
-
-      // Add any offset introduced lexically at the dereference site, i.e. member
-      // or index exprs, like foo->bar[3]. If bar is of integer type, we translate
-      // that to be a dereference of foo + extra_offset, resulting in an integer.
-      if (!is_nil_expr(lexical_offset))
-        final_offset = add2tc(final_offset->type, final_offset, lexical_offset);
-    }
-    else
-    {
-      log_status("set final offset");
-      final_offset->dump();
-      if (!is_nil_expr(lexical_offset))
-        final_offset = add2tc(final_offset->type, final_offset, lexical_offset);
-
-      expr2tc simp = final_offset->simplify();
-      if (!is_nil_expr(simp)) final_offset = simp;
-
-      final_offset->dump();
-    }
+    if (!is_nil_expr(lexical_offset))
+      final_offset = add2tc(final_offset->type, final_offset, lexical_offset);
+    simplify(final_offset);
 
     // If we're in internal mode, collect all of our data into one struct, insert
     // it into the list of internal data, and then bail. The caller does not want
@@ -961,50 +922,17 @@ expr2tc dereferencet::build_reference_to(
     {
       dereference_callbackt::internal_item internal;
       internal.object = value;
-
-      if (use_old_encoding)
-      {
-        // Converting offset to bytes
-        internal.offset = typecast2tc(
-          signed_size_type2(),
-          div2tc(
-            final_offset->type, final_offset, gen_long(final_offset->type, 8)));
-      }
-      else
-        internal.offset = final_offset;
-      
+      internal.offset = final_offset; // offset for SLHV
       internal.guard = pointer_guard;
       internal_items.push_back(internal);
       return expr2tc();
     }
 
-    if (is_code_type(value) || is_code_type(type))
-    {
-      if (!check_code_access(value, final_offset, type, tmp_guard, mode))
-        return expr2tc();
-      /* here, both of them are code */
-    }
-    else if (is_array_type(value)) // Encode some access bounds checks.
-    {
-      bounds_check(value, final_offset, type, tmp_guard);
-    }
-    else if (is_heap_region2t(value)) 
-    {
+    // other checks may be added later
+    if (is_heap_region2t(value))
       check_heap_region_access(value, final_offset, type, tmp_guard, mode);
-    }
-    else
-    {
-      check_data_obj_access(value, final_offset, type, tmp_guard, mode);
-    }
 
-    simplify(final_offset);
-
-    // Converting alignment to bits here
-    alignment *= 8;
-
-    // Call reference building methods. For the given data object in value,
-    // an expression of type type will be constructed that reads from it.
-    build_reference_slhv(value, final_offset, type, tmp_guard, mode, alignment);
+    build_deref_slhv(value, final_offset, type, tmp_guard, mode, alignment);
 
     return value;
   }
@@ -1314,7 +1242,7 @@ void dereferencet::build_reference_rec(
   }
 }
 
-void dereferencet::build_reference_slhv(
+void dereferencet::build_deref_slhv(
   expr2tc &value,
   const expr2tc &offset,
   const type2tc &type,
@@ -1322,50 +1250,59 @@ void dereferencet::build_reference_slhv(
   modet mode,
   unsigned long alignment)
 {
-  log_status("build reference slhv");
+  log_status(" ----------------- build deref slhv ----------------- ");
   value->dump();
   guard.dump();
   offset->dump();
   type->dump();
-  assert(is_heap_region2t(value));
-  if(is_scalar_type(type)) {
-    if (!is_constant_int2t(offset))
-    {
-      // TODO : support
-      log_error("Do not support non-constant offset");
-      abort();
-    }
-     
-    unsigned int field = to_constant_int2t(offset).value.to_uint64();
-    heap_region2t& heap_region = to_heap_region2t(value);
-    intheap_type2t &_type = to_intheap_type(heap_region.type);
 
-    unsigned int access_sz = type_byte_size(type, &ns).to_uint64();
-    // heap region as a value
-    if (field == 0 && access_sz == _type.total_bytes) return;
-    
-    if (field >= _type.field_types.size() ||
-      access_sz != _type.total_bytes / _type.field_types.size())
-    {
-      // Out of bound or unaligned
-      expr2tc sym = symbol2tc(
-        type, 
-        dereference_callback.get_nondet_id("undefined_behavior_var"));
-      value = sym;
-      return;
-    }
-  
-    if (_type.set_field_type(field, type))
-    {
-      heap_region.flag->type = heap_region.type;
-      dereference_callback.update_heap_type(heap_region.flag);
-    }
-
-    value = fieldof2tc(type, value, gen_ulong(field));
-  } else {
+  if (!is_scalar_type(type))
+  {
     log_error("ERROR: currently not support non-scalar type dereference");
     abort();
   }
+  if (!is_constant_int2t(offset))
+  {
+    // TODO : support
+    log_error("Do not support non-constant offset");
+    abort();
+  }
+
+  heap_region2t& heap_region = to_heap_region2t(value);
+  unsigned int field = to_constant_int2t(offset).value.to_uint64();
+  intheap_type2t &_type = to_intheap_type(heap_region.type);
+  unsigned int access_sz = type_byte_size(type, &ns).to_uint64();
+
+  if (!_type.is_aligned)
+  {
+    log_error("heap region must be aligned");
+    abort();
+  }
+
+  // heap region as a value
+  if (field == 0 && access_sz == _type.total_bytes) return;
+  
+  if (field >= _type.field_types.size() ||
+    access_sz != _type.total_bytes / _type.field_types.size())
+  {
+    // Out of bound or unaligned - undefined behavior
+    expr2tc sym = symbol2tc(
+      type, 
+      dereference_callback.get_nondet_id("undefined_behavior_var"));
+    value = sym;
+    return;
+  }
+  else
+    value = fieldof2tc(type, value, gen_ulong(field));
+
+  // update field type
+  if (_type.set_field_type(field, type))
+  {
+    heap_region.flag->type = heap_region.type;
+    dereference_callback.update_heap_type(heap_region.flag);
+  }
+
+  log_status(" ----------------- build deref slhv ----------------- ");
 }
 
 void dereferencet::construct_from_array(
@@ -2627,78 +2564,51 @@ void dereferencet::check_heap_region_access(
   modet mode)
 {
   // This check is in byte-level;
-  log_status("check heap region access");
-  guard.dump();
-  log_status("offset");
+  // Since we construct offset in word level and store total bytes
+  // of region in heap_alloc_size, offset should be transfered to
+  // byte-level.
+
+  log_status(" ------------------ check heap region access ------------------ ");
+  value->dump();
   offset->dump();
-  assert(is_heap_region2t(value));
+  type->dump();
+  guard.dump();
+
+  if (!is_constant_int2t(offset))
+  {
+    // TODO : support
+    log_error("Do not support non-constant offset");
+    abort();
+  }
+
   const heap_region2t& heap_region = to_heap_region2t(value);
+  const intheap_type2t &_type = to_intheap_type(heap_region.type);
 
-  heap_region.type->dump();
-
-  expr2tc offset_e = offset;
-  if (!is_constant_int2t(offset_e) && is_signedbv_type(offset_e))
-    offset_e = offset_e.simplify();
-
-  std::string sz_id = dereference_callback.get_nondet_id("nondet_region_size::");
-  expr2tc sz = symbol2tc(get_uint64_type(), sz_id);
-  expr2tc sz_pt = points_to2tc(heap_region.source_location, sz);
-  expr2tc alloc_size_heap;
-  migrate_expr(
-    symbol_expr(
-      *ns.lookup(dereference_callback.get_alloc_size_heap_name())),
-      alloc_size_heap);
-  expr2tc heap_ct = heap_contain2tc(sz_pt, alloc_size_heap);
-
-  expr2tc data_sz = gen_ulong(type->get_width());
-  expr2tc offset_check;
-  if (!is_constant_int2t(offset_e))
+  if (!_type.is_aligned)
   {
-    // pointer arithmetic
-    if (is_add2t(offset_e) || is_sub2t(offset_e))
-    {
-      expr2tc side_1 = is_add2t(offset_e) ?
-        to_add2t(offset_e).side_1 : to_sub2t(offset_e).side_1;
-      expr2tc side_2 = is_add2t(offset_e) ?
-        to_add2t(offset_e).side_2 : to_sub2t(offset_e).side_2;
-      
-      expr2tc ptr = is_pointer_type(side_1) ? side_1 : side_2;
-      expr2tc off = is_pointer_type(side_1) ? side_2 : side_1;
-      
-      if (!is_signedbv_type(off) && !is_unsignedbv_type(off))
-      {
-        log_error("Do not support");
-        abort();
-      }
-
-      std::string nondet_off_id = dereference_callback.get_nondet_id("nondet_off::");
-      expr2tc off_var = symbol2tc(get_uint64_type(), nondet_off_id);
-
-      expr2tc target_loc = locadd2tc(heap_region.source_location, off_var);
-      expr2tc offset_loc = locadd2tc(ptr, off_var);
-      expr2tc eq = equality2tc(target_loc, offset_loc);
-      expr2tc ge = greaterthanequal2tc(off_var, gen_ulong(0));
-      expr2tc lt = lessthan2tc(off_var, sz);
-
-      offset_check = and2tc(eq, and2tc(ge, lt));
-    }
-    else
-    {
-      log_error("Do not support");
-      abort();
-    }
-  }
-  else
-  {
-    expr2tc off_var = offset_e;
-    offset_check =
-      and2tc(
-        greaterthanequal2tc(off_var, gen_ulong(0)),
-        lessthan2tc(off_var, sz)
-      );
+    log_error("heap region must be aligned");
+    abort();
   }
 
-  expr2tc bound_check = not2tc(and2tc(heap_ct, offset_check));
+  unsigned int _offset_bytes =
+    to_constant_int2t(offset).value.to_uint64() * 8;
+  expr2tc offset_bytes = gen_ulong(_offset_bytes);
+  
+  expr2tc total_bytes = gen_ulong(_type.total_bytes);
+
+  expr2tc access_sz = gen_ulong(type_byte_size(type, &ns).to_uint64());
+  expr2tc l = offset_bytes;
+  expr2tc r = add2tc(l->type, l, access_sz);
+  simplify(r);
+  expr2tc offset_cond =
+    and2tc(
+      greaterthanequal2tc(l, gen_ulong(0)),
+      lessthanequal2tc(r, total_bytes)
+    );
+  
+  offset_cond->dump();
+
+  expr2tc bound_check = not2tc(offset_cond);
   if(!options.get_bool_option("no-bounds-check"))
   {
     guardt tmp_guard = guard;
@@ -2709,7 +2619,8 @@ void dereferencet::check_heap_region_access(
       tmp_guard
     );
   }
-  // TODO: maybe add alignment check
+
+  log_status(" ------------------ check heap region access ------------------ ");
 }
 
 void dereferencet::check_alignment(

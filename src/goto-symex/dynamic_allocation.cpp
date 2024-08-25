@@ -29,19 +29,18 @@ void goto_symext::default_replace_dynamic_allocation(expr2tc &expr)
 
       expr2tc index_expr = index2tc(get_bool_type(), alloc_arr_2, obj_expr);
       expr = index_expr;
-
     } else {
-      log_status("replace valid_object");
+      // Checking that the object is valid by heap_alloc_size
+      log_status(" --- generate cond for checking heap region --- ");
       const valid_object2t &obj = to_valid_object2t(expr);
       obj.dump();
-      assert(is_heap_region2t(obj.value));
       const heap_region2t& valid_inner = to_heap_region2t(obj.value);
-      expr2tc alloc_size_heap_2;
-      log_status("before migrate");
-      migrate_expr(symbol_expr(*ns.lookup(alloc_size_heap_name)), alloc_size_heap_2);
-      log_status("migrate over");
-      expr2tc heap_contain = heap_contain2tc(valid_inner.source_location, alloc_size_heap_2);
+      // get alloc size heap
+      expr2tc alloc_size_heap;
+      migrate_expr(symbol_expr(*ns.lookup(alloc_size_heap_name)), alloc_size_heap);
+      expr2tc heap_contain = heap_contain2tc(valid_inner.source_location, alloc_size_heap);
       expr = heap_contain;
+      log_status(" --- generate cond for checking heap region --- ");
     }
   }
   else if (is_invalid_pointer2t(expr))

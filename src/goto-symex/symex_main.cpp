@@ -1223,9 +1223,9 @@ void goto_symext::add_memory_leak_checks()
         "dereference failure: forgotten memory: " + get_pretty_name(it.name));
       } 
   } else {
-    log_status("memleak encoding");
+    log_status(" ----------- [memleak encoding ]----------- ");
     for (auto const &it : dynamic_memory){
-      log_status("allocated object {}: ",  it.name );
+      log_status("allocated object {}: ", it.name);
       expr2tc deallocated = equality2tc(it.obj, gen_emp());
       expr2tc when = it.alloc_guard.as_expr();
       expr2tc cond = implies2tc(when, deallocated);
