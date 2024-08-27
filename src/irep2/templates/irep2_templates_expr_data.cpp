@@ -38,7 +38,7 @@ expr_typedefs3(fieldof, fieldof_data);
 expr_typedefs4(heap_update, heap_update_data);
 expr_typedefs2(heap_append, heap_append_data);
 expr_typedefs2(heap_delete, heap_delete_data);
-expr_typedefs2(heap_contain, heap_contains_data);
+expr_typedefs2(heap_contain, heap_contain_data);
 expr_typedefs2(overflow_cast, overflow_cast_data);
 expr_typedefs3(dynamic_object, dynamic_object_data);
 expr_typedefs2(dereference, dereference_data);

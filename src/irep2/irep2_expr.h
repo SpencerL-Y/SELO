@@ -1120,26 +1120,26 @@ public:
   typedef esbmct::expr2t_traits<source_heap_field, location_field> traits;
 };
 
-class heap_contains_data : public expr2t {
+class heap_contain_data : public expr2t {
 public:
-  heap_contains_data(
+  heap_contain_data(
     const type2tc &t,
     datatype_ops::expr_ids id,
-    const expr2tc &l,
-    const expr2tc &h)
-    : expr2t(t, id), location(l), heap(h)
+    const expr2tc &ht,
+    const expr2tc &th)
+    : expr2t(t, id), heap_term(ht), target_heap(th)
   {
   }
 
-  expr2tc location;
-  expr2tc heap;
+  expr2tc heap_term;
+  expr2tc target_heap;
 
   //Type mangling:
-  typedef esbmct::field_traits<expr2tc, heap_contains_data, &heap_contains_data::location>
-    location_field;
-  typedef esbmct::field_traits<expr2tc, heap_contains_data, &heap_contains_data::heap>
-    heap_field;
-  typedef esbmct::expr2t_traits<location_field, heap_field> traits;
+  typedef esbmct::field_traits<expr2tc, heap_contain_data, &heap_contain_data::heap_term>
+    heap_term_field;
+  typedef esbmct::field_traits<expr2tc, heap_contain_data, &heap_contain_data::target_heap>
+    target_heap_field;
+  typedef esbmct::expr2t_traits<heap_term_field, target_heap_field> traits;
 };
 
 /* ================================ SLHV ================================ */
@@ -1779,7 +1779,7 @@ irep_typedefs(fieldof, fieldof_data);
 irep_typedefs(heap_update, heap_update_data);
 irep_typedefs(heap_append, heap_append_data);
 irep_typedefs(heap_delete, heap_delete_data);
-irep_typedefs(heap_contain, heap_contains_data);
+irep_typedefs(heap_contain, heap_contain_data);
 irep_typedefs(isnan, bool_1op);
 irep_typedefs(overflow, overflow_ops);
 irep_typedefs(overflow_cast, overflow_cast_data);
@@ -3380,8 +3380,9 @@ class heap_contain2t : public heap_contain_expr_methods
 {
 public:
   heap_contain2t(
-    const expr2tc &location, const expr2tc &heap)
-    : heap_contain_expr_methods(get_bool_type(), heap_contain_id, location, heap)
+    const expr2tc &heap_term, const expr2tc &target_heap)
+    : heap_contain_expr_methods(
+      get_bool_type(), heap_contain_id, heap_term, target_heap)
   {
   }
   heap_contain2t(const heap_contain2t &ref) = default;

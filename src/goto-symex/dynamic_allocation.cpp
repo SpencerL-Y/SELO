@@ -34,11 +34,17 @@ void goto_symext::default_replace_dynamic_allocation(expr2tc &expr)
       log_status(" --- generate cond for checking heap region --- ");
       const valid_object2t &obj = to_valid_object2t(expr);
       obj.dump();
-      const heap_region2t& valid_inner = to_heap_region2t(obj.value);
+      const heap_region2t &valid_inner = to_heap_region2t(obj.value);
+      const intheap_type2t &_type = to_intheap_type(valid_inner.type);
       // get alloc size heap
       expr2tc alloc_size_heap;
       migrate_expr(symbol_expr(*ns.lookup(alloc_size_heap_name)), alloc_size_heap);
-      expr2tc heap_contain = heap_contain2tc(valid_inner.source_location, alloc_size_heap);
+
+      expr2tc size = gen_ulong(_type.total_bytes);
+      expr2tc heap_contain =
+        heap_contain2tc(
+          points_to2tc(valid_inner.source_location, size),
+          alloc_size_heap);
       expr = heap_contain;
       log_status(" --- generate cond for checking heap region --- ");
     }
@@ -84,13 +90,12 @@ void goto_symext::default_replace_dynamic_allocation(expr2tc &expr)
     }
     else
     {
+      // TODO : support
+      log_error("Dot not support invalid pointer yet");
+      abort();
+
       expr2tc alloc_size_heap;
       migrate_expr(symbol_expr(*ns.lookup(alloc_size_heap_name)), alloc_size_heap);
-
-      expr2tc heap_contain = heap_contain2tc(obj_expr, alloc_size_heap);
-      expr2tc not_valid = not2tc(heap_contain);
-
-      expr = not_valid;
     }
   }
   else if (is_deallocated_obj2t(expr))

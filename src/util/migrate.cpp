@@ -2694,8 +2694,8 @@ exprt migrate_expr_back(const expr2tc &ref)
     const heap_contain2t &ref2 = to_heap_contain2t(ref);
     typet thetype = migrate_type_back(ref->type);
     exprt heap_contain("heap_contain", thetype);
-    heap_contain.copy_to_operands(migrate_expr_back(ref2.location));
-    heap_contain.copy_to_operands(migrate_expr_back(ref2.heap));
+    heap_contain.copy_to_operands(migrate_expr_back(ref2.heap_term));
+    heap_contain.copy_to_operands(migrate_expr_back(ref2.target_heap));
     return heap_contain;
   }
   case expr2t::isnan_id:

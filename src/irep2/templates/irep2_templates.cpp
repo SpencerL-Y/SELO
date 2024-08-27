@@ -181,7 +181,7 @@ std::string heap_append2t::field_names[esbmct::num_type_fields] =
 std::string heap_delete2t::field_names[esbmct::num_type_fields] = 
   {"source_heap", "location", "",  "", ""};
 std::string heap_contain2t::field_names[esbmct::num_type_fields] = 
-  {"location", "heap", "", "", ""};
+  {"heap_term", "target_heap", "", "", ""};
 std::string isnan2t::field_names[esbmct::num_type_fields] =
   {"value", "", "", "", ""};
 std::string overflow2t::field_names[esbmct::num_type_fields] =

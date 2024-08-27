@@ -278,16 +278,13 @@ z3_slhv_convt::convert_slhv_opts(
     case expr2t::heap_contain_id:
     {
       const heap_contain2t& heap_ct = to_heap_contain2t(expr);
-      smt_astt sh;
-      if (is_symbol2t(heap_ct.location) || is_pointer_object2t(heap_ct.location))
+      if (!is_intheap_type(heap_ct.heap_term) ||
+          !is_intheap_type(heap_ct.target_heap))
       {
-        sh = mk_pt(args[0], mk_fresh(mk_int_sort(), mk_fresh_name("tmp_val::")));
+        log_error("Wrong heap term");
+        abort();
       }
-      else if (is_points_to2t(heap_ct.location))
-      {
-        sh = args[0];
-      }
-      return mk_subh(sh, args[1]);
+      return mk_subh(args[0], args[1]);
     }
     case expr2t::fieldof_id:
     case expr2t::heap_update_id:
