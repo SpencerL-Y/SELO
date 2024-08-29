@@ -453,12 +453,15 @@ const expr2tc &get_base_object(const expr2tc &expr)
 
   if (is_dereference2t(expr))
     return get_base_object(to_dereference2t(expr).value);
+
+  if (is_flagof2t(expr))
+    return get_base_object(to_flagof2t(expr).source_heap);
   
   if (is_locationof2t(expr))
-    return get_base_object(to_locationof2t(expr).source_region);
+    return get_base_object(to_locationof2t(expr).source_heap);
 
   if (is_fieldof2t(expr))
-    return get_base_object(to_fieldof2t(expr).source_region);
+    return get_base_object(to_fieldof2t(expr).source_heap);
 
   return expr;
 }

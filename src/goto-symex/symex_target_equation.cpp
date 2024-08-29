@@ -160,24 +160,9 @@ void symex_target_equationt::convert_internal_step(
 
   if (step.ignore)
   {
-    // std::ostringstream oss;
-    // step.output(ns, oss);
-    // log_status("{}", oss.str());
-    // log_status("convert internal step ignored ------ ");
-
-    // log_status("-------------- over -----------------");
     step.cond_ast = true_val;
     step.guard_ast = false_val;
     return;
-  }
-
-  if (ssa_trace)
-  {
-    // log_status("-------------- ssa trace -----------------");
-    // std::ostringstream oss;
-    // step.output(ns, oss);
-    // log_status("{}", oss.str());
-    // log_status("-------------- ssa trace end -----------------");
   }
 
   log_status(" ============================== step ======================== ");

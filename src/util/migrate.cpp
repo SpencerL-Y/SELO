@@ -2644,12 +2644,20 @@ exprt migrate_expr_back(const expr2tc &ref)
     region.copy_to_operands(migrate_expr_back(ref2.source_location));
     return region;
   }
+  case expr2t::flagof_id:
+  {
+    const flagof2t &ref2 = to_flagof2t(ref);
+    typet thetype = migrate_type_back(ref->type);
+    exprt flagof("flagof", thetype);
+    flagof.copy_to_operands(migrate_expr_back(ref2.source_heap));
+    return flagof;
+  }
   case expr2t::locationof_id:
   {
     const locationof2t &ref2 = to_locationof2t(ref);
     typet thetype = migrate_type_back(ref->type);
     exprt locationof("locationof", thetype);
-    locationof.copy_to_operands(migrate_expr_back(ref2.source_region));
+    locationof.copy_to_operands(migrate_expr_back(ref2.source_heap));
     return locationof;
   }
   case expr2t::fieldof_id:
@@ -2657,8 +2665,8 @@ exprt migrate_expr_back(const expr2tc &ref)
     const fieldof2t &ref2 = to_fieldof2t(ref);
     typet thetype = migrate_type_back(ref->type);
     exprt fieldof("fieldof", thetype);
-    fieldof.copy_to_operands(migrate_expr_back(ref2.source_region));
-    fieldof.copy_to_operands(migrate_expr_back(ref2.field));
+    fieldof.copy_to_operands(migrate_expr_back(ref2.source_heap));
+    fieldof.copy_to_operands(migrate_expr_back(ref2.operand));
     return fieldof;
   }
   case expr2t::heap_update_id:
@@ -2666,9 +2674,9 @@ exprt migrate_expr_back(const expr2tc &ref)
     const heap_update2t &ref2 = to_heap_update2t(ref);
     typet thetype = migrate_type_back(ref->type);
     exprt heap_update("heap_update", thetype);
-    heap_update.copy_to_operands(migrate_expr_back(ref2.source_region));
-    heap_update.copy_to_operands(migrate_expr_back(ref2.update_field));
-    heap_update.copy_to_operands(migrate_expr_back(ref2.update_value));
+    heap_update.copy_to_operands(migrate_expr_back(ref2.source_heap));
+    heap_update.copy_to_operands(migrate_expr_back(ref2.operand_1));
+    heap_update.copy_to_operands(migrate_expr_back(ref2.operand_2));
     return heap_update;
   }
   case expr2t::heap_append_id:
@@ -2677,7 +2685,7 @@ exprt migrate_expr_back(const expr2tc &ref)
     typet thetype = migrate_type_back(ref->type);
     exprt heap_append("heap_append", thetype);
     heap_append.copy_to_operands(migrate_expr_back(ref2.source_heap));
-    heap_append.copy_to_operands(migrate_expr_back(ref2.heap_term));
+    heap_append.copy_to_operands(migrate_expr_back(ref2.operand));
     return heap_append;
   }
   case expr2t::heap_delete_id:
@@ -2686,7 +2694,7 @@ exprt migrate_expr_back(const expr2tc &ref)
     typet thetype = migrate_type_back(ref->type);
     exprt heap_delete("heap_delete", thetype);
     heap_delete.copy_to_operands(migrate_expr_back(ref2.source_heap));
-    heap_delete.copy_to_operands(migrate_expr_back(ref2.location));
+    heap_delete.copy_to_operands(migrate_expr_back(ref2.operand));
     return heap_delete;
   }
   case expr2t::heap_contain_id:
@@ -2694,8 +2702,8 @@ exprt migrate_expr_back(const expr2tc &ref)
     const heap_contain2t &ref2 = to_heap_contain2t(ref);
     typet thetype = migrate_type_back(ref->type);
     exprt heap_contain("heap_contain", thetype);
-    heap_contain.copy_to_operands(migrate_expr_back(ref2.heap_term));
-    heap_contain.copy_to_operands(migrate_expr_back(ref2.target_heap));
+    heap_contain.copy_to_operands(migrate_expr_back(ref2.source_heap));
+    heap_contain.copy_to_operands(migrate_expr_back(ref2.operand));
     return heap_contain;
   }
   case expr2t::isnan_id:

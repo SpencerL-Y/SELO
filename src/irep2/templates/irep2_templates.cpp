@@ -170,6 +170,8 @@ std::string locadd2t::field_names[esbmct::num_type_fields] =
   {"location", "offset", "", "", ""};
 std::string heap_region2t::field_names[esbmct::num_type_fields] = 
   {"flag", "source_location", "", "", ""};
+std::string flagof2t::field_names[esbmct::num_type_fields] =
+  {"source_region", "", "", "", ""};
 std::string locationof2t::field_names[esbmct::num_type_fields] =
   {"source_region", "", "", "", ""};
 std::string fieldof2t::field_names[esbmct::num_type_fields] =
@@ -181,7 +183,7 @@ std::string heap_append2t::field_names[esbmct::num_type_fields] =
 std::string heap_delete2t::field_names[esbmct::num_type_fields] = 
   {"source_heap", "location", "",  "", ""};
 std::string heap_contain2t::field_names[esbmct::num_type_fields] = 
-  {"heap_term", "target_heap", "", "", ""};
+  {"source_heap", "heap_term", "", "", ""};
 std::string isnan2t::field_names[esbmct::num_type_fields] =
   {"value", "", "", "", ""};
 std::string overflow2t::field_names[esbmct::num_type_fields] =

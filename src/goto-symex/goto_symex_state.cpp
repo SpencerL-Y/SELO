@@ -80,7 +80,7 @@ bool goto_symex_statet::constant_propagation(const expr2tc &expr) const
   }
 
   if (is_locationof2t(expr))
-    return constant_propagation(to_locationof2t(expr).source_region);
+    return constant_propagation(to_locationof2t(expr).source_heap);
 
   if (is_array_type(expr))
   {
@@ -280,22 +280,19 @@ void goto_symex_statet::rename(expr2tc &expr)
     address_of2t &addrof = to_address_of2t(expr);
     rename_address(addrof.ptr_obj);
   }
-  else if (!is_heap_region2t(expr))
+  else  if (is_heap_region2t(expr))
+  {
+    heap_region2t &heap_region = to_heap_region2t(expr);
+    rename(heap_region.source_location);
+    // Return to l1 name first
+    level2.get_original_name(heap_region.flag);
+    // Get the newest l2 name
+    level2.get_ident_name(heap_region.flag);
+  }
+  else
   {
     // do this recursively
     expr->Foreach_operand([this](expr2tc &e) { rename(e); });
-  }
-
-  // If we get a heap region from a symbol, then set the flag to
-  // the newest one. Since some variable will be reset to l1 version,
-  // it is also neccessary to rename source location.
-  if (is_heap_region2t(expr))
-  {
-    // Only need to rename flag to l2 since source location
-    // already has l2 name.
-    heap_region2t &heap_region = to_heap_region2t(expr);
-    rename(heap_region.source_location);
-    level2.get_ident_name(heap_region.flag);
   }
 }
 

@@ -600,7 +600,7 @@ void value_sett::get_value_set_rec(
   if (is_locationof2t(expr))
   {
     get_value_set_rec(
-      to_locationof2t(expr).source_region,
+      to_locationof2t(expr).source_heap,
       dest, suffix, original_type
     );
     return;
@@ -609,8 +609,8 @@ void value_sett::get_value_set_rec(
   if (is_fieldof2t(expr))
   {
     const fieldof2t &fieldof = to_fieldof2t(expr);
-    const heap_region2t &heap_region = to_heap_region2t(fieldof.source_region);
-    expr2tc field = fieldof.field;
+    const heap_region2t &heap_region = to_heap_region2t(fieldof.source_heap);
+    expr2tc field = fieldof.operand;
 
     if (!is_constant_int2t(field))
     {
@@ -1250,9 +1250,11 @@ void value_sett::assign(
     if (to_intheap_type(lhs_type).is_region && is_heap_update2t(rhs))
     {
       const heap_update2t &heap_upd = to_heap_update2t(rhs);
+      const expr2tc &upd_field = heap_upd.operand_1;
+      const expr2tc &upd_value = heap_upd.operand_2;
       expr2tc lhs_field = 
-        fieldof2tc(rhs->type, heap_upd.source_region, heap_upd.update_field);
-      assign(lhs_field, heap_upd.update_value, add_to_sets);
+        fieldof2tc(rhs->type, heap_upd.source_heap, upd_field);
+      assign(lhs_field, upd_value, add_to_sets);
       return;
     }
   }
@@ -1412,7 +1414,7 @@ void value_sett::assign_rec(
   {
     const fieldof2t &fieldof = to_fieldof2t(lhs);
 
-    expr2tc field = fieldof.field;
+    expr2tc field = fieldof.operand;
     if (!is_constant_int2t(field))
     {
       log_error("Do not support dynamic offset yet");
@@ -1421,7 +1423,7 @@ void value_sett::assign_rec(
 
     unsigned int _field = to_constant_int2t(field).value.to_uint64();
 
-    const heap_region2t &heap_region = to_heap_region2t(fieldof.source_region);
+    const heap_region2t &heap_region = to_heap_region2t(fieldof.source_heap);
 
     assign_rec(
       heap_region.flag,

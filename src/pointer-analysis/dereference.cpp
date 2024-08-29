@@ -442,18 +442,18 @@ expr2tc dereferencet::dereference_expr_nonscalar(
   {
     fieldof2t &fieldof = to_fieldof2t(expr);
 
-    if (!is_dereference2t(fieldof.source_region))
+    if (!is_dereference2t(fieldof.source_heap))
     {
       log_error("Do not support struct in struct yet");
       abort();
     }
 
-    dereference2t &deref = to_dereference2t(fieldof.source_region);
+    dereference2t &deref = to_dereference2t(fieldof.source_heap);
 
     // Get the heap region
     dereference_expr(deref.value, guard, dereferencet::READ);
 
-    expr2tc offset_to_scalar = fieldof.field;
+    expr2tc offset_to_scalar = fieldof.operand;
     simplify(offset_to_scalar);
 
     return dereference(deref.value, base->type, guard, mode, offset_to_scalar);

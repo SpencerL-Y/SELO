@@ -29,16 +29,6 @@ expr_typedefs4(byte_update, byte_update_data);
 expr_typedefs3(with, with_data);
 expr_typedefs2(member, member_data);
 expr_typedefs2(index, index_data);
-expr_typedefs2(points_to, points_to_data);
-expr_typedefs1(uplus, uplus_data);
-expr_typedefs2(locadd, locadd_data);
-expr_typedefs3(heap_region, heap_region_data);
-expr_typedefs1(locationof, locationof_data);
-expr_typedefs3(fieldof, fieldof_data);
-expr_typedefs4(heap_update, heap_update_data);
-expr_typedefs2(heap_append, heap_append_data);
-expr_typedefs2(heap_delete, heap_delete_data);
-expr_typedefs2(heap_contain, heap_contain_data);
 expr_typedefs2(overflow_cast, overflow_cast_data);
 expr_typedefs3(dynamic_object, dynamic_object_data);
 expr_typedefs2(dereference, dereference_data);
@@ -65,3 +55,9 @@ expr_typedefs2(code_cpp_throw, code_cpp_throw_data);
 expr_typedefs2(code_cpp_throw_decl, code_cpp_throw_decl_data);
 expr_typedefs1(code_cpp_throw_decl_end, code_cpp_throw_decl_data);
 expr_typedefs3(extract, extract_data);
+
+
+expr_typedefs2(points_to, points_to_data);
+expr_typedefs1(uplus, uplus_data);
+expr_typedefs2(locadd, locadd_data);
+expr_typedefs3(heap_region, heap_region_data);

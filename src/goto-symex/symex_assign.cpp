@@ -906,14 +906,15 @@ void goto_symext::symex_assign_fieldof(
   assert(is_scalar_type(rhs));
 
   const fieldof2t& fieldof = to_fieldof2t(lhs);
-  const heap_region2t &heap_region = to_heap_region2t(fieldof.source_region);
+  const heap_region2t &heap_region = to_heap_region2t(fieldof.source_heap);
+  const expr2tc &field = fieldof.operand;
 
   expr2tc update_heap =
-    heap_update2tc(heap_region.type, fieldof.source_region, fieldof.field, rhs);
+    heap_update2tc(heap_region.type, fieldof.source_heap, field, rhs);
 
   symex_assign_rec(
     heap_region.flag,
-    fieldof.source_region,
+    fieldof.source_heap,
     update_heap,
     update_heap,
     guard, hidden);

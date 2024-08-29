@@ -43,8 +43,9 @@ void goto_symext::default_replace_dynamic_allocation(expr2tc &expr)
       expr2tc size = gen_ulong(_type.total_bytes);
       expr2tc heap_contain =
         heap_contain2tc(
-          points_to2tc(valid_inner.source_location, size),
-          alloc_size_heap);
+          alloc_size_heap,
+          points_to2tc(valid_inner.source_location, size)
+        );
       expr = heap_contain;
       log_status(" --- generate cond for checking heap region --- ");
     }
