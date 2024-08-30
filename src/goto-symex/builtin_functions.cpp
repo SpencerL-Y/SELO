@@ -455,29 +455,28 @@ void goto_symext::symex_free(const expr2tc &expr)
     symex_assign(code_assign2tc(valid_index_expr, falsity), true);
   } else {
     expr2tc free_ptr = code.operand;
-    expr2tc is_src_loc = gen_false_expr();
+    expr2tc when = gen_false_expr();
     // set each heap region to empty, guarded by item.gurad
     for(auto const& item : internal_deref_items)
     {
       assert(is_heap_region2t(item.object));
+      log_status("free object guard");
+      item.guard->dump();
+      
       const heap_region2t& heap_region = to_heap_region2t(item.object);
       expr2tc free_heap = heap_region.flag;
-      expr2tc free_loc = heap_region.source_location;
-      expr2tc emp_heap = gen_emp();
+      guardt g; g.add(item.guard);
+      symex_assign(code_assign2tc(free_heap, gen_emp()), false, g);
 
-      expr2tc _is_src_loc = equality2tc(free_ptr, free_loc);
-      is_src_loc = or2tc(is_src_loc, _is_src_loc);
-      
-      guardt g; g.add(_is_src_loc);
-      symex_assign(code_assign2tc(free_heap, emp_heap), false, g);
+      // collect guards for deleting heap alloc size
+      when = or2tc(when, item.guard);
     }
     // delete the pointer in alloc_size heap
     expr2tc alloc_size_heap = symbol2tc(get_intheap_type(), alloc_size_heap_name);
     expr2tc new_heap = heap_delete2tc(alloc_size_heap, free_ptr);
-    guardt g; g.add(is_src_loc);
+    guardt g; g.add(when);
     symex_assign(code_assign2tc(alloc_size_heap, new_heap), false, g);
   }
-
   log_status("xxxxxxx symex free done");
 }
 
