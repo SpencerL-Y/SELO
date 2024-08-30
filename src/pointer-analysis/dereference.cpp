@@ -852,30 +852,27 @@ expr2tc dereferencet::build_reference_to(
       lexical_offset->dump();
 
     guardt tmp_guard(guard);
-    if (is_heap_region2t(value))
-    {
-      heap_region2t& heap_region = to_heap_region2t(value);
-
-      if (!is_free(mode) && !is_internal(mode))
-      {
-        int access_sz = type->get_width() / 8;
-        // Do alignment
-        intheap_type2t &_type = to_intheap_type(heap_region.type);
-        bool has_changed = _type.do_alignment(access_sz);
-        if (has_changed)
-        {
-          to_symbol2t(heap_region.flag).type = heap_region.type;
-          dereference_callback.update_heap_type(heap_region.flag);
-        }
-      }
-      pointer_guard = same_object2tc(deref_expr, locationof2tc(value));
-      tmp_guard.add(pointer_guard);
-    }
-    else
+    if (!is_intheap_type(value) ||
+        !to_intheap_type(value->type).is_region)
     {
       log_error("Not heap region");
       abort();
     }
+
+    intheap_type2t &_type = to_intheap_type(value->type);
+
+    if (!is_free(mode) && !is_internal(mode))
+    {
+      int access_sz = type->get_width() / 8;
+      // Do alignment
+      bool has_changed = _type.do_alignment(access_sz);
+      if (has_changed)
+        dereference_callback.update_heap_type(_type);
+    }
+    pointer_guard = same_object2tc(deref_expr, locationof2tc(value));
+    tmp_guard.add(pointer_guard);
+  
+
 
     log_status("generated pointer guard:");
     pointer_guard->dump();
@@ -929,8 +926,7 @@ expr2tc dereferencet::build_reference_to(
     }
 
     // other checks may be added later
-    if (is_heap_region2t(value))
-      check_heap_region_access(value, final_offset, type, tmp_guard, mode);
+    check_heap_region_access(value, final_offset, type, tmp_guard, mode);
 
     build_deref_slhv(value, final_offset, type, tmp_guard, mode, alignment);
 
@@ -1268,9 +1264,11 @@ void dereferencet::build_deref_slhv(
     abort();
   }
 
-  heap_region2t& heap_region = to_heap_region2t(value);
+  // value is the flag symbol of a heap region
+  expr2tc &heap_region = value;
+
   unsigned int field = to_constant_int2t(offset).value.to_uint64();
-  intheap_type2t &_type = to_intheap_type(heap_region.type);
+  intheap_type2t &_type = to_intheap_type(heap_region->type);
   unsigned int access_sz = type_byte_size(type, &ns).to_uint64();
 
   if (!_type.is_aligned)
@@ -1297,10 +1295,7 @@ void dereferencet::build_deref_slhv(
 
   // update field type
   if (_type.set_field_type(field, type))
-  {
-    heap_region.flag->type = heap_region.type;
-    dereference_callback.update_heap_type(heap_region.flag);
-  }
+    dereference_callback.update_heap_type(_type);
 
   log_status(" ----------------- build deref slhv ----------------- ");
 }
@@ -2313,6 +2308,22 @@ void dereferencet::valid_check(
     // always "valid", shut up
     return;
   }
+  else if(is_intheap_type(symbol))
+  {
+    log_status("guard : ");
+    guard.dump();
+    expr2tc not_valid_heap_region = not2tc(valid_object2tc(symbol));
+    log_status("not valid print:");
+    not_valid_heap_region->dump();
+    guardt tmp_guard(guard);
+    tmp_guard.add(not_valid_heap_region);
+    std::string foo = is_free(mode) ?  "invalid free pointer"
+                                      : "invalid dereference pointer";
+    // deref failure will replace heap region with heap contains
+    // that indicates the reigon is avaliable.
+    dereference_failure("pointer dereference", foo, tmp_guard);
+    return;
+  }
   else if (is_symbol2t(symbol))
   {
     // Hacks, but as dereferencet object isn't persistent, necessary. Fix by
@@ -2365,22 +2376,6 @@ void dereferencet::valid_check(
         return;
       }
     }
-  }
-  else if(is_heap_region2t(symbol))
-  {
-    log_status("guard : ");
-    guard.dump();
-    expr2tc not_valid_heap_region = not2tc(valid_object2tc(symbol));
-    log_status("not valid print:");
-    not_valid_heap_region->dump();
-    guardt tmp_guard(guard);
-    tmp_guard.add(not_valid_heap_region);
-    std::string foo = is_free(mode) ?  "invalid free pointer"
-                                      : "invalid dereference pointer";
-    // deref failure will replace heap region with heap contains
-    // that indicates the reigon is avaliable.
-    dereference_failure("pointer dereference", foo, tmp_guard);
-    return;
   }
 }
 

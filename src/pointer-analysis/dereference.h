@@ -154,13 +154,13 @@ public:
   virtual bool is_live_variable(const expr2tc &sym) = 0;
 
 
-  virtual void update_heap_type(const expr2tc &flag)
+  virtual void update_heap_type(const intheap_type2t &type)
   {
     log_error("Do not support");
     abort();
   }
 
-  virtual void update_heap_type_rec(expr2tc &expr, const symbol2t &flag)
+  virtual void update_heap_type_rec(expr2tc &expr, const intheap_type2t &type)
   {
     log_error("Do not support");
     abort();

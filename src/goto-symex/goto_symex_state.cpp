@@ -67,9 +67,7 @@ void goto_symex_statet::initialize(
 bool goto_symex_statet::constant_propagation(const expr2tc &expr) const
 {
   // SLHV propagation
-  if (is_constant_intheap2t(expr) ||
-      is_constant_intloc2t(expr) ||
-      is_heap_region2t(expr))
+  if (is_constant_intheap2t(expr) || is_constant_intloc2t(expr))
     return true;
 
   if (is_locadd2t(expr))
@@ -210,13 +208,6 @@ void goto_symex_statet::assignment(expr2tc &lhs, const expr2tc &rhs)
   expr2tc l1_lhs = lhs;
 
   expr2tc const_value = constant_propagation(rhs) ? rhs : expr2tc();
-
-  // Each heap region has only one unique flag that does not change
-  // during its lifetime. The l1 version of flag is the representation.
-  // For constant_propagation, all heap regions should hold their flag. 
-  if (!is_nil_expr(const_value) && is_heap_region2t(const_value))
-    level2.get_original_name(to_heap_region2t(const_value).flag);
-
   level2.make_assignment(lhs, const_value, rhs);
 
   if (use_value_set)
@@ -230,6 +221,7 @@ void goto_symex_statet::assignment(expr2tc &lhs, const expr2tc &rhs)
     l1_lhs->dump();
     log_status("#####");
     value_set.assign(l1_lhs, l1_rhs);
+    log_status("update value set done!!!!");
   }
 }
 
@@ -263,7 +255,8 @@ void goto_symex_statet::rename_type(expr2tc &expr)
 void goto_symex_statet::rename(expr2tc &expr)
 {
   // rename all the symbols with their last known value
-  if (is_nil_expr(expr))
+  if (is_nil_expr(expr) ||
+      is_heap_region2t(expr))
     return;
 
   rename_type(expr);
@@ -279,15 +272,6 @@ void goto_symex_statet::rename(expr2tc &expr)
   {
     address_of2t &addrof = to_address_of2t(expr);
     rename_address(addrof.ptr_obj);
-  }
-  else  if (is_heap_region2t(expr))
-  {
-    heap_region2t &heap_region = to_heap_region2t(expr);
-    rename(heap_region.source_location);
-    // Return to l1 name first
-    level2.get_original_name(heap_region.flag);
-    // Get the newest l2 name
-    level2.get_ident_name(heap_region.flag);
   }
   else
   {

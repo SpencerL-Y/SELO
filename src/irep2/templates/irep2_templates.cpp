@@ -12,7 +12,7 @@ std::string empty_type2t::field_names[esbmct::num_type_fields] =
 std::string intloc_type2t::field_names[esbmct::num_type_fields] =
   {"", "", "", "", ""};
 std::string intheap_type2t::field_names[esbmct::num_type_fields] =
-  {"field_types", "total_bytes", "is_region", "is_aligned", ""};
+  {"location", "field_types", "total_bytes", "is_region", "is_aligned", ""};
 std::string symbol_type2t::field_names[esbmct::num_type_fields] =
   {"symbol_name", "", "", "", ""};
 std::string struct_type2t::field_names[esbmct::num_type_fields] =
@@ -170,8 +170,6 @@ std::string locadd2t::field_names[esbmct::num_type_fields] =
   {"location", "offset", "", "", ""};
 std::string heap_region2t::field_names[esbmct::num_type_fields] = 
   {"flag", "source_location", "", "", ""};
-std::string flagof2t::field_names[esbmct::num_type_fields] =
-  {"source_region", "", "", "", ""};
 std::string locationof2t::field_names[esbmct::num_type_fields] =
   {"source_region", "", "", "", ""};
 std::string fieldof2t::field_names[esbmct::num_type_fields] =

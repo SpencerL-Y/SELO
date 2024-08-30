@@ -281,10 +281,7 @@ expr2tc goto_symext::symex_mem(
     symbol.mode = "C";
     new_context.add(symbol);
 
-    expr2tc rhs_heap = symbol2tc(heap_type, symbol.id);
-    guardt rhs_guard = cur_state->guard;
-
-    // set a location for new heap region
+    // create a new location for new heap region
     symbolt heap_region_loc;
     heap_region_loc.name = "heap_region_loc_"+ i2string(dynamic_counter);
     
@@ -300,6 +297,12 @@ expr2tc goto_symext::symex_mem(
     // rhs_base_loc do not change during its lifetime
     // use l2 symbol, do not need to be renamed
     cur_state->rename(rhs_base_loc);
+
+    // store base location in intheap type
+    _heap_type.location = rhs_base_loc;
+
+    expr2tc rhs_heap = symbol2tc(heap_type, symbol.id);
+    guardt rhs_guard = cur_state->guard;
 
     expr2tc rhs_region = heap_region2tc(heap_type, rhs_heap, rhs_base_loc);
     
@@ -320,7 +323,7 @@ expr2tc goto_symext::symex_mem(
     );
 
     log_status("create valueset base loc symbol and assign");
-    symex_assign(code_assign2tc(lhs, locationof2tc(rhs_region)));
+    symex_assign(code_assign2tc(lhs, locationof2tc(rhs_heap)));
 
     return expr2tc();
   }
@@ -459,14 +462,12 @@ void goto_symext::symex_free(const expr2tc &expr)
     // set each heap region to empty, guarded by item.gurad
     for(auto const& item : internal_deref_items)
     {
-      assert(is_heap_region2t(item.object));
+      assert(is_intheap_type(item.object));
       log_status("free object guard");
       item.guard->dump();
-      
-      const heap_region2t& heap_region = to_heap_region2t(item.object);
-      expr2tc free_heap = heap_region.flag;
+
       guardt g; g.add(item.guard);
-      symex_assign(code_assign2tc(free_heap, gen_emp()), false, g);
+      symex_assign(code_assign2tc(item.object, gen_emp()), false, g);
 
       // collect guards for deleting heap alloc size
       when = or2tc(when, item.guard);

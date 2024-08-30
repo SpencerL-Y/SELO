@@ -2644,14 +2644,6 @@ exprt migrate_expr_back(const expr2tc &ref)
     region.copy_to_operands(migrate_expr_back(ref2.source_location));
     return region;
   }
-  case expr2t::flagof_id:
-  {
-    const flagof2t &ref2 = to_flagof2t(ref);
-    typet thetype = migrate_type_back(ref->type);
-    exprt flagof("flagof", thetype);
-    flagof.copy_to_operands(migrate_expr_back(ref2.source_heap));
-    return flagof;
-  }
   case expr2t::locationof_id:
   {
     const locationof2t &ref2 = to_locationof2t(ref);

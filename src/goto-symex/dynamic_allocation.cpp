@@ -33,9 +33,15 @@ void goto_symext::default_replace_dynamic_allocation(expr2tc &expr)
       // Checking that the object is valid by heap_alloc_size
       log_status(" --- generate cond for checking heap region --- ");
       const valid_object2t &obj = to_valid_object2t(expr);
-      obj.dump();
-      const heap_region2t &valid_inner = to_heap_region2t(obj.value);
-      const intheap_type2t &_type = to_intheap_type(valid_inner.type);
+      const expr2tc &heap_region = obj.value;
+      if (!is_intheap_type(heap_region->type) ||
+          !to_intheap_type(heap_region->type).is_region)
+      {
+        log_error("Wrong object");
+        abort();
+      }
+
+      const intheap_type2t &_type = to_intheap_type(heap_region->type);
       // get alloc size heap
       expr2tc alloc_size_heap;
       migrate_expr(symbol_expr(*ns.lookup(alloc_size_heap_name)), alloc_size_heap);
@@ -44,7 +50,7 @@ void goto_symext::default_replace_dynamic_allocation(expr2tc &expr)
       expr2tc heap_contain =
         heap_contain2tc(
           alloc_size_heap,
-          points_to2tc(valid_inner.source_location, size)
+          points_to2tc(_type.location, size)
         );
       expr = heap_contain;
       log_status(" --- generate cond for checking heap region --- ");

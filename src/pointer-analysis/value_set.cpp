@@ -566,10 +566,7 @@ void value_sett::get_value_set_rec(
   }
   // SLHV:
   if (is_constant_intloc2t(expr) || is_constant_intheap2t(expr) ||
-      is_heap_append2t(expr) || is_heap_delete2t(expr) ||
-      // heap_region as a constant
-      // deref a heap region use fieldof(region, 0)
-      is_heap_region2t(expr))
+      is_heap_append2t(expr) || is_heap_delete2t(expr))
   {
     expr2tc new_object = expr;
     insert(dest, new_object, BigInt(0));
@@ -609,7 +606,8 @@ void value_sett::get_value_set_rec(
   if (is_fieldof2t(expr))
   {
     const fieldof2t &fieldof = to_fieldof2t(expr);
-    const heap_region2t &heap_region = to_heap_region2t(fieldof.source_heap);
+    const expr2tc &heap_region = fieldof.source_heap;
+    const intheap_type2t &_type = to_intheap_type(heap_region->type);
     expr2tc field = fieldof.operand;
 
     if (!is_constant_int2t(field))
@@ -621,7 +619,7 @@ void value_sett::get_value_set_rec(
     unsigned int _field = to_constant_int2t(field).value.to_uint64();
 
     get_value_set_rec(
-      heap_region.flag,
+      _type.location,
       dest,
       "::field::" + std::to_string(_field) + "::" + suffix,
       original_type
@@ -629,7 +627,8 @@ void value_sett::get_value_set_rec(
     return;
   }
 
-  if (is_heap_update2t(expr) || is_points_to2t(expr))
+  if (is_heap_update2t(expr) || is_points_to2t(expr) ||
+      is_heap_region2t(expr))
   {
     expr->dump();
     log_status("fini get_value_set_rec heap_update");
@@ -870,8 +869,7 @@ void value_sett::get_reference_set_rec(const expr2tc &expr, object_mapt &dest)
 {
   if (
     is_symbol2t(expr) || is_dynamic_object2t(expr) ||
-    is_constant_string2t(expr) || is_constant_array2t(expr)
-    || is_heap_region2t(expr))
+    is_constant_string2t(expr) || is_constant_array2t(expr))
   {
     // Any symbol we refer to, store into the destination object map.
     // Given that this is a simple symbol, we can be sure that the offset to
@@ -1247,6 +1245,17 @@ void value_sett::assign(
 
   if (is_intheap_type(lhs_type))
   {
+    if (is_heap_region2t(rhs))
+    {
+      // heap region is created for encoding
+      // the heap variable lhs contains all information
+      expr2tc new_obj = to_heap_region2t(rhs).flag;
+      object_mapt values_rhs;
+      // flag contains all neccessary information
+      insert(values_rhs, new_obj, BigInt(0));
+      assign_rec(lhs, values_rhs, "", add_to_sets);
+      return;
+    }
     if (to_intheap_type(lhs_type).is_region && is_heap_update2t(rhs))
     {
       const heap_update2t &heap_upd = to_heap_update2t(rhs);
@@ -1422,11 +1431,13 @@ void value_sett::assign_rec(
     }
 
     unsigned int _field = to_constant_int2t(field).value.to_uint64();
+    const expr2tc &heap_region = fieldof.source_heap;
+    const intheap_type2t &_type = to_intheap_type(heap_region->type);
 
-    const heap_region2t &heap_region = to_heap_region2t(fieldof.source_heap);
-
+    // TODO : fix
+    // use location to encoding field
     assign_rec(
-      heap_region.flag,
+      _type.location,
       values_rhs,
       "::field::" + std::to_string(_field) + "::" + suffix,
       add_to_sets);

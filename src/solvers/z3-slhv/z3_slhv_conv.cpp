@@ -237,36 +237,12 @@ z3_slhv_convt::convert_slhv_opts(
       }
       return pt_vec.size() == 1 ? pt_vec[0] : mk_uplus(pt_vec);
     }
-    case expr2t::flagof_id:
-    {
-      const flagof2t &flagof = to_flagof2t(expr);
-
-      if (is_symbol2t(flagof.source_heap))
-      {
-        if (!is_intheap_type(flagof.source_heap->type))
-        {
-          log_error("Wrong intheap type");
-          abort();
-        }
-        return args[0];
-      }
-
-      if (!is_heap_region2t(flagof.source_heap))
-      {
-        log_error("We can't get a location of a non-region heap");
-        abort();
-      }
-      return convert_ast(to_heap_region2t(flagof.source_heap).flag);
-    }
     case expr2t::locationof_id:
     {
       const locationof2t &locof = to_locationof2t(expr);
-      if (!is_heap_region2t(locof.source_heap))
-      {
-        log_error("We can't get a location of a non-region heap");
-        abort();
-      }
-      return convert_ast(to_heap_region2t(locof.source_heap).source_location);
+      const expr2tc &heap_region = locof.source_heap;
+      const intheap_type2t &_type = to_intheap_type(heap_region->type);
+      return convert_ast(_type.location);
     }
     case expr2t::points_to_id:
     {
@@ -354,24 +330,18 @@ z3_slhv_convt::convert_opt_without_assert(const expr2tc &expr)
           mk_smt_bool(true),
           mk_fresh(convert_sort(fieldof.type), mk_fresh_name("invalid_loc_")));
 
-      if (!is_heap_region2t(fieldof.source_heap))
-      {
-        log_error("We can't get a location of a non-region heap");
-        abort();
-      }
       if (!is_constant_int2t(fieldof.operand))
       {
         log_error("Wrong field");
         abort();
       }
 
-      const heap_region2t &heap_region = to_heap_region2t(fieldof.source_heap);
-      const intheap_type2t &_type = to_intheap_type(heap_region.type);
+      const expr2tc &heap_region = fieldof.source_heap;
+      const intheap_type2t &_type = to_intheap_type(heap_region->type);
       const expr2tc &field = fieldof.operand;
-
       unsigned int _field = to_constant_int2t(field).value.to_uint64();
 
-      smt_astt source_loc = convert_ast(heap_region.source_location);
+      smt_astt source_loc = convert_ast(_type.location);
       smt_astt loc = _field == 0 ?
         source_loc : mk_locadd(source_loc, convert_ast(field));
 
@@ -390,31 +360,27 @@ z3_slhv_convt::convert_opt_without_assert(const expr2tc &expr)
       }
       smt_astt v1 = mk_fresh(s1, name);
 
-      smt_astt assert_expr = mk_subh(mk_pt(loc, v1), convert_ast(heap_region.flag));
+      smt_astt assert_expr = mk_subh(mk_pt(loc, v1), convert_ast(heap_region));
       return std::make_pair(assert_expr, v1);
     }
     case expr2t::heap_update_id:
     {
       const heap_update2t &heap_upd = to_heap_update2t(expr);
-      if (!is_heap_region2t(heap_upd.source_heap))
-      {
-        log_error("Do not support heap update for other heap terms");
-        abort();
-      }
       if (!is_constant_int2t(heap_upd.operand_1))
       {
         log_error("Wrong field");
         abort();
       }
 
-      const heap_region2t &heap_region = to_heap_region2t(heap_upd.source_heap);
+      const expr2tc &heap_region = heap_upd.source_heap;
+      const intheap_type2t &_type = to_intheap_type(heap_region->type);
       const expr2tc &upd_field = heap_upd.operand_1;
       const expr2tc &upd_value = heap_upd.operand_2;
 
       unsigned int _field = to_constant_int2t(upd_field).value.to_uint64();
 
-      smt_astt h = convert_ast(heap_region.flag);
-      smt_astt source_loc = convert_ast(heap_region.source_location);
+      smt_astt h = convert_ast(heap_region);
+      smt_astt source_loc = convert_ast(_type.location);
       smt_astt field = convert_ast(upd_field);
       smt_astt loc = _field == 0 ? source_loc : mk_locadd(source_loc, field);
       smt_astt val = convert_ast(upd_value);
@@ -452,11 +418,14 @@ z3_slhv_convt::smt_ast_pair
 z3_slhv_convt::project(const expr2tc &expr)
 {
   if (is_symbol2t(expr))
+  {
+    if (is_intheap_type(expr))
+    {
+      const intheap_type2t &_type = to_intheap_type(expr->type);
+      return this->project(_type.location);
+    }
     return convert_opt_without_assert(expr);
-  else if (is_heap_region2t(expr))
-    return this->project(to_heap_region2t(expr).source_location);
-  else if (is_flagof2t(expr))
-    return this->project(to_flagof2t(expr).source_heap);
+  }
   else if (is_locationof2t(expr))
     return this->project(to_locationof2t(expr).source_heap);
   else if (is_fieldof2t(expr))

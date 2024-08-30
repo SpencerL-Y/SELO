@@ -969,8 +969,8 @@ protected:
   dump_internal_state(const std::list<struct internal_item> &data) override;
   bool is_live_variable(const expr2tc &sym) override;
 
-  void update_heap_type(const expr2tc &flag) override;
-  void update_heap_type_rec(expr2tc &expr, const symbol2t &flag) override;
+  void update_heap_type(const intheap_type2t &type) override;
+  void update_heap_type_rec(expr2tc &expr, const intheap_type2t &type) override;
   std::string get_nondet_id(std::string prefix = "") override;
   irep_idt get_alloc_size_heap_name() override;
 };

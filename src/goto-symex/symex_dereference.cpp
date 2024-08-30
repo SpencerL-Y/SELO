@@ -166,82 +166,56 @@ bool symex_dereference_statet::is_live_variable(const expr2tc &symbol)
   return false;
 }
 
-void symex_dereference_statet::update_heap_type(const expr2tc &flag)
+void symex_dereference_statet::update_heap_type(const intheap_type2t &type)
 {
-  if (!is_symbol2t(flag))
+  if (is_nil_expr(to_intheap_type(type).location))
   {
-    log_error("Wrong flag!!!!");
+    log_error("Wrong type!!!!");
     abort();
   }
-
-  log_status("begin update heap type");
-  flag->dump();
-
-  // Each heap region has a unique L0 name
-  expr2tc l0_flag = flag;
-  goto_symex.cur_state->get_original_name(l0_flag);
-  const symbol2t l0_sym = to_symbol2t(l0_flag);
-
-  l0_flag->dump();
 
   // update value set
   value_sett& value_set = goto_symex.cur_state->value_set;
   unsigned int n = value_set.object_numbering.size();
   for(unsigned int i = 0; i < n; i++)
-    update_heap_type_rec(value_set.object_numbering[i], l0_sym);
-  
-
-  log_status("finishing update value set");
+    update_heap_type_rec(value_set.object_numbering[i], type);
 
   // update eq system
   std::shared_ptr<symex_target_equationt> eq =
     std::dynamic_pointer_cast<symex_target_equationt>(goto_symex.target);
   for(auto& ssa_step : eq->SSA_steps)
   {
-    update_heap_type_rec(ssa_step.guard, l0_sym);
-    update_heap_type_rec(ssa_step.rhs, l0_sym);
-    update_heap_type_rec(ssa_step.cond, l0_sym);
+    update_heap_type_rec(ssa_step.guard, type);
+    update_heap_type_rec(ssa_step.rhs, type);
+    update_heap_type_rec(ssa_step.cond, type);
   }
-
-  log_status("finishing replace");
 }
 
 void symex_dereference_statet::update_heap_type_rec(
-  expr2tc &expr, const symbol2t &flag)
+  expr2tc &expr, const intheap_type2t &type)
 {
   if (is_nil_expr(expr)) return;
-  log_status("update type of :");
-  expr->dump();
-  if (is_symbol2t(expr))
+  if (is_intheap_type(expr))
   {
-    // update heap variable
-    expr2tc l0_sym = expr;
-    goto_symex.cur_state->get_original_name(l0_sym);
+    intheap_type2t &_type = to_intheap_type(expr->type);
 
-    if (flag.get_symbol_name() == to_symbol2t(l0_sym).get_symbol_name())
-      expr->type = flag.type;
-  }
-  else if (is_heap_region2t(expr))
-  {
-    heap_region2t &heap_region = to_heap_region2t(expr);
+    if (is_nil_expr(_type.location)) return;
+
+    if (to_symbol2t(_type.location).get_symbol_name() ==
+        to_symbol2t(type.location).get_symbol_name())
+      expr->type = intheap_type2tc(type);
     
-    expr2tc l0_flag = heap_region.flag;
-    goto_symex.cur_state->get_original_name(l0_flag);
-
-    l0_flag->dump();
-
-    if (flag.get_symbol_name() ==
-        to_symbol2t(l0_flag).get_symbol_name()) 
+    if (is_heap_region2t(expr))
     {
-      heap_region.type = flag.type;
-      update_heap_type_rec(heap_region.flag, flag);
+      heap_region2t &heap_region = to_heap_region2t(expr);
+      update_heap_type_rec(heap_region.flag, type);
     }
   }
   else
   {
-    expr->Foreach_operand([this, &flag](expr2tc& e){
+    expr->Foreach_operand([this, &type](expr2tc& e){
       if (!is_nil_expr(e))
-        update_heap_type_rec(e, flag);
+        update_heap_type_rec(e, type);
     });
   }
 }

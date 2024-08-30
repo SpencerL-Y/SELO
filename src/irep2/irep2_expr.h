@@ -1704,7 +1704,6 @@ irep_typedefs(points_to, points_to_data);
 irep_typedefs(uplus, uplus_data);
 irep_typedefs(locadd, locadd_data);
 irep_typedefs(heap_region, heap_region_data);
-irep_typedefs(flagof, heap_ops);
 irep_typedefs(locationof, heap_ops);
 irep_typedefs(fieldof, heap_1op);
 irep_typedefs(heap_update, heap_2ops);
@@ -3227,18 +3226,6 @@ public:
   {
   }
   heap_region2t(const heap_region2t &ref) = default;
-
-  static std::string field_names[esbmct::num_type_fields];
-};
-
-class flagof2t : public flagof_expr_methods
-{
-public:
-  flagof2t(const expr2tc &source_region)
-    : flagof_expr_methods(get_intheap_type(), flagof_id, source_region)
-  {
-  }
-  flagof2t(const flagof2t &ref) = default;
 
   static std::string field_names[esbmct::num_type_fields];
 };

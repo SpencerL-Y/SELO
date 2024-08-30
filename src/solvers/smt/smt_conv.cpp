@@ -346,7 +346,6 @@ smt_astt smt_convt::convert_ast(const expr2tc &expr)
   case expr2t::constant_intheap_id:
   case expr2t::constant_intloc_id:
   case expr2t::heap_region_id:
-  case expr2t::flagof_id:
   case expr2t::locationof_id:
   case expr2t::fieldof_id:
   case expr2t::points_to_id:

@@ -294,6 +294,7 @@ void goto_symext::symex_assign_rec(
   {
     log_status("symex_assign_symbol");
     symex_assign_symbol(lhs, full_lhs, rhs, full_rhs, guard, hidden);
+    log_status("symex_assign_symbol done!!!");
   } 
   else if (is_index2t(lhs))
   {
@@ -349,10 +350,7 @@ void goto_symext::symex_assign_rec(
   {
     log_status("symex_assign_fieldof");
     symex_assign_fieldof(lhs, full_lhs, rhs, full_rhs, guard, hidden);
-  }
-  else if (is_heap_region2t(lhs))
-  {
-    log_status("symex_assign_heap_region");
+    log_status("symex_assign_fieldof done!!!");
   }
   else
   {
@@ -396,6 +394,8 @@ void goto_symext::symex_assign_symbol(
   rhs->dump();
 
   cur_state->assignment(renamed_lhs, rhs);
+
+  log_status("cur state assignment done!!!");
 
   // Special case when the lhs is an array access, we need to get the
   // right symbol for the index
@@ -906,18 +906,13 @@ void goto_symext::symex_assign_fieldof(
   assert(is_scalar_type(rhs));
 
   const fieldof2t& fieldof = to_fieldof2t(lhs);
-  const heap_region2t &heap_region = to_heap_region2t(fieldof.source_heap);
+  const expr2tc &heap_region = fieldof.source_heap;
   const expr2tc &field = fieldof.operand;
 
   expr2tc update_heap =
-    heap_update2tc(heap_region.type, fieldof.source_heap, field, rhs);
+    heap_update2tc(heap_region->type, heap_region, field, rhs);
 
-  symex_assign_rec(
-    heap_region.flag,
-    fieldof.source_heap,
-    update_heap,
-    update_heap,
-    guard, hidden);
+  symex_assign_rec(heap_region, full_lhs, update_heap, full_rhs, guard, hidden);
 }
 
 void goto_symext::replace_nondet(expr2tc &expr)

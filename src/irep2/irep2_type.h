@@ -208,22 +208,26 @@ class intheap_data : public type2t
 public:
   intheap_data(
     type2t::type_ids id,
-    const std::vector<type2tc> &ft,
+    const expr2tc &loc,
     unsigned int tb,
     bool ir,
     bool ia)
-    : type2t(id), field_types(ft), total_bytes(tb),
+    : type2t(id),
+      location(loc), total_bytes(tb),
       is_region(ir), is_aligned(ia)
   {
   }
   intheap_data(const intheap_data &ref) = default;
 
+  expr2tc location;
   std::vector<type2tc> field_types;
   unsigned int total_bytes;
   bool is_region;
   bool is_aligned;
   
   // Type mangling:
+  typedef esbmct::field_traits<expr2tc, intheap_data, &intheap_data::location>
+    location_field;
   typedef esbmct::field_traits<std::vector<type2tc>, intheap_data, &intheap_data::field_types>
     field_types_field;
   typedef esbmct::field_traits<unsigned int, intheap_data, &intheap_data::total_bytes>
@@ -233,6 +237,7 @@ public:
   typedef esbmct::field_traits<bool, intheap_data, &intheap_data::is_aligned>
     is_aligned_field;
   typedef esbmct::type2t_traits<
+    location_field,
     field_types_field,
     total_bytes_field,
     is_region_field,
@@ -394,11 +399,14 @@ class intheap_type2t : public intheap_type_methods
 {
 public:
   intheap_type2t(
-    const std::vector<type2tc> &field_types,
+    const expr2tc &location,
     unsigned int total_bytes,
     bool is_region,
     bool is_aligned)
-    : intheap_type_methods(intheap_id, field_types, total_bytes, is_region, is_aligned)
+    : intheap_type_methods(
+      intheap_id,
+      location, total_bytes,
+      is_region, is_aligned)
   {
     if (is_region && this->field_types.empty())
       this->field_types.push_back(empty_type2tc());
