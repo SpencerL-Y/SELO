@@ -607,7 +607,6 @@ void value_sett::get_value_set_rec(
   {
     const fieldof2t &fieldof = to_fieldof2t(expr);
     const expr2tc &heap_region = fieldof.source_heap;
-    const intheap_type2t &_type = to_intheap_type(heap_region->type);
     expr2tc field = fieldof.operand;
 
     if (!is_constant_int2t(field))
@@ -619,7 +618,7 @@ void value_sett::get_value_set_rec(
     unsigned int _field = to_constant_int2t(field).value.to_uint64();
 
     get_value_set_rec(
-      _type.location,
+      heap_region,
       dest,
       "::field::" + std::to_string(_field) + "::" + suffix,
       original_type
@@ -1259,11 +1258,36 @@ void value_sett::assign(
     if (to_intheap_type(lhs_type).is_region && is_heap_update2t(rhs))
     {
       const heap_update2t &heap_upd = to_heap_update2t(rhs);
+      const expr2tc &upd_heap = heap_upd.source_heap;
       const expr2tc &upd_field = heap_upd.operand_1;
       const expr2tc &upd_value = heap_upd.operand_2;
-      expr2tc lhs_field = 
-        fieldof2tc(rhs->type, heap_upd.source_heap, upd_field);
-      assign(lhs_field, upd_value, add_to_sets);
+
+      if (!is_constant_int2t(upd_field))
+      {
+        log_error("Do not support dynamic field");
+        abort();
+      }
+      unsigned int field = to_constant_int2t(upd_field).value.to_uint64();
+
+      const intheap_type2t &_type = to_intheap_type(upd_heap->type);
+      for (unsigned int i = 0; i < _type.field_types.size(); i++)
+      {
+        expr2tc lhs_field;
+        expr2tc val;
+        if (i == field)
+        {
+          lhs_field = fieldof2tc(rhs->type, upd_heap, upd_field);
+          val = upd_value;
+        }
+        else
+        {
+          lhs_field = fieldof2tc(_type.field_types[i], upd_heap, gen_ulong(i));
+          val = lhs_field;
+          add_to_sets = false;
+        }
+        assign(lhs_field, upd_value, add_to_sets);
+      }
+
       return;
     }
   }
@@ -1437,7 +1461,7 @@ void value_sett::assign_rec(
     // TODO : fix
     // use location to encoding field
     assign_rec(
-      _type.location,
+      heap_region,
       values_rhs,
       "::field::" + std::to_string(_field) + "::" + suffix,
       add_to_sets);

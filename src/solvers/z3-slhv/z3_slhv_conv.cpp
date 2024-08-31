@@ -389,11 +389,14 @@ z3_slhv_convt::convert_opt_without_assert(const expr2tc &expr)
       smt_astt v1 = mk_fresh(val->sort, mk_fresh_name("tmp_val::"));
 
       // current heap state
-      smt_astt h_state = mk_uplus(h1, mk_pt(loc, v1));
-      smt_astt assert_expr = mk_eq(h, h_state);
+      smt_astt old_state = mk_uplus(h1, mk_pt(loc, v1));
+      smt_astt assert_expr = mk_eq(h, old_state);
 
       // new heap state
-      return std::make_pair(assert_expr,  h_state);
+      smt_astt new_state = mk_uplus(h1, mk_pt(loc, val));
+
+      // new heap state
+      return std::make_pair(assert_expr,  new_state);
     }
     case expr2t::heap_delete_id:
     {
