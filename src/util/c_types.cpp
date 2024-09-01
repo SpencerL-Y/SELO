@@ -396,7 +396,7 @@ type2tc get_empty_type()
 
 type2tc get_intheap_type(unsigned int sz)
 {
-  return intheap_type2tc(expr2tc(), sz, sz != 0, false);
+  return intheap_type2tc(expr2tc(), sz, false, false);
 }
 
 type2tc get_intloc_type() {

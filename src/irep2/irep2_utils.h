@@ -200,8 +200,8 @@ inline bool is_slhv_expr(const expr2tc &expr)
          is_heap_delete2t(expr) ||
          is_heap_region2t(expr) ||
          is_heap_update2t(expr) ||
-         is_locationof2t(expr) ||
-         is_fieldof2t(expr);
+         is_location_of2t(expr) ||
+         is_field_of2t(expr);
 }
 
 /** Test if expr is true. First checks whether the expr is a constant bool, and

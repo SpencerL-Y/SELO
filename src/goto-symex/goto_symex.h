@@ -812,6 +812,47 @@ protected:
   void replace_pointer_airth(expr2tc &expr);
 
   /**
+   * @brief Replace addressof by location_of
+   * @param expr 
+   */
+  void replace_address_of(expr2tc &expr);
+
+  /**
+   * @brief Replace all struct/array variable by heap variable
+   * @param expr 
+   */
+  void replace_tuple(expr2tc &expr);
+
+  /**
+   * @brief Create a heap type object
+   * 
+   * @param type 
+   * @param loc 
+   * @return type2tc 
+   */
+  type2tc create_heap_region_type(
+    const type2tc &type,
+    unsigned int bytes,
+    const expr2tc &loc);
+
+  /**
+   * @brief Create a heap region object
+   * 
+   * @param sideeffect 
+   * @param flag
+   * @return expr2tc 
+   */
+  expr2tc create_heap_region(const sideeffect2t &effect, expr2tc &flag);
+
+  /**
+   * @brief In SLHV, struct/array are heap variable
+   * 
+   * @param lhs 
+   * @param effect 
+   */
+  void symex_nondet(const expr2tc &lhs, const expr2tc &effect);
+
+  /**
    *  Fetch reference to global dynamic object counter.
    *  @return Reference to global dynamic object counter.
    */

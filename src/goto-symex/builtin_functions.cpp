@@ -244,86 +244,42 @@ expr2tc goto_symext::symex_mem(
   } else {
     log_status("create heap symbol for allocation");
 
-    // value
+    // create a intheap symbol for heap region
     symbolt symbol;
     symbol.name = "dynamic_heap_"+ i2string(dynamic_counter);
-    
-    symbol.id = std::string("symex_dynamic::") + (!is_malloc ?    "alloca::" : "") +
-                id2string(symbol.name);
+    symbol.id = std::string("symex_dynamic::") + id2string(symbol.name);
     symbol.lvalue = true;
-
     symbol.type = typet(typet::t_intheap);
-
-    expr2tc _total_bytes = code.operand;
-    do_simplify(_total_bytes);
-    if (!is_constant_int2t(_total_bytes))
-    {
-      log_status("Do not support dynamic size");
-      abort();
-    }
-    unsigned int bytes = to_constant_int2t(_total_bytes).value.to_uint64();
-
-    type2tc heap_type = get_intheap_type(bytes);
-    intheap_type2t &_heap_type = to_intheap_type(heap_type); 
-    _heap_type.is_region = true;
-    if (is_struct_type(type))
-    {
-      struct_type2t &_type = to_struct_type(type);
-      _heap_type.is_aligned = true;
-      _heap_type.field_types.clear();
-      for(auto inner_type : _type.get_structure_members())
-        _heap_type.field_types.push_back(
-          is_pointer_type(inner_type) ? get_intloc_type() : get_int64_type()
-        );
-    }
-
     symbol.type.dynamic(true);
     symbol.mode = "C";
     new_context.add(symbol);
 
-    // create a new location for new heap region
-    symbolt heap_region_loc;
-    heap_region_loc.name = "heap_region_loc_"+ i2string(dynamic_counter);
-    
-    heap_region_loc.id = std::string("symex_dynamic::") + id2string(heap_region_loc.name);
-    heap_region_loc.lvalue = true;
-
-    heap_region_loc.type = typet(typet::t_intheap);
-
-    heap_region_loc.mode = "C";
-    new_context.add(heap_region_loc);
-
-    expr2tc rhs_base_loc = symbol2tc(get_intloc_type(), heap_region_loc.id);
-    // rhs_base_loc do not change during its lifetime
-    // use l2 symbol, do not need to be renamed
-    cur_state->rename(rhs_base_loc);
-
-    // store base location in intheap type
-    _heap_type.location = rhs_base_loc;
-
-    expr2tc rhs_heap = symbol2tc(heap_type, symbol.id);
+    expr2tc rhs_heap = symbol2tc(get_intheap_type(), symbol.id);
+    expr2tc rhs_region = create_heap_region(code, rhs_heap);
+    expr2tc rhs_base_loc = to_heap_region2t(rhs_region).source_location;
     guardt rhs_guard = cur_state->guard;
-
-    expr2tc rhs_region = heap_region2tc(heap_type, rhs_heap, rhs_base_loc);
     
     log_status("symex assign in symex_mem: allocated_heap = heaplet");
     symex_assign(code_assign2tc(rhs_heap, rhs_region));
 
     // link pointer variable and heap variable
+    log_status("track new pointer - {}", to_symbol2t(rhs_base_loc).get_symbol_name());
     track_new_pointer(
       rhs_base_loc,
       get_intheap_type(),
-      gen_ulong(to_intheap_type(heap_type).total_bytes));
+      gen_ulong(to_intheap_type(rhs_region->type).total_bytes));
 
+    log_status("use dynamic memory to track malloc heap - {}",
+      to_symbol2t(rhs_heap).get_symbol_name());
     dynamic_memory.emplace_back(
       rhs_heap,
       rhs_guard,
       !is_malloc,
-      symbol.name.as_string()
+      to_symbol2t(rhs_heap).get_symbol_name()
     );
 
     log_status("create valueset base loc symbol and assign");
-    symex_assign(code_assign2tc(lhs, locationof2tc(rhs_heap)));
+    symex_assign(code_assign2tc(lhs, location_of2tc(rhs_heap)));
 
     return expr2tc();
   }

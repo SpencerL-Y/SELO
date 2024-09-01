@@ -173,7 +173,7 @@ void dereferencet::dereference_expr(expr2tc &expr, guardt &guard, modet mode)
     expr = result;
     break;
   }
-  case expr2t::fieldof_id:
+  case expr2t::field_of_id:
   case expr2t::index_id:
   case expr2t::member_id:
   {
@@ -438,22 +438,22 @@ expr2tc dereferencet::dereference_expr_nonscalar(
       u.datatype_members.front(), guard, mode, base);
   }
 
-  if (is_fieldof2t(expr))
+  if (is_field_of2t(expr))
   {
-    fieldof2t &fieldof = to_fieldof2t(expr);
+    field_of2t &field_of = to_field_of2t(expr);
 
-    if (!is_dereference2t(fieldof.source_heap))
+    if (!is_dereference2t(field_of.source_heap))
     {
       log_error("Do not support struct in struct yet");
       abort();
     }
 
-    dereference2t &deref = to_dereference2t(fieldof.source_heap);
+    dereference2t &deref = to_dereference2t(field_of.source_heap);
 
     // Get the heap region
     dereference_expr(deref.value, guard, dereferencet::READ);
 
-    expr2tc offset_to_scalar = fieldof.operand;
+    expr2tc offset_to_scalar = field_of.operand;
     simplify(offset_to_scalar);
 
     return dereference(deref.value, base->type, guard, mode, offset_to_scalar);
@@ -869,7 +869,7 @@ expr2tc dereferencet::build_reference_to(
       if (has_changed)
         dereference_callback.update_heap_type(_type);
     }
-    pointer_guard = same_object2tc(deref_expr, locationof2tc(value));
+    pointer_guard = same_object2tc(deref_expr, location_of2tc(value));
     tmp_guard.add(pointer_guard);
   
 
@@ -1291,7 +1291,7 @@ void dereferencet::build_deref_slhv(
     return;
   }
   else
-    value = fieldof2tc(type, value, gen_ulong(field));
+    value = field_of2tc(type, value, gen_ulong(field));
 
   // update field type
   if (_type.set_field_type(field, type))

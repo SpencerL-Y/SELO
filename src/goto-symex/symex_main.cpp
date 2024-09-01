@@ -138,6 +138,8 @@ goto_symext::symex_resultt goto_symext::get_symex_result()
   return goto_symext::symex_resultt(target, total_claims, remaining_claims);
 }
 
+#include<iostream>
+
 void goto_symext::symex_step(reachability_treet &art)
 {
   log_status("    ======= goto_symext symex_step");
@@ -168,14 +170,19 @@ void goto_symext::symex_step(reachability_treet &art)
 
   case END_FUNCTION:
     log_status("    ======= goto symex: END_FUNCTION");
+
+    this->cur_state->level2.print(std::cout);
+
     symex_end_of_function();
 
+    this->cur_state->level2.print(std::cout);
+    
     // Potentially skip to run another function ptr target; if not,
     // continue
     if (!run_next_function_ptr_target(false))
       cur_state->source.pc++;
-    break;
 
+    break;
   case GOTO:
   {
     log_status("    ======= goto symex: GOTO");

@@ -237,9 +237,9 @@ z3_slhv_convt::convert_slhv_opts(
       }
       return pt_vec.size() == 1 ? pt_vec[0] : mk_uplus(pt_vec);
     }
-    case expr2t::locationof_id:
+    case expr2t::location_of_id:
     {
-      const locationof2t &locof = to_locationof2t(expr);
+      const location_of2t &locof = to_location_of2t(expr);
       const expr2tc &heap_region = locof.source_heap;
       const intheap_type2t &_type = to_intheap_type(heap_region->type);
       return convert_ast(_type.location);
@@ -289,7 +289,7 @@ z3_slhv_convt::convert_slhv_opts(
       }
       return mk_subh(args[1], args[0]);
     }
-    case expr2t::fieldof_id:
+    case expr2t::field_of_id:
     case expr2t::heap_update_id:
     case expr2t::heap_delete_id:
     {
@@ -321,24 +321,24 @@ z3_slhv_convt::convert_opt_without_assert(const expr2tc &expr)
 {
   switch (expr->expr_id)
   {
-    case expr2t::fieldof_id:
+    case expr2t::field_of_id:
     {
-      const fieldof2t &fieldof = to_fieldof2t(expr);
+      const field_of2t &field_of = to_field_of2t(expr);
 
-      if (is_constant_intheap2t(fieldof.source_heap))
+      if (is_constant_intheap2t(field_of.source_heap))
         return std::make_pair(
           mk_smt_bool(true),
-          mk_fresh(convert_sort(fieldof.type), mk_fresh_name("invalid_loc_")));
+          mk_fresh(convert_sort(field_of.type), mk_fresh_name("invalid_loc_")));
 
-      if (!is_constant_int2t(fieldof.operand))
+      if (!is_constant_int2t(field_of.operand))
       {
         log_error("Wrong field");
         abort();
       }
 
-      const expr2tc &heap_region = fieldof.source_heap;
+      const expr2tc &heap_region = field_of.source_heap;
       const intheap_type2t &_type = to_intheap_type(heap_region->type);
-      const expr2tc &field = fieldof.operand;
+      const expr2tc &field = field_of.operand;
       unsigned int _field = to_constant_int2t(field).value.to_uint64();
 
       smt_astt source_loc = convert_ast(_type.location);
@@ -429,9 +429,9 @@ z3_slhv_convt::project(const expr2tc &expr)
     }
     return convert_opt_without_assert(expr);
   }
-  else if (is_locationof2t(expr))
-    return this->project(to_locationof2t(expr).source_heap);
-  else if (is_fieldof2t(expr))
+  else if (is_location_of2t(expr))
+    return this->project(to_location_of2t(expr).source_heap);
+  else if (is_field_of2t(expr))
     return convert_opt_without_assert(expr);
   else if (is_typecast2t(expr))
     return this->project(to_typecast2t(expr).from);

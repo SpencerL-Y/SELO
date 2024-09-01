@@ -2644,22 +2644,22 @@ exprt migrate_expr_back(const expr2tc &ref)
     region.copy_to_operands(migrate_expr_back(ref2.source_location));
     return region;
   }
-  case expr2t::locationof_id:
+  case expr2t::location_of_id:
   {
-    const locationof2t &ref2 = to_locationof2t(ref);
+    const location_of2t &ref2 = to_location_of2t(ref);
     typet thetype = migrate_type_back(ref->type);
-    exprt locationof("locationof", thetype);
-    locationof.copy_to_operands(migrate_expr_back(ref2.source_heap));
-    return locationof;
+    exprt location_of("location_of", thetype);
+    location_of.copy_to_operands(migrate_expr_back(ref2.source_heap));
+    return location_of;
   }
-  case expr2t::fieldof_id:
+  case expr2t::field_of_id:
   {
-    const fieldof2t &ref2 = to_fieldof2t(ref);
+    const field_of2t &ref2 = to_field_of2t(ref);
     typet thetype = migrate_type_back(ref->type);
-    exprt fieldof("fieldof", thetype);
-    fieldof.copy_to_operands(migrate_expr_back(ref2.source_heap));
-    fieldof.copy_to_operands(migrate_expr_back(ref2.operand));
-    return fieldof;
+    exprt field_of("field_of", thetype);
+    field_of.copy_to_operands(migrate_expr_back(ref2.source_heap));
+    field_of.copy_to_operands(migrate_expr_back(ref2.operand));
+    return field_of;
   }
   case expr2t::heap_update_id:
   {

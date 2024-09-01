@@ -12,10 +12,10 @@ bool symex_slicet::get_symbols(const expr2tc &expr)
 {
   bool res = false;
 
-  // locationof only has heap_region as oprend
+  // location_of only has heap_region as oprend
   // the location of heap_region is completely fresh
   // and is not being used in symbolic execution
-  if (is_locationof2t(expr) || is_heap_region2t(expr)) return false;
+  if (is_location_of2t(expr) || is_heap_region2t(expr)) return false;
 
   // Recursively look if any of the operands has a inner symbol
   expr->foreach_operand([this, &res](const expr2tc &e) {

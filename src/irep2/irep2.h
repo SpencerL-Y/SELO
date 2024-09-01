@@ -107,8 +107,8 @@
   BOOST_PP_LIST_CONS(uplus,                                                    \
   BOOST_PP_LIST_CONS(locadd,                                                   \
   BOOST_PP_LIST_CONS(heap_region,                                              \
-  BOOST_PP_LIST_CONS(locationof,                                               \
-  BOOST_PP_LIST_CONS(fieldof,                                                  \
+  BOOST_PP_LIST_CONS(location_of,                                               \
+  BOOST_PP_LIST_CONS(field_of,                                                  \
   BOOST_PP_LIST_CONS(heap_update,                                              \
   BOOST_PP_LIST_CONS(heap_append,                                              \
   BOOST_PP_LIST_CONS(heap_delete,                                              \

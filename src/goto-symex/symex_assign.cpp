@@ -192,15 +192,28 @@ void goto_symext::symex_assign(
 
     replace_pointer_airth(lhs);
     replace_pointer_airth(rhs);
+
+    replace_address_of(lhs);
+    replace_address_of(rhs);
+
+    replace_tuple(lhs);
+    replace_tuple(rhs);
+
+    if (is_sideeffect2t(rhs) &&
+        to_sideeffect2t(rhs).kind == sideeffect2t::nondet)
+    {
+      symex_nondet(lhs, rhs);
+      return;
+    }
   }
+
+  replace_nondet(lhs);
+  replace_nondet(rhs);
 
   log_status("symex assign lhs : ------------- ");
   lhs->dump();
   log_status("symex assign rhs : ------------- ");
   rhs->dump();
-
-  replace_nondet(lhs);
-  replace_nondet(rhs);
 
   intrinsic_races_check_dereference(lhs);
   log_status("dereference lhs write");
@@ -346,7 +359,7 @@ void goto_symext::symex_assign_rec(
     log_status("symex_assign_bitfield");
     symex_assign_bitfield(lhs, full_lhs, rhs, full_rhs, guard, hidden);
   }
-  else if (is_fieldof2t(lhs))
+  else if (is_field_of2t(lhs))
   {
     log_status("symex_assign_fieldof");
     symex_assign_fieldof(lhs, full_lhs, rhs, full_rhs, guard, hidden);
@@ -905,9 +918,9 @@ void goto_symext::symex_assign_fieldof(
 {
   assert(is_scalar_type(rhs));
 
-  const fieldof2t& fieldof = to_fieldof2t(lhs);
-  const expr2tc &heap_region = fieldof.source_heap;
-  const expr2tc &field = fieldof.operand;
+  const field_of2t& field_of = to_field_of2t(lhs);
+  const expr2tc &heap_region = field_of.source_heap;
+  const expr2tc &field = field_of.operand;
 
   expr2tc update_heap =
     heap_update2tc(heap_region->type, heap_region, field, rhs);
@@ -920,6 +933,7 @@ void goto_symext::replace_nondet(expr2tc &expr)
   if (
     is_sideeffect2t(expr) && to_sideeffect2t(expr).kind == sideeffect2t::nondet)
   {
+
     unsigned int &nondet_count = get_dynamic_counter();
     expr =
       symbol2tc(expr->type, "nondet$symex::nondet" + i2string(nondet_count++));
@@ -980,13 +994,139 @@ void goto_symext::replace_pointer_airth(expr2tc &expr)
 
   if (is_member2t(expr))
   {
-    // replaced by fieldof
+    // replaced by field_of
     const member2t &member = to_member2t(expr);
 
     const struct_type2t &struct_type = to_struct_type(member.source_value->type);
 
     expr2tc field = gen_ulong(struct_type.get_component_number(member.member));
     
-    expr = fieldof2tc(member.type, member.source_value, field);
+    expr = field_of2tc(member.type, member.source_value, field);
   }
+}
+
+void goto_symext::replace_address_of(expr2tc &expr)
+{
+  if (is_nil_expr(expr)) return;
+
+  expr->Foreach_operand([this](expr2tc &e) { replace_pointer_airth(e); });
+
+  if (is_address_of2t(expr))
+  {
+    expr = location_of2tc(to_address_of2t(expr).ptr_obj);
+  }
+}
+
+void goto_symext::replace_tuple(expr2tc &expr)
+{
+  if (is_nil_expr(expr)) return;
+
+  expr->Foreach_operand([this](expr2tc &e) { replace_tuple(e); });
+
+  if (is_symbol2t(expr) && is_struct_type(expr->type))
+  {
+    log_status("found struct?");
+    unsigned int bytes = type_byte_size(expr->type, &ns).to_uint64();
+    expr->type = create_heap_region_type(expr->type, bytes, expr);
+  }
+}
+
+type2tc goto_symext::create_heap_region_type(
+  const type2tc &type,
+  unsigned int bytes,
+  const expr2tc &loc)
+{
+  expr2tc l1_loc = loc;
+  cur_state->top().level1.rename(l1_loc);
+
+  type2tc heap_type = get_intheap_type();
+  intheap_type2t &_heap_type = to_intheap_type(heap_type);
+  _heap_type.location = l1_loc;
+  _heap_type.total_bytes = bytes;
+  _heap_type.is_region = true;
+
+  if (is_struct_type(type))
+  {
+    _heap_type.is_aligned = true;
+    _heap_type.total_bytes = bytes;
+    const struct_type2t &_type = to_struct_type(type);
+    _heap_type.field_types.clear();
+    for(auto inner_type : _type.get_structure_members())
+      _heap_type.field_types.push_back(
+        is_pointer_type(inner_type) ? get_intloc_type() : get_int64_type()
+      );
+  }
+
+  return heap_type;
+}
+
+expr2tc goto_symext::create_heap_region(const sideeffect2t &effect, expr2tc &flag)
+{
+  log_status(" ======= create a heap region ========== ");
+
+  type2tc type;
+  if (effect.kind == sideeffect2t::nondet)
+  {
+    // alloc a heap region in stack
+    type = effect.type;
+  }
+  else
+  {
+    // malloc a heap region
+    type = effect.alloctype;
+    if (is_nil_type(type)) type = char_type2();
+  }
+
+  // create a new location
+  symbolt heap_region_loc;
+  heap_region_loc.name =
+    id2string(to_symbol2t(flag).get_symbol_name()) + std::string("_loc");
+  heap_region_loc.id = 
+    std::string("symex_location::") + id2string(heap_region_loc.name);
+  heap_region_loc.lvalue = true;
+  heap_region_loc.type = typet(typet::t_intloc);
+  heap_region_loc.mode = "C";
+  new_context.add(heap_region_loc);
+
+  expr2tc base_loc = symbol2tc(get_intloc_type(), heap_region_loc.id);
+  unsigned int bytes;
+
+  if (is_struct_type(type))
+  {
+    bytes = type_byte_size(type, &ns).to_uint64();
+  }
+  else
+  {
+    expr2tc op = effect.operand;
+    do_simplify(op);
+    if (!is_constant_int2t(op))
+    {
+      log_error("Do not support dynamic size");
+      abort();
+    }
+    bytes = to_constant_int2t(op).value.to_uint64();
+  }
+
+  type2tc heap_type = create_heap_region_type(type, bytes, base_loc);
+  flag->type = heap_type;
+
+  log_status(" ======= create a heap region ========== ");
+
+  return heap_region2tc(heap_type, flag, base_loc);
+}
+
+void goto_symext::symex_nondet(const expr2tc &lhs, const expr2tc &effect)
+{
+  log_status(" ======== symex nondet ===== ");
+  lhs->dump();
+  effect->dump();
+
+  expr2tc l1_lhs = lhs;
+  
+  expr2tc heap_region =
+    create_heap_region(to_sideeffect2t(effect), l1_lhs);
+
+  symex_assign(code_assign2tc(lhs, heap_region));
+  
+  log_status(" ======== symex nondet ===== ");
 }

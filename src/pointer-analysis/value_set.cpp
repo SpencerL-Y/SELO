@@ -558,11 +558,13 @@ void value_sett::get_value_set_rec(
     if (v_it != values.end())
     {
       make_union(dest, v_it->second.object_map);
-      log_status("points_to somthing");
+      log_status("points to somthing");
       for (auto obj : dest)
         object_numbering[obj.first]->dump();
       return;
     }
+    else
+      log_status("nothing");
   }
   // SLHV:
   if (is_constant_intloc2t(expr) || is_constant_intheap2t(expr) ||
@@ -594,20 +596,20 @@ void value_sett::get_value_set_rec(
     return;
   }
 
-  if (is_locationof2t(expr))
+  if (is_location_of2t(expr))
   {
     get_value_set_rec(
-      to_locationof2t(expr).source_heap,
+      to_location_of2t(expr).source_heap,
       dest, suffix, original_type
     );
     return;
   }
 
-  if (is_fieldof2t(expr))
+  if (is_field_of2t(expr))
   {
-    const fieldof2t &fieldof = to_fieldof2t(expr);
-    const expr2tc &heap_region = fieldof.source_heap;
-    expr2tc field = fieldof.operand;
+    const field_of2t &field_of = to_field_of2t(expr);
+    const expr2tc &heap_region = field_of.source_heap;
+    expr2tc field = field_of.operand;
 
     if (!is_constant_int2t(field))
     {
@@ -1276,16 +1278,15 @@ void value_sett::assign(
         expr2tc val;
         if (i == field)
         {
-          lhs_field = fieldof2tc(rhs->type, upd_heap, upd_field);
+          lhs_field = field_of2tc(rhs->type, upd_heap, upd_field);
           val = upd_value;
         }
         else
         {
-          lhs_field = fieldof2tc(_type.field_types[i], upd_heap, gen_ulong(i));
+          lhs_field = field_of2tc(_type.field_types[i], upd_heap, gen_ulong(i));
           val = lhs_field;
-          add_to_sets = false;
         }
-        assign(lhs_field, upd_value, add_to_sets);
+        assign(lhs_field, val, false);
       }
 
       return;
@@ -1443,11 +1444,11 @@ void value_sett::assign_rec(
       "." + component_name + suffix,
       add_to_sets);
   }
-  else if (is_fieldof2t(lhs))
+  else if (is_field_of2t(lhs))
   {
-    const fieldof2t &fieldof = to_fieldof2t(lhs);
+    const field_of2t &field_of = to_field_of2t(lhs);
 
-    expr2tc field = fieldof.operand;
+    expr2tc field = field_of.operand;
     if (!is_constant_int2t(field))
     {
       log_error("Do not support dynamic offset yet");
@@ -1455,7 +1456,7 @@ void value_sett::assign_rec(
     }
 
     unsigned int _field = to_constant_int2t(field).value.to_uint64();
-    const expr2tc &heap_region = fieldof.source_heap;
+    const expr2tc &heap_region = field_of.source_heap;
     const intheap_type2t &_type = to_intheap_type(heap_region->type);
 
     // TODO : fix

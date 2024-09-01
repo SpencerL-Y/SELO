@@ -77,8 +77,8 @@ bool goto_symex_statet::constant_propagation(const expr2tc &expr) const
       constant_propagation(locadd.offset);
   }
 
-  if (is_locationof2t(expr))
-    return constant_propagation(to_locationof2t(expr).source_heap);
+  if (is_location_of2t(expr))
+    return constant_propagation(to_location_of2t(expr).source_heap);
 
   if (is_array_type(expr))
   {
@@ -104,6 +104,8 @@ bool goto_symex_statet::constant_propagation(const expr2tc &expr) const
 
   if (is_symbol2t(expr))
   {
+    if (is_intheap_type(expr)) return true;
+
     symbol2t s = to_symbol2t(expr);
 
     // Null is also essentially a constant.
@@ -208,6 +210,7 @@ void goto_symex_statet::assignment(expr2tc &lhs, const expr2tc &rhs)
   expr2tc l1_lhs = lhs;
 
   expr2tc const_value = constant_propagation(rhs) ? rhs : expr2tc();
+  log_status("is constant - {}", !is_nil_expr(const_value));
   level2.make_assignment(lhs, const_value, rhs);
 
   if (use_value_set)

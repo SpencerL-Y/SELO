@@ -170,9 +170,9 @@ std::string locadd2t::field_names[esbmct::num_type_fields] =
   {"location", "offset", "", "", ""};
 std::string heap_region2t::field_names[esbmct::num_type_fields] = 
   {"flag", "source_location", "", "", ""};
-std::string locationof2t::field_names[esbmct::num_type_fields] =
+std::string location_of2t::field_names[esbmct::num_type_fields] =
   {"source_region", "", "", "", ""};
-std::string fieldof2t::field_names[esbmct::num_type_fields] =
+std::string field_of2t::field_names[esbmct::num_type_fields] =
   {"heap_region", "field", "", "", ""};
 std::string heap_update2t::field_names[esbmct::num_type_fields] = 
   {"source_region", "update_field", "update_val", "", ""};

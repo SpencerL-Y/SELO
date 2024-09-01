@@ -1704,8 +1704,8 @@ irep_typedefs(points_to, points_to_data);
 irep_typedefs(uplus, uplus_data);
 irep_typedefs(locadd, locadd_data);
 irep_typedefs(heap_region, heap_region_data);
-irep_typedefs(locationof, heap_ops);
-irep_typedefs(fieldof, heap_1op);
+irep_typedefs(location_of, heap_ops);
+irep_typedefs(field_of, heap_1op);
 irep_typedefs(heap_update, heap_2ops);
 irep_typedefs(heap_append, heap_1op);
 irep_typedefs(heap_delete, heap_1op);
@@ -3230,29 +3230,29 @@ public:
   static std::string field_names[esbmct::num_type_fields];
 };
 
-class locationof2t : public locationof_expr_methods
+class location_of2t : public location_of_expr_methods
 {
 public:
-  locationof2t(const expr2tc &source_region)
-    : locationof_expr_methods(get_intloc_type(), locationof_id, source_region)
+  location_of2t(const expr2tc &source_region)
+    : location_of_expr_methods(get_intloc_type(), location_of_id, source_region)
   {
   }
-  locationof2t(const locationof2t &ref) = default;
+  location_of2t(const location_of2t &ref) = default;
 
   static std::string field_names[esbmct::num_type_fields];
 };
 
-class fieldof2t : public fieldof_expr_methods
+class field_of2t : public field_of_expr_methods
 {
 public:
-  fieldof2t(
+  field_of2t(
     const type2tc &type,
     const expr2tc &heap_region,
     const expr2tc &field)
-    : fieldof_expr_methods(type, fieldof_id, heap_region, field)
+    : field_of_expr_methods(type, field_of_id, heap_region, field)
   {
   }
-  fieldof2t(const fieldof2t &ref) = default;
+  field_of2t(const field_of2t &ref) = default;
 
   static std::string field_names[esbmct::num_type_fields];
 };
