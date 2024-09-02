@@ -1244,7 +1244,7 @@ void value_sett::assign(
     return;
   }
 
-  if (is_intheap_type(lhs_type))
+  if (is_intheap_type(lhs_type) && !is_constant_intheap2t(rhs))
   {
     if (is_heap_region2t(rhs))
     {
@@ -1257,36 +1257,69 @@ void value_sett::assign(
       assign_rec(lhs, values_rhs, "", add_to_sets);
       return;
     }
-    if (to_intheap_type(lhs_type).is_region && is_heap_update2t(rhs))
+    if (to_intheap_type(lhs_type).is_region)
     {
-      const heap_update2t &heap_upd = to_heap_update2t(rhs);
-      const expr2tc &upd_heap = heap_upd.source_heap;
-      const expr2tc &upd_field = heap_upd.operand_1;
-      const expr2tc &upd_value = heap_upd.operand_2;
-
-      if (!is_constant_int2t(upd_field))
+      if (!is_intheap_type(rhs->type) ||
+          !to_intheap_type(rhs->type).is_region)
       {
-        log_error("Do not support dynamic field");
+        log_error("Wrong assignment for heap variable");
         abort();
       }
-      unsigned int field = to_constant_int2t(upd_field).value.to_uint64();
 
-      const intheap_type2t &_type = to_intheap_type(upd_heap->type);
-      for (unsigned int i = 0; i < _type.field_types.size(); i++)
+      unsigned int _field = -1;
+      expr2tc rhs_heap;
+      type2tc rhs_type;
+
+      if (is_heap_update2t(rhs))
       {
-        expr2tc lhs_field;
-        expr2tc val;
-        if (i == field)
+        const heap_update2t &heap_upd = to_heap_update2t(rhs);
+        rhs_heap = heap_upd.source_heap;
+        rhs_type = rhs_heap->type;
+        const expr2tc &upd_field = heap_upd.operand_1;
+        const expr2tc &upd_value = heap_upd.operand_2;
+
+        if (!is_constant_int2t(upd_field))
         {
-          lhs_field = field_of2tc(rhs->type, upd_heap, upd_field);
-          val = upd_value;
+          log_error("Do not support dynamic field");
+          abort();
         }
-        else
+
+        _field = to_constant_int2t(upd_field).value.to_uint64();
+        const intheap_type2t &_type = to_intheap_type(rhs_type);
+        expr2tc lhs_field =
+          field_of2tc(_type.field_types[_field], rhs_heap, upd_field);
+
+        assign(lhs_field, upd_value, false);
+      }
+      else if (is_symbol2t(rhs))
+      {
+        rhs_heap = rhs;
+        rhs_type = rhs->type;
+      }
+      else
+      {
+        log_error("Some wrong");
+        abort();
+      }
+
+      const intheap_type2t &_lhs_type = to_intheap_type(lhs->type);
+      const intheap_type2t &_rhs_type = to_intheap_type(rhs_type);
+
+      for (unsigned int i = 0; i < _lhs_type.field_types.size(); i++)
+      {
+        if (i == _field) continue;
+        if (_lhs_type.field_types[i] != _rhs_type.field_types[i])
         {
-          lhs_field = field_of2tc(_type.field_types[i], upd_heap, gen_ulong(i));
-          val = lhs_field;
+          log_error("Type does not match!!!");
+          abort();
         }
-        assign(lhs_field, val, false);
+
+        expr2tc lhs_field =
+          field_of2tc(_lhs_type.field_types[i], lhs, gen_ulong(i));
+        expr2tc rhs_field =
+          field_of2tc(_rhs_type.field_types[i], rhs_heap, gen_ulong(i));
+
+        assign(lhs_field, rhs_field, false);
       }
 
       return;

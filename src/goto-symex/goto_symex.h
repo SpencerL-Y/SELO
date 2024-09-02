@@ -824,6 +824,14 @@ protected:
   void replace_tuple(expr2tc &expr);
 
   /**
+   * @brief Create a heap region intloc
+   * 
+   * @param expr 
+   * @return expr2tc 
+   */
+  expr2tc create_heap_region_loc(const expr2tc &expr);
+
+  /**
    * @brief Create a heap type object
    * 
    * @param type 

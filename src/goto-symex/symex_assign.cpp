@@ -1027,8 +1027,37 @@ void goto_symext::replace_tuple(expr2tc &expr)
   {
     log_status("found struct?");
     unsigned int bytes = type_byte_size(expr->type, &ns).to_uint64();
-    expr->type = create_heap_region_type(expr->type, bytes, expr);
+    
+    // use l1 name and suffix "loc" to create base loc
+    expr2tc base_loc = create_heap_region_loc(expr);
+
+    expr->type = create_heap_region_type(expr->type, bytes, base_loc);
   }
+}
+
+expr2tc goto_symext::create_heap_region_loc(const expr2tc &expr)
+{
+  if (!is_symbol2t(expr))
+  {
+    log_error("Wrong symbol");
+    abort();
+  }
+  expr2tc l1_sym = expr;
+  cur_state->level2.get_original_name(l1_sym);
+
+  symbolt loc_sym;
+  loc_sym.name =
+    id2string(to_symbol2t(l1_sym).get_symbol_name()) + std::string("_loc");
+  loc_sym.id = std::string("symex_location::") + id2string(loc_sym.name);
+  loc_sym.lvalue = true;
+  loc_sym.type = typet(typet::t_intloc);
+  loc_sym.mode = "C";
+  new_context.add(loc_sym);
+
+  expr2tc base_loc = symbol2tc(get_intloc_type(), loc_sym.id);
+  cur_state->rename(base_loc);
+
+  return base_loc;
 }
 
 type2tc goto_symext::create_heap_region_type(
@@ -1036,12 +1065,9 @@ type2tc goto_symext::create_heap_region_type(
   unsigned int bytes,
   const expr2tc &loc)
 {
-  expr2tc l1_loc = loc;
-  cur_state->top().level1.rename(l1_loc);
-
   type2tc heap_type = get_intheap_type();
   intheap_type2t &_heap_type = to_intheap_type(heap_type);
-  _heap_type.location = l1_loc;
+  _heap_type.location = loc;
   _heap_type.total_bytes = bytes;
   _heap_type.is_region = true;
 
@@ -1077,20 +1103,9 @@ expr2tc goto_symext::create_heap_region(const sideeffect2t &effect, expr2tc &fla
     if (is_nil_type(type)) type = char_type2();
   }
 
-  // create a new location
-  symbolt heap_region_loc;
-  heap_region_loc.name =
-    id2string(to_symbol2t(flag).get_symbol_name()) + std::string("_loc");
-  heap_region_loc.id = 
-    std::string("symex_location::") + id2string(heap_region_loc.name);
-  heap_region_loc.lvalue = true;
-  heap_region_loc.type = typet(typet::t_intloc);
-  heap_region_loc.mode = "C";
-  new_context.add(heap_region_loc);
+  expr2tc base_loc = create_heap_region_loc(flag);
 
-  expr2tc base_loc = symbol2tc(get_intloc_type(), heap_region_loc.id);
   unsigned int bytes;
-
   if (is_struct_type(type))
   {
     bytes = type_byte_size(type, &ns).to_uint64();
@@ -1120,13 +1135,19 @@ void goto_symext::symex_nondet(const expr2tc &lhs, const expr2tc &effect)
   log_status(" ======== symex nondet ===== ");
   lhs->dump();
   effect->dump();
-
-  expr2tc l1_lhs = lhs;
   
+  expr2tc new_lhs = lhs;
   expr2tc heap_region =
-    create_heap_region(to_sideeffect2t(effect), l1_lhs);
+    create_heap_region(to_sideeffect2t(effect), new_lhs);
 
   symex_assign(code_assign2tc(lhs, heap_region));
+
+  const intheap_type2t &_type = to_intheap_type(new_lhs->type);
+
+  track_new_pointer(
+    _type.location,
+    get_intheap_type(),
+    gen_ulong(_type.total_bytes));
   
   log_status(" ======== symex nondet ===== ");
 }
