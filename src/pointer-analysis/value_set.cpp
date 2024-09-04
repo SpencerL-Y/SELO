@@ -578,18 +578,15 @@ void value_sett::get_value_set_rec(
 
   if (is_locadd2t(expr))
   {
-    expr2tc simp = expr;
+    const locadd2t &locadd = to_locadd2t(expr);
 
-    if (!is_constant_int2t(to_locadd2t(simp).offset))
-      simp = simp->simplify();
-    if (!is_constant_int2t(to_locadd2t(simp).offset))
+    bool is_const = false;
+    BigInt off;
+    if (is_constant_int2t(locadd.offset))
     {
-      log_error("Do not support dynamic pointer arithmetic");
-      abort();
+      off = to_constant_int2t(locadd.offset).value;
+      is_const = true;
     }
-    
-    const locadd2t &locadd = to_locadd2t(simp);
-    BigInt off = to_constant_int2t(locadd.offset).value;
 
     object_mapt pointer_expr_set;
     get_value_set_rec(locadd.location, pointer_expr_set, suffix, original_type);
@@ -600,10 +597,10 @@ void value_sett::get_value_set_rec(
 
       // TODO : Do more analysis
 
-      if (object.offset_is_set)
-        object.offset += off; // may be useless
-      else
-        object.offset = off;
+      if (is_const && object.offset_is_set)
+        object.offset += off;
+      else if (!is_const)
+        object.offset_is_set = false;
 
       // Once updated, store object reference into destination map.
       insert(dest, it.first, object);

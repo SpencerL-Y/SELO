@@ -779,8 +779,6 @@ expr2tc dereferencet::build_reference_to(
     // that to be a dereference of foo + extra_offset, resulting in an integer.
     if (!is_nil_expr(lexical_offset))
       final_offset = add2tc(final_offset->type, final_offset, lexical_offset);
-    
-    final_offset->dump();
 
     // If we're in internal mode, collect all of our data into one struct, insert
     // it into the list of internal data, and then bail. The caller does not want
@@ -876,14 +874,24 @@ expr2tc dereferencet::build_reference_to(
 
     if (!is_constant_int2t(final_offset))
     {
-      log_error("Wrong offset for object");
-      abort();
-    }
+      if (is_locadd2t(deref_expr))
+      {
+        log_status("get offset from locadd by renaming");
+        expr2tc locadd = deref_expr;
+        dereference_callback.rename(locadd);
+        expr2tc off = to_locadd2t(locadd).get_offset();
+        off->dump();
+        log_status("after renaming");
+        off->dump();
 
-  #if 0
-    // FIXME: benchmark this, on tacas.
-    dereference_callback.rename(final_offset);
-  #endif
+        final_offset = to_locadd2t(off).get_offset();
+      }
+      else
+      {
+        log_error("Wrong offset");
+        abort();
+      }
+    }
 
     // maybe used later
     unsigned int alignment = o.alignment;
@@ -891,6 +899,16 @@ expr2tc dereferencet::build_reference_to(
     if (!is_nil_expr(lexical_offset))
       final_offset = add2tc(final_offset->type, final_offset, lexical_offset);
     simplify(final_offset);
+
+    log_status("final offset : ");
+    final_offset->dump();
+
+    if (!is_constant_int2t(final_offset) &&
+        !is_symbol2t(final_offset))
+    {
+      log_error("Wrong offset, support later");
+      abort();
+    }
 
     // If we're in internal mode, collect all of our data into one struct, insert
     // it into the list of internal data, and then bail. The caller does not want
@@ -2538,23 +2556,13 @@ void dereferencet::check_heap_region_access(
   const guardt &guard,
   modet mode)
 {
-  // This check is in byte-level;
-  // Since we construct offset in word level and store total bytes
-  // of region in heap_alloc_size, offset should be transfered to
-  // byte-level.
+  // This check is in word-level;
 
   log_status(" ------------------ check heap region access ------------------ ");
   value->dump();
   offset->dump();
   type->dump();
   guard.dump();
-
-  if (!is_constant_int2t(offset))
-  {
-    // TODO : support
-    log_error("Do not support non-constant offset");
-    abort();
-  }
 
   const heap_region2t& heap_region = to_heap_region2t(value);
   const intheap_type2t &_type = to_intheap_type(heap_region.type);
@@ -2565,22 +2573,14 @@ void dereferencet::check_heap_region_access(
     abort();
   }
 
-  unsigned int _offset_bytes =
-    to_constant_int2t(offset).value.to_uint64() * 8;
-  expr2tc offset_bytes = gen_ulong(_offset_bytes);
-  
-  expr2tc total_bytes = gen_ulong(_type.total_bytes);
-
-  expr2tc access_sz = gen_ulong(type_byte_size(type, &ns).to_uint64());
-  expr2tc l = offset_bytes;
-  expr2tc r = add2tc(l->type, l, access_sz);
-  simplify(r);
+  expr2tc size = gen_ulong(_type.field_types.size());
   expr2tc offset_cond =
     and2tc(
-      greaterthanequal2tc(l, gen_ulong(0)),
-      lessthanequal2tc(r, total_bytes)
+      greaterthanequal2tc(offset, gen_ulong(0)),
+      lessthanequal2tc(offset, size)
     );
   
+  log_status("offset condition:");
   offset_cond->dump();
 
   expr2tc bound_check = not2tc(offset_cond);

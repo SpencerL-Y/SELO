@@ -194,6 +194,8 @@ void goto_symext::symex_step(reachability_treet &art)
     }
     replace_nondet(tmp);
 
+    tmp->dump();
+
     dereference(tmp, dereferencet::READ);
     replace_dynamic_allocation(tmp);
 
@@ -409,7 +411,10 @@ void goto_symext::symex_assume()
   expr2tc cond = cur_state->source.pc->guard;
   
   if (options.get_bool_option("z3-slhv"))
+  {
     replace_null(cond);
+    replace_pointer_airth(cond);
+  }
   replace_nondet(cond);
   dereference(cond, dereferencet::READ);
   replace_dynamic_allocation(cond);

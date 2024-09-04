@@ -972,6 +972,8 @@ void goto_symext::replace_pointer_airth(expr2tc &expr)
 
   if (is_add2t(expr) || is_sub2t(expr))
   {
+    if (!is_pointer_type(expr) && !is_intloc_type(expr)) return;
+
     expr2tc side_1 = is_add2t(expr) ? to_add2t(expr).side_1 : to_sub2t(expr).side_1;
     expr2tc side_2 = is_add2t(expr) ? to_add2t(expr).side_2 : to_sub2t(expr).side_2;
     
@@ -988,7 +990,7 @@ void goto_symext::replace_pointer_airth(expr2tc &expr)
 
     expr2tc locadd = locadd2tc(side_1, side_2);
     do_simplify(locadd);
-    
+
     expr = locadd;
   }
 
