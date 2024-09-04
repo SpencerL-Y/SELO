@@ -522,32 +522,13 @@ expr2tc dereferencet::dereference(
   expr2tc value;
   if (!known_exhaustive)
     value = make_failed_symbol(type);
-  
-  // TODO : fix
-  // Extract base location ad offset from locadd
-  // In SLHV, all offset is in word-level
-  expr2tc new_src = src;
-  // TODO : rename new_src by constant to get offset
-  expr2tc offset = lexical_offset;
-  if (is_locadd2t(src))
-  {
-    new_src = to_locadd2t(src).get_base_location();
-    expr2tc off_from_src = to_locadd2t(src).get_offset();
-    if (is_nil_expr(offset))
-      offset = off_from_src;
-    else
-      offset = add2tc(offset->type, offset, off_from_src);
-    expr2tc simp = offset->simplify();
-    if (!is_nil_expr(simp))
-      offset = simp;
-  }
 
   for (const expr2tc &target : points_to_set)
   {
     expr2tc new_value, pointer_guard;
 
     new_value = build_reference_to(
-      target, mode, new_src, type, guard, offset, pointer_guard);
+      target, mode, src, type, guard, lexical_offset, pointer_guard);
 
     if (is_nil_expr(new_value))
       continue;
@@ -798,6 +779,8 @@ expr2tc dereferencet::build_reference_to(
     // that to be a dereference of foo + extra_offset, resulting in an integer.
     if (!is_nil_expr(lexical_offset))
       final_offset = add2tc(final_offset->type, final_offset, lexical_offset);
+    
+    final_offset->dump();
 
     // If we're in internal mode, collect all of our data into one struct, insert
     // it into the list of internal data, and then bail. The caller does not want
@@ -871,8 +854,6 @@ expr2tc dereferencet::build_reference_to(
     }
     pointer_guard = same_object2tc(deref_expr, location_of2tc(value));
     tmp_guard.add(pointer_guard);
-  
-
 
     log_status("generated pointer guard:");
     pointer_guard->dump();
@@ -893,8 +874,7 @@ expr2tc dereferencet::build_reference_to(
     // Final offset computations start here
     expr2tc final_offset = o.offset;
 
-    if (!is_constant_int2t(final_offset) ||
-        to_constant_int2t(final_offset).value.to_uint64() != 0)
+    if (!is_constant_int2t(final_offset))
     {
       log_error("Wrong offset for object");
       abort();

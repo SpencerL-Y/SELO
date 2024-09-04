@@ -176,7 +176,7 @@ void goto_symext::symex_step(reachability_treet &art)
     symex_end_of_function();
 
     this->cur_state->level2.print(std::cout);
-    
+
     // Potentially skip to run another function ptr target; if not,
     // continue
     if (!run_next_function_ptr_target(false))
@@ -188,7 +188,10 @@ void goto_symext::symex_step(reachability_treet &art)
     log_status("    ======= goto symex: GOTO");
     expr2tc tmp(instruction.guard);
     if (options.get_bool_option("z3-slhv"))
+    {
       replace_null(tmp);
+      replace_pointer_airth(tmp);
+    }
     replace_nondet(tmp);
 
     dereference(tmp, dereferencet::READ);

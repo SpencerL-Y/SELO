@@ -78,7 +78,13 @@ bool goto_symex_statet::constant_propagation(const expr2tc &expr) const
   }
 
   if (is_location_of2t(expr))
-    return constant_propagation(to_location_of2t(expr).source_heap);
+  {
+    // Similar to address_of
+    if (is_symbol2t(to_location_of2t(expr).source_heap))
+      return true; // always return true
+    
+    // TODO
+  }
 
   if (is_array_type(expr))
   {

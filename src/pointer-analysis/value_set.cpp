@@ -566,6 +566,7 @@ void value_sett::get_value_set_rec(
     else
       log_status("nothing");
   }
+
   // SLHV:
   if (is_constant_intloc2t(expr) || is_constant_intheap2t(expr) ||
       is_heap_append2t(expr) || is_heap_delete2t(expr))
@@ -579,20 +580,35 @@ void value_sett::get_value_set_rec(
   {
     expr2tc simp = expr;
 
-    if (!is_symbol2t(to_locadd2t(simp).location) ||
-        !is_constant_int2t(to_locadd2t(simp).offset))
+    if (!is_constant_int2t(to_locadd2t(simp).offset))
       simp = simp->simplify();
-    
-    if (!is_symbol2t(to_locadd2t(simp).location) ||
-        !is_constant_int2t(to_locadd2t(simp).offset))
+    if (!is_constant_int2t(to_locadd2t(simp).offset))
     {
       log_error("Do not support dynamic pointer arithmetic");
       abort();
     }
     
     const locadd2t &locadd = to_locadd2t(simp);
+    BigInt off = to_constant_int2t(locadd.offset).value;
 
-    get_value_set_rec(locadd.location, dest, suffix, original_type);
+    object_mapt pointer_expr_set;
+    get_value_set_rec(locadd.location, pointer_expr_set, suffix, original_type);
+
+    for (const auto &it : pointer_expr_set)
+    {
+      objectt object = it.second;
+
+      // TODO : Do more analysis
+
+      if (object.offset_is_set)
+        object.offset += off; // may be useless
+      else
+        object.offset = off;
+
+      // Once updated, store object reference into destination map.
+      insert(dest, it.first, object);
+    }
+
     return;
   }
 

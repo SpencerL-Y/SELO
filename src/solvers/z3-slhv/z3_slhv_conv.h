@@ -46,7 +46,7 @@ public:
 
     smt_ast_pair convert_opt_without_assert(const expr2tc &expr);
 
-    smt_ast_pair project(const expr2tc &expr);
+    smt_astt project(const expr2tc &expr);
 
     void dump_smt() override;
 

@@ -53,7 +53,6 @@ void goto_symext::default_replace_dynamic_allocation(expr2tc &expr)
           points_to2tc(_type.location, size)
         );
       expr = heap_contain;
-      log_status(" --- generate cond for checking heap region --- ");
     }
   }
   else if (is_invalid_pointer2t(expr))

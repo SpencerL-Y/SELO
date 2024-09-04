@@ -301,13 +301,10 @@ z3_slhv_convt::convert_slhv_opts(
     {
       // Do project for SLHV
       const same_object2t& same = to_same_object2t(expr);
-      z3_slhv_convt::smt_ast_pair p1 = this->project(same.side_1);
-      z3_slhv_convt::smt_ast_pair p2 = this->project(same.side_2);
-      
-      smt_astt cond = mk_and(p1.first, p2.first);
-      smt_astt eq = mk_eq(p1.second, p2.second);
-
-      return mk_and(cond, eq);
+      smt_astt p1 = this->project(same.side_1);
+      smt_astt p2 = this->project(same.side_2);
+      smt_astt eq = mk_eq(p1, p2);
+      return eq;
     }
     default: {
       log_status("Invalid SLHV operations!!!");
@@ -417,8 +414,7 @@ z3_slhv_convt::convert_opt_without_assert(const expr2tc &expr)
   }
 }
 
-z3_slhv_convt::smt_ast_pair
-z3_slhv_convt::project(const expr2tc &expr)
+smt_astt z3_slhv_convt::project(const expr2tc &expr)
 {
   if (is_symbol2t(expr))
   {
@@ -427,34 +423,22 @@ z3_slhv_convt::project(const expr2tc &expr)
       const intheap_type2t &_type = to_intheap_type(expr->type);
       return this->project(_type.location);
     }
-    return convert_opt_without_assert(expr);
+    return convert_opt_without_assert(expr).second;
   }
   else if (is_location_of2t(expr))
     return this->project(to_location_of2t(expr).source_heap);
   else if (is_field_of2t(expr))
-    return convert_opt_without_assert(expr);
+    return convert_opt_without_assert(expr).second;
   else if (is_typecast2t(expr))
     return this->project(to_typecast2t(expr).from);
-  else if (is_locadd2t(expr) || is_add2t(expr) || is_sub2t(expr))
+  else if (is_locadd2t(expr))
+    return this->project(to_locadd2t(expr).location);
+  else
   {
-    // TODO : fix
-    expr2tc ptr;
-    if (is_locadd2t(expr))
-      ptr = to_locadd2t(expr).location;
-    else if (is_add2t(expr))
-      ptr = (is_pointer_type(to_add2t(expr).side_1) || is_intloc_type(to_add2t(expr).side_1))?
-        to_add2t(expr).side_1 : to_add2t(expr).side_2;
-    else if (is_sub2t(expr))
-      ptr = (is_pointer_type(to_sub2t(expr).side_1) || is_intloc_type(to_sub2t(expr).side_1))?
-        to_sub2t(expr).side_1 : to_sub2t(expr).side_2;
-    return this->project(ptr);
- }
-else
-{
-  log_error("Do not support project");
-  expr->dump();
-  abort();
-}
+    log_error("Do not support project");
+    expr->dump();
+    abort();
+  }
 }
 
 void z3_slhv_convt::dump_smt() {

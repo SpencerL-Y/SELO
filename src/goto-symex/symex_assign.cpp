@@ -1113,6 +1113,9 @@ expr2tc goto_symext::create_heap_region(const sideeffect2t &effect, expr2tc &fla
   else
   {
     expr2tc op = effect.operand;
+    cur_state->rename(op);
+    log_status("malloc size:");
+    op->dump();
     do_simplify(op);
     if (!is_constant_int2t(op))
     {
