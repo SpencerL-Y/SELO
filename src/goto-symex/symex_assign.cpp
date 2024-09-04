@@ -1137,17 +1137,26 @@ void goto_symext::symex_nondet(const expr2tc &lhs, const expr2tc &effect)
   effect->dump();
   
   expr2tc new_lhs = lhs;
-  expr2tc heap_region =
-    create_heap_region(to_sideeffect2t(effect), new_lhs);
+  expr2tc new_rhs = effect;
 
-  symex_assign(code_assign2tc(lhs, heap_region));
+  const sideeffect2t &_effect = to_sideeffect2t(effect);
 
-  const intheap_type2t &_type = to_intheap_type(new_lhs->type);
+  if (!is_nil_type(_effect.alloctype) && is_struct_type(_effect.alloctype))
+    new_rhs = create_heap_region(to_sideeffect2t(effect), new_lhs);
+  else
+    replace_nondet(new_rhs);
 
-  track_new_pointer(
-    _type.location,
-    get_intheap_type(),
-    gen_ulong(_type.total_bytes));
-  
+  symex_assign(code_assign2tc(lhs, new_rhs));
+
+  if (is_intheap_type(new_lhs->type))
+  {
+    const intheap_type2t &_type = to_intheap_type(new_lhs->type);
+
+    track_new_pointer(
+      _type.location,
+      get_intheap_type(),
+      gen_ulong(_type.total_bytes));
+  }
+
   log_status(" ======== symex nondet ===== ");
 }
