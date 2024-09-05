@@ -252,6 +252,8 @@ smt_astt smt_convt::convert_ast(const expr2tc &expr)
     return (cache_result->ast);
   }
 
+  bool use_old_encoding = !options.get_bool_option("z3-slhv");
+
   /* Vectors!
    *
    * Here we need special attention for Vectors, because of the way
@@ -262,7 +264,7 @@ smt_astt smt_convt::convert_ast(const expr2tc &expr)
    * for some reason we would like to run ESBMC without simplifications
    * then we need to apply it here.
   */
-  if (!options.get_bool_option("z3-slhv") && is_vector_type(expr))
+  if (use_old_encoding && is_vector_type(expr))
   {
     if (is_neg2t(expr))
     {
@@ -317,12 +319,15 @@ smt_astt smt_convt::convert_ast(const expr2tc &expr)
   case expr2t::pointer_capability_id:
   
   case expr2t::field_of_id:
+  case expr2t::heap_region_id:
   case expr2t::heap_update_id:
   case expr2t::heap_delete_id:
     break; // Don't convert their operands
 
   default:
   {
+    if (is_same_object2t(expr) && !use_old_encoding) break;
+
     // Convert all the arguments and store them in 'args'.
     unsigned int i = 0;
     expr->foreach_operand(
@@ -365,8 +370,6 @@ smt_astt smt_convt::convert_ast(const expr2tc &expr)
   case expr2t::symbol_id:
   {
     a = convert_terminal(expr);
-    log_status("convert_terminal result: ");
-    a->dump();
     break;
   }
   case expr2t::constant_string_id:
@@ -455,7 +458,7 @@ smt_astt smt_convt::convert_ast(const expr2tc &expr)
       is_pointer_type(expr->type) || is_pointer_type(add.side_1) ||
       is_pointer_type(add.side_2))
     {
-      a = this->solver_text() == "Z3-slhv" ?
+      a = !use_old_encoding ?
         convert_slhv_opts(expr, args) : 
         convert_pointer_arith(expr, expr->type);
     }
@@ -476,7 +479,7 @@ smt_astt smt_convt::convert_ast(const expr2tc &expr)
       is_pointer_type(expr->type) || is_pointer_type(sub.side_1) ||
       is_pointer_type(sub.side_2))
     {
-      a = this->solver_text() == "Z3-slhv" ?
+      a = !use_old_encoding ?
         convert_slhv_opts(expr, args) : 
         convert_pointer_arith(expr, expr->type);
     }
@@ -742,7 +745,7 @@ smt_astt smt_convt::convert_ast(const expr2tc &expr)
   {
     const same_object2t& so = to_same_object2t(expr);
     // Two projects, then comparison.
-    if (this->solver_text() != "Z3-slhv") {
+    if (use_old_encoding) {
       args[0] = args[0]->project(this, 0);
       args[1] = args[1]->project(this, 0);
       a = mk_eq(args[0], args[1]);
@@ -760,7 +763,7 @@ smt_astt smt_convt::convert_ast(const expr2tc &expr)
       ptr = &to_typecast2t(*ptr).from;
 
     args[0] = convert_ast(*ptr);
-    a = this->solver_text() == "Z3-slhv" ? args[0] : args[0]->project(this, 0);
+    a = !use_old_encoding ? args[0] : args[0]->project(this, 0);
     break;
   }
   case expr2t::pointer_object_id:
@@ -772,7 +775,7 @@ smt_astt smt_convt::convert_ast(const expr2tc &expr)
       ptr = &to_typecast2t(*ptr).from;
 
     args[0] = convert_ast(*ptr);
-    a = this->solver_text() == "Z3-slhv" ? args[0] : args[0]->project(this, 0);
+    a = !use_old_encoding ? args[0] : args[0]->project(this, 0);
     break;
   }
   case expr2t::pointer_capability_id:

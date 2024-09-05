@@ -42,10 +42,6 @@ public:
     smt_astt
     convert_slhv_opts(const expr2tc &expr, const std::vector<smt_astt>& args) override;
 
-    typedef std::pair<smt_astt, smt_astt> smt_ast_pair;
-
-    smt_ast_pair convert_opt_without_assert(const expr2tc &expr);
-
     smt_astt project(const expr2tc &expr);
 
     void dump_smt() override;

@@ -2,8 +2,8 @@
 
 
 int main(){
-    int num = 5;
-    int *j = (int*)malloc(num*sizeof(int));
-    *(j+6) = num + (-1);
-    free(j);
+    int **p = malloc(sizeof(int*));
+    *p = malloc(sizeof(int));
+    free(*p);
+    free(p);
 }

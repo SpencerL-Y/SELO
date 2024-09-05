@@ -206,13 +206,15 @@ z3_slhv_convt::convert_slhv_opts(
     case expr2t::heap_region_id:
     {
       const intheap_type2t &_type = to_intheap_type(expr->type);
+
+      smt_astt base_loc = convert_ast(_type.location);
       
       std::vector<smt_astt> pt_vec;
       if (_type.is_aligned)
       {
         for (unsigned i = 0; i < _type.field_types.size(); i++)
         {
-          smt_astt loc = i == 0 ? args[1] : mk_locadd(args[1], mk_smt_int(BigInt(i)));
+          smt_astt loc = i == 0 ? base_loc : mk_locadd(base_loc, mk_smt_int(BigInt(i)));
           smt_sortt sort =
             is_intloc_type(_type.field_types[i]) ?
               mk_intloc_sort() : mk_int_sort();
@@ -229,7 +231,7 @@ z3_slhv_convt::convert_slhv_opts(
         // Default sort is intloc
         pt_vec.push_back(
           mk_pt(
-            args[1],
+            base_loc,
             mk_fresh(mk_intloc_sort(), mk_fresh_name("tmp_loc::")
             )
           )
@@ -290,42 +292,11 @@ z3_slhv_convt::convert_slhv_opts(
       return mk_subh(args[1], args[0]);
     }
     case expr2t::field_of_id:
-    case expr2t::heap_update_id:
-    case expr2t::heap_delete_id:
-    {
-      z3_slhv_convt::smt_ast_pair sap = convert_opt_without_assert(expr);
-      assert_ast(sap.first);
-      return sap.second;
-    }
-    case expr2t::same_object_id:
-    {
-      // Do project for SLHV
-      const same_object2t& same = to_same_object2t(expr);
-      smt_astt p1 = this->project(same.side_1);
-      smt_astt p2 = this->project(same.side_2);
-      smt_astt eq = mk_eq(p1, p2);
-      return eq;
-    }
-    default: {
-      log_status("Invalid SLHV operations!!!");
-      abort();
-    }
-  }
-}
-
-z3_slhv_convt::smt_ast_pair
-z3_slhv_convt::convert_opt_without_assert(const expr2tc &expr)
-{
-  switch (expr->expr_id)
-  {
-    case expr2t::field_of_id:
     {
       const field_of2t &field_of = to_field_of2t(expr);
 
       if (is_constant_intheap2t(field_of.source_heap))
-        return std::make_pair(
-          mk_smt_bool(true),
-          mk_fresh(convert_sort(field_of.type), mk_fresh_name("invalid_loc_")));
+        return mk_fresh(convert_sort(field_of.type), mk_fresh_name("invalid_fieldof_"));
 
       if (!is_constant_int2t(field_of.operand))
       {
@@ -357,8 +328,8 @@ z3_slhv_convt::convert_opt_without_assert(const expr2tc &expr)
       }
       smt_astt v1 = mk_fresh(s1, name);
 
-      smt_astt assert_expr = mk_subh(mk_pt(loc, v1), convert_ast(heap_region));
-      return std::make_pair(assert_expr, v1);
+      assert_ast(mk_subh(mk_pt(loc, v1), convert_ast(heap_region)));
+      return v1;
     }
     case expr2t::heap_update_id:
     {
@@ -387,13 +358,11 @@ z3_slhv_convt::convert_opt_without_assert(const expr2tc &expr)
 
       // current heap state
       smt_astt old_state = mk_uplus(h1, mk_pt(loc, v1));
-      smt_astt assert_expr = mk_eq(h, old_state);
+      assert_ast(mk_eq(h, old_state));
 
       // new heap state
       smt_astt new_state = mk_uplus(h1, mk_pt(loc, val));
-
-      // new heap state
-      return std::make_pair(assert_expr,  new_state);
+      return new_state;
     }
     case expr2t::heap_delete_id:
     {
@@ -404,12 +373,22 @@ z3_slhv_convt::convert_opt_without_assert(const expr2tc &expr)
 
       smt_astt h1 = mk_fresh(mk_intheap_sort(), mk_fresh_name("tmp_heap::"));
       smt_astt v1 = mk_fresh(mk_int_sort(), mk_fresh_name("tmp_val::"));
-      smt_astt assert_expr = mk_eq(h, mk_uplus(h1, mk_pt(l, v1)));
       
-      return std::make_pair(assert_expr, h1);
+      assert_ast(mk_eq(h, mk_uplus(h1, mk_pt(l, v1))));
+      return h1;
+    }
+    case expr2t::same_object_id:
+    {
+      // Do project for SLHV
+      const same_object2t& same = to_same_object2t(expr);
+      smt_astt p1 = this->project(same.side_1);
+      smt_astt p2 = this->project(same.side_2);
+      smt_astt eq = mk_eq(p1, p2);
+      return eq;
     }
     default: {
-      return std::make_pair(mk_smt_bool(true), convert_ast(expr));
+      log_status("Invalid SLHV operations!!!");
+      abort();
     }
   }
 }
@@ -423,12 +402,17 @@ smt_astt z3_slhv_convt::project(const expr2tc &expr)
       const intheap_type2t &_type = to_intheap_type(expr->type);
       return this->project(_type.location);
     }
-    return convert_opt_without_assert(expr).second;
+
+    if (is_intloc_type(expr) || is_pointer_type(expr))
+      return convert_ast(expr);
+
+    log_error("Wrong symbol for projection");
+    expr->dump();
   }
   else if (is_location_of2t(expr))
     return this->project(to_location_of2t(expr).source_heap);
   else if (is_field_of2t(expr))
-    return convert_opt_without_assert(expr).second;
+    return convert_ast(expr);
   else if (is_typecast2t(expr))
     return this->project(to_typecast2t(expr).from);
   else if (is_locadd2t(expr))

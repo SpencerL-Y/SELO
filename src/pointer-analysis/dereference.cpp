@@ -532,11 +532,11 @@ expr2tc dereferencet::dereference(
 
     if (is_nil_expr(new_value))
       continue;
-    
-    log_status("after building reference to : not nill");
-    new_value->dump();
 
     assert(!is_nil_expr(pointer_guard));
+
+    new_value->dump();
+    type->dump();
 
     if (!dereference_type_compare(new_value, type))
     {
@@ -915,6 +915,7 @@ expr2tc dereferencet::build_reference_to(
     // to have a reference built at all.
     if (is_internal(mode))
     {
+      log_status("collect objects for doing free");
       dereference_callbackt::internal_item internal;
       internal.object = value;
       internal.offset = final_offset; // offset for SLHV
@@ -1274,10 +1275,8 @@ void dereferencet::build_deref_slhv(
     log_error("heap region must be aligned");
     abort();
   }
-
-  // heap region as a value
-  if (field == 0 && access_sz == _type.total_bytes) return;
   
+  bool is_field = true;
   if (field >= _type.field_types.size() ||
     access_sz != _type.total_bytes / _type.field_types.size())
   {
@@ -1286,14 +1285,17 @@ void dereferencet::build_deref_slhv(
       type, 
       dereference_callback.get_nondet_id("undefined_behavior_var"));
     value = sym;
-    return;
+    is_field = false;
   }
   else
     value = field_of2tc(type, value, gen_ulong(field));
 
   // update field type
-  if (_type.set_field_type(field, type))
+  if (is_field && _type.set_field_type(field, type))
     dereference_callback.update_heap_type(_type);
+
+  log_status("return dereference --->");
+  value->dump();
 
   log_status(" ----------------- build deref slhv ----------------- ");
 }

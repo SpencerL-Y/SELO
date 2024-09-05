@@ -169,9 +169,10 @@ void symex_target_equationt::convert_internal_step(
   step.dump();
   log_status(" ============================== step ======================== ");
 
-  log_status("convert step guard ast: ");
-  step.guard_ast = smt_conv.convert_ast(step.guard);
-  step.guard_ast->dump();
+  // log_status("convert step guard ast: ");
+  // guard_ast is used for generating witness
+  // not used now
+  // step.guard_ast = smt_conv.convert_ast(step.guard);
 
   if (step.is_assume() || step.is_assert())
   {
