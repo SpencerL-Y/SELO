@@ -242,9 +242,30 @@ z3_slhv_convt::convert_slhv_opts(
     case expr2t::location_of_id:
     {
       const location_of2t &locof = to_location_of2t(expr);
-      const expr2tc &heap_region = locof.source_heap;
-      const intheap_type2t &_type = to_intheap_type(heap_region->type);
-      return convert_ast(_type.location);
+
+      smt_astt loc;
+      if (is_intheap_type(locof.source_heap))
+      {
+        const expr2tc &heap_region = locof.source_heap;
+        const intheap_type2t &_type = to_intheap_type(heap_region->type);
+        loc = convert_ast(_type.location);
+      }
+      else if (is_pointer_type(locof.source_heap) ||
+          is_intloc_type(locof.source_heap))
+      {
+        if (!is_symbol2t(locof.source_heap))
+        {
+          log_error("Do not support yet");
+          locof.source_heap->dump();
+          abort();
+        }
+        
+        std::string loc_name =
+          to_symbol2t(locof.source_heap).get_symbol_name() + std::string("_LOC_");
+        
+        loc = mk_smt_symbol(loc_name, mk_intloc_sort());
+      }
+      return loc;
     }
     case expr2t::points_to_id:
     {
@@ -395,7 +416,9 @@ z3_slhv_convt::convert_slhv_opts(
 
 smt_astt z3_slhv_convt::project(const expr2tc &expr)
 {
-  if (is_symbol2t(expr))
+  if (is_constant_intloc2t(expr))
+    return mk_nil();
+  else if (is_symbol2t(expr))
   {
     if (is_intheap_type(expr))
     {
@@ -417,6 +440,14 @@ smt_astt z3_slhv_convt::project(const expr2tc &expr)
     return this->project(to_typecast2t(expr).from);
   else if (is_locadd2t(expr))
     return this->project(to_locadd2t(expr).location);
+  else if (is_if2t(expr))
+  {
+    const if2t &_if = to_if2t(expr);
+    smt_astt cond = convert_ast(_if.cond);
+    smt_astt t = this->project(_if.true_value);
+    smt_astt f = this->project(_if.true_value);
+    return mk_ite(cond, t, f);
+  }
   else
   {
     log_error("Do not support project");

@@ -559,8 +559,12 @@ void value_sett::get_value_set_rec(
     {
       make_union(dest, v_it->second.object_map);
       log_status("points to somthing");
+      int i = 0;
       for (auto obj : dest)
+      {
+        log_status("item - {} : ", i++);
         object_numbering[obj.first]->dump();
+      }
       return;
     }
     else
@@ -568,11 +572,21 @@ void value_sett::get_value_set_rec(
   }
 
   // SLHV:
-  if (is_constant_intloc2t(expr) || is_constant_intheap2t(expr) ||
+
+
+  if (is_heap_update2t(expr) || is_points_to2t(expr) ||
+      is_heap_region2t(expr) || is_constant_intheap2t(expr) ||
       is_heap_append2t(expr) || is_heap_delete2t(expr))
   {
-    expr2tc new_object = expr;
-    insert(dest, new_object, BigInt(0));
+    log_status("do not support get_value_set_rec");
+    expr->dump();
+    abort();
+  }
+
+  if (is_constant_intloc2t(expr) )
+  {
+    expr2tc null_obj = null_object2tc(get_intloc_type());
+    insert(dest, null_obj, BigInt(0));
     return;
   }
 
@@ -611,10 +625,11 @@ void value_sett::get_value_set_rec(
 
   if (is_location_of2t(expr))
   {
-    get_value_set_rec(
-      to_location_of2t(expr).source_heap,
-      dest, suffix, original_type
-    );
+    // TODO : maybe we should introduce reference
+    const location_of2t &loc_of = to_location_of2t(expr);
+    expr2tc new_obj = loc_of.source_heap;
+    
+    insert(dest, new_obj, BigInt(0));
     return;
   }
 
@@ -639,14 +654,6 @@ void value_sett::get_value_set_rec(
       original_type
     );
     return;
-  }
-
-  if (is_heap_update2t(expr) || is_points_to2t(expr) ||
-      is_heap_region2t(expr))
-  {
-    expr->dump();
-    log_status("fini get_value_set_rec heap_update");
-    abort();
   }
 
   if (is_add2t(expr) || is_sub2t(expr))
@@ -827,7 +834,6 @@ void value_sett::get_value_set_rec(
     get_expr_id(expr),
     get_type_id(expr->type));
   expr2tc tmp = unknown2tc(original_type);
-  expr->dump();
   insert(dest, tmp, BigInt(0));
 }
 
@@ -1257,28 +1263,14 @@ void value_sett::assign(
     return;
   }
 
-  if (is_intheap_type(lhs_type) && !is_constant_intheap2t(rhs))
+  if (is_intheap_type(lhs_type))
   {
-    if (is_heap_region2t(rhs))
-    {
-      // heap region is created for encoding
-      // the heap variable lhs contains all information
-      expr2tc new_obj = to_heap_region2t(rhs).flag;
-      object_mapt values_rhs;
-      // flag contains all neccessary information
-      insert(values_rhs, new_obj, BigInt(0));
-      assign_rec(lhs, values_rhs, "", add_to_sets);
-      return;
-    }
-    if (to_intheap_type(lhs_type).is_region)
-    {
-      if (!is_intheap_type(rhs->type) ||
-          !to_intheap_type(rhs->type).is_region)
-      {
-        log_error("Wrong assignment for heap variable");
-        abort();
-      }
+    // Heap varialbes perform as array variable.
+    // We only update its fields that are pointers
 
+    if ((is_heap_update2t(rhs) || is_symbol2t(rhs))
+        && to_intheap_type(rhs->type).is_region)
+    {
       unsigned int _field = -1;
       expr2tc rhs_heap;
       type2tc rhs_type;
@@ -1318,6 +1310,7 @@ void value_sett::assign(
       const intheap_type2t &_lhs_type = to_intheap_type(lhs->type);
       const intheap_type2t &_rhs_type = to_intheap_type(rhs_type);
 
+      // copy other fields
       for (unsigned int i = 0; i < _lhs_type.field_types.size(); i++)
       {
         if (i == _field) continue;
@@ -1334,9 +1327,8 @@ void value_sett::assign(
 
         assign(lhs_field, rhs_field, false);
       }
-
-      return;
     }
+    return;
   }
 
   // basic type

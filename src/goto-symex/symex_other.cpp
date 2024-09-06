@@ -11,6 +11,7 @@ void goto_symext::symex_other(const expr2tc code)
   {
     replace_null(code2);
     replace_pointer_airth(code2);
+    replace_typecast(code2);
   }
 
   code2->dump();

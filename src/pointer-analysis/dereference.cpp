@@ -384,7 +384,11 @@ expr2tc dereferencet::dereference_expr_nonscalar(
     }
 
     // Determine offset accumulated to this point (in bits)
-    expr2tc offset_to_scalar = compute_pointer_offset_bits(base, &ns);
+    expr2tc offset_to_scalar;
+    if (is_field_of2t(base))
+      offset_to_scalar = to_field_of2t(base).operand;
+    else
+      offset_to_scalar = compute_pointer_offset_bits(base, &ns);
     simplify(offset_to_scalar);
 
     dereference2t &deref = to_dereference2t(expr);
@@ -442,21 +446,7 @@ expr2tc dereferencet::dereference_expr_nonscalar(
   {
     field_of2t &field_of = to_field_of2t(expr);
 
-    if (!is_dereference2t(field_of.source_heap))
-    {
-      log_error("Do not support struct in struct yet");
-      abort();
-    }
-
-    dereference2t &deref = to_dereference2t(field_of.source_heap);
-
-    // Get the heap region
-    dereference_expr(deref.value, guard, dereferencet::READ);
-
-    expr2tc offset_to_scalar = field_of.operand;
-    simplify(offset_to_scalar);
-
-    return dereference(deref.value, base->type, guard, mode, offset_to_scalar);
+    return dereference_expr_nonscalar(field_of.source_heap, guard, mode, base);
   }
 
   // there should be no sudden transition back to scalars, except through
@@ -480,7 +470,11 @@ expr2tc dereferencet::dereference(
 {
   log_status("--------------- dereferencing pointer ---------");
   orig_src->dump();
-
+  if (!is_nil_expr(lexical_offset))
+  {
+    log_status("with lexical offset : ");
+    lexical_offset->dump();
+  }
   internal_items.clear();
 
   // Awkwardly, the pointer might not be of pointer type, for example with
@@ -503,10 +497,7 @@ expr2tc dereferencet::dereference(
   src->dump();
   dereference_callback.get_value_set(src, points_to_set);
   log_status("---- value set: {} items", points_to_set.size());
-  for(expr2tc e : points_to_set) {
-    e->dump();
-    log_status("----");
-  }
+  log_status("get value set done --------------------");
 
   /* If the value-set contains unknown or invalid, we cannot be sure it contains
    * all possible values and we have to add a fallback symbol in case all guards
@@ -534,9 +525,6 @@ expr2tc dereferencet::dereference(
       continue;
 
     assert(!is_nil_expr(pointer_guard));
-
-    new_value->dump();
-    type->dump();
 
     if (!dereference_type_compare(new_value, type))
     {
@@ -658,8 +646,10 @@ expr2tc dereferencet::build_reference_to(
   expr2tc &pointer_guard)
 {
   log_status(" =================== build reference to =================== ");
-  what->dump();
   deref_expr->dump();
+  log_status("|------------ points to -------------> ");
+  what->dump();
+  log_status("--------------------");
 
   expr2tc value;
   pointer_guard = gen_false_expr();
@@ -683,23 +673,16 @@ expr2tc dereferencet::build_reference_to(
 
   bool use_old_encoding = !options.get_bool_option("z3-slhv");
 
-  if ((is_constant_intloc2t(object) ||
-      is_constant_intheap2t(object) ||
-      is_null_object2t(root_object)) &&
-      !is_free(mode) && !is_internal(mode))
+  if (is_null_object2t(root_object) &&!is_free(mode) && !is_internal(mode))
   {
     expr2tc pointer_guard;
-    if (use_old_encoding)
-    {
-      type2tc nullptrtype = pointer_type2tc(type);
-      expr2tc null_ptr = symbol2tc(nullptrtype, "NULL");
-      pointer_guard = same_object2tc(deref_expr, null_ptr);
-    }
-    else
-    {
-      pointer_guard = same_object2tc(deref_expr, gen_nil());
-    }
+    type2tc nullptrtype = pointer_type2tc(type);
+    expr2tc null_ptr = symbol2tc(nullptrtype, "NULL");
 
+    if (use_old_encoding)
+      pointer_guard = same_object2tc(deref_expr, null_ptr);
+    else
+      pointer_guard = same_object2tc(deref_expr, gen_nil());
     guardt tmp_guard(guard);
     tmp_guard.add(pointer_guard);
 
@@ -709,10 +692,8 @@ expr2tc dereferencet::build_reference_to(
     // solver will only get confused.
     return value;
   }
-  if ((is_constant_intloc2t(object) ||
-      is_constant_intheap2t(object) ||
-      is_null_object2t(root_object)) &&
-      (is_free(mode) || is_internal(mode)))
+  
+  if (is_null_object2t(root_object) && (is_free(mode) || is_internal(mode)))
   {
     // Freeing NULL is completely legit according to C
     return value;
@@ -833,23 +814,29 @@ expr2tc dereferencet::build_reference_to(
       lexical_offset->dump();
 
     guardt tmp_guard(guard);
-    if (!is_intheap_type(value) ||
-        !to_intheap_type(value->type).is_region)
+    if (!is_intheap_type(value) &&
+        !is_pointer_type(value) &&
+        !is_intloc_type(value))
     {
-      log_error("Not heap region");
+      log_error("Do not support this tpye");
+      value->dump();
       abort();
     }
 
-    intheap_type2t &_type = to_intheap_type(value->type);
-
-    if (!is_free(mode) && !is_internal(mode))
+    if (is_intheap_type(value))
     {
-      int access_sz = type->get_width() / 8;
-      // Do alignment
-      bool has_changed = _type.do_alignment(access_sz);
-      if (has_changed)
-        dereference_callback.update_heap_type(_type);
+      intheap_type2t &_type = to_intheap_type(value->type);
+
+      if (!is_free(mode) && !is_internal(mode))
+      {
+        int access_sz = type->get_width() / 8;
+        // Do alignment
+        bool has_changed = _type.do_alignment(access_sz);
+        if (has_changed)
+          dereference_callback.update_heap_type(_type);
+      }
     }
+
     pointer_guard = same_object2tc(deref_expr, location_of2tc(value));
     tmp_guard.add(pointer_guard);
 
@@ -883,7 +870,6 @@ expr2tc dereferencet::build_reference_to(
         off->dump();
         log_status("after renaming");
         off->dump();
-
         final_offset = to_locadd2t(off).get_offset();
       }
       else
@@ -1247,9 +1233,9 @@ void dereferencet::build_deref_slhv(
 {
   log_status(" ----------------- build deref slhv ----------------- ");
   value->dump();
-  guard.dump();
-  offset->dump();
-  type->dump();
+  // guard.dump();
+  // offset->dump();
+  // type->dump();
 
   if (!is_scalar_type(type))
   {
@@ -1263,36 +1249,43 @@ void dereferencet::build_deref_slhv(
     abort();
   }
 
-  // value is the flag symbol of a heap region
-  expr2tc &heap_region = value;
-
-  unsigned int field = to_constant_int2t(offset).value.to_uint64();
-  intheap_type2t &_type = to_intheap_type(heap_region->type);
-  unsigned int access_sz = type_byte_size(type, &ns).to_uint64();
-
-  if (!_type.is_aligned)
+  if (is_intheap_type(value))
   {
-    log_error("heap region must be aligned");
-    abort();
-  }
-  
-  bool is_field = true;
-  if (field >= _type.field_types.size() ||
-    access_sz != _type.total_bytes / _type.field_types.size())
-  {
-    // Out of bound or unaligned - undefined behavior
-    expr2tc sym = symbol2tc(
-      type, 
-      dereference_callback.get_nondet_id("undefined_behavior_var"));
-    value = sym;
-    is_field = false;
+    expr2tc &heap_region = value;
+
+    unsigned int field = to_constant_int2t(offset).value.to_uint64();
+    intheap_type2t &_type = to_intheap_type(heap_region->type);
+    unsigned int access_sz = type_byte_size(type, &ns).to_uint64();
+
+    if (!_type.is_aligned)
+    {
+      log_error("heap region must be aligned");
+      abort();
+    }
+    
+    bool is_field = true;
+    if (field >= _type.field_types.size() ||
+      access_sz != _type.total_bytes / _type.field_types.size())
+    {
+      // Out of bound or unaligned - undefined behavior
+      expr2tc sym = symbol2tc(
+        type, 
+        dereference_callback.get_nondet_id("undefined_behavior_var"));
+      value = sym;
+      is_field = false;
+    }
+    else
+      value = field_of2tc(type, value, gen_ulong(field));
+
+    // update field type
+    if (is_field && _type.set_field_type(field, type))
+      dereference_callback.update_heap_type(_type);
   }
   else
-    value = field_of2tc(type, value, gen_ulong(field));
-
-  // update field type
-  if (is_field && _type.set_field_type(field, type))
-    dereference_callback.update_heap_type(_type);
+  {
+    // pointer - return itself
+  }
+  
 
   log_status("return dereference --->");
   value->dump();
@@ -2560,30 +2553,39 @@ void dereferencet::check_heap_region_access(
 {
   // This check is in word-level;
 
-  log_status(" ------------------ check heap region access ------------------ ");
-  value->dump();
-  offset->dump();
-  type->dump();
-  guard.dump();
+  // log_status(" ------------------ check heap region access ------------------ ");
+  // value->dump();
+  // offset->dump();
+  // type->dump();
+  // guard.dump();
 
-  const heap_region2t& heap_region = to_heap_region2t(value);
-  const intheap_type2t &_type = to_intheap_type(heap_region.type);
-
-  if (!_type.is_aligned)
+  expr2tc offset_cond;
+  if (is_intheap_type(value))
   {
-    log_error("heap region must be aligned");
-    abort();
+    const heap_region2t& heap_region = to_heap_region2t(value);
+    const intheap_type2t &_type = to_intheap_type(heap_region.type);
+
+    if (!_type.is_aligned)
+    {
+      log_error("heap region must be aligned");
+      abort();
+    }
+
+    expr2tc size = gen_ulong(_type.field_types.size());
+    offset_cond =
+      and2tc(
+        greaterthanequal2tc(offset, gen_ulong(0)),
+        lessthanequal2tc(offset, size)
+      );
+  }
+  else
+  {
+    // pointer
+    offset_cond = equality2tc(offset, gen_ulong(0));
   }
 
-  expr2tc size = gen_ulong(_type.field_types.size());
-  expr2tc offset_cond =
-    and2tc(
-      greaterthanequal2tc(offset, gen_ulong(0)),
-      lessthanequal2tc(offset, size)
-    );
-  
-  log_status("offset condition:");
-  offset_cond->dump();
+  // log_status("offset condition:");
+  // offset_cond->dump();
 
   expr2tc bound_check = not2tc(offset_cond);
   if(!options.get_bool_option("no-bounds-check"))
@@ -2597,7 +2599,7 @@ void dereferencet::check_heap_region_access(
     );
   }
 
-  log_status(" ------------------ check heap region access ------------------ ");
+  // log_status(" ------------------ check heap region access ------------------ ");
 }
 
 void dereferencet::check_alignment(

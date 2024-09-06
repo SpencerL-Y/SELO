@@ -23,6 +23,10 @@ expr2tc expr2t::simplify() const
     if (expr_id == address_of_id) // unlikely
       return expr2tc();
 
+    // Similar to addressof
+    if (expr_id == location_of_id)
+      return expr2tc();
+
     // And overflows too. We don't wish an add to distribute itself, for example,
     // when we're trying to work out whether or not it's going to overflow.
     if (expr_id == overflow_id)

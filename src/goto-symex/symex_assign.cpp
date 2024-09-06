@@ -199,6 +199,9 @@ void goto_symext::symex_assign(
     replace_tuple(lhs);
     replace_tuple(rhs);
 
+    replace_typecast(lhs);
+    replace_typecast(rhs);
+
     if (is_sideeffect2t(rhs) &&
         to_sideeffect2t(rhs).kind == sideeffect2t::nondet)
     {
@@ -1019,6 +1022,28 @@ void goto_symext::replace_address_of(expr2tc &expr)
   }
 }
 
+void goto_symext::replace_typecast(expr2tc &expr)
+{
+  if (is_nil_expr(expr)) return;
+
+  expr->Foreach_operand([this](expr2tc &e) { replace_typecast(e); });
+
+  if (is_typecast2t(expr))
+  {
+    const typecast2t &typecast = to_typecast2t(expr);
+
+    // Oly replace bool typecast
+    if ((is_pointer_type(typecast.from) || is_intloc_type(typecast.from))
+        && is_bool_type(typecast.type))
+    {
+      log_status("replace typecast to bool");
+      expr->dump();
+
+      expr = notequal2tc(typecast.from, gen_nil());
+    }
+  }
+}
+
 void goto_symext::replace_tuple(expr2tc &expr)
 {
   if (is_nil_expr(expr)) return;
@@ -1146,10 +1171,11 @@ void goto_symext::symex_nondet(const expr2tc &lhs, const expr2tc &effect)
 
   const sideeffect2t &_effect = to_sideeffect2t(effect);
 
-  if (!is_nil_type(_effect.alloctype) && is_struct_type(_effect.alloctype))
-    new_rhs = create_heap_region(to_sideeffect2t(effect), new_lhs);
-  else
+  if (_effect.kind == sideeffect2t::nondet &&
+      !is_struct_type(_effect.type))
     replace_nondet(new_rhs);
+  else
+    new_rhs = create_heap_region(to_sideeffect2t(effect), new_lhs);
 
   symex_assign(code_assign2tc(lhs, new_rhs));
 

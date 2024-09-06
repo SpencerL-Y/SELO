@@ -818,6 +818,14 @@ protected:
   void replace_address_of(expr2tc &expr);
 
   /**
+   * @brief Eliminate typecast from intloc to pointer and
+   * replace casting from pointer to bool by equation
+   * 
+   * @param expr 
+   */
+  void replace_typecast(expr2tc &expr);
+
+  /**
    * @brief Replace all struct/array variable by heap variable
    * @param expr 
    */

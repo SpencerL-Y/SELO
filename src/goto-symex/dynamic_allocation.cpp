@@ -31,7 +31,6 @@ void goto_symext::default_replace_dynamic_allocation(expr2tc &expr)
       expr = index_expr;
     } else {
       // Checking that the object is valid by heap_alloc_size
-      log_status(" --- generate cond for checking heap region --- ");
       const valid_object2t &obj = to_valid_object2t(expr);
       const expr2tc &heap_region = obj.value;
       if (!is_intheap_type(heap_region->type) ||
@@ -96,12 +95,24 @@ void goto_symext::default_replace_dynamic_allocation(expr2tc &expr)
     }
     else
     {
-      // TODO : support
-      log_error("Dot not support invalid pointer yet");
-      abort();
+      log_status("replace invalid pointer");
+      obj_expr->dump();
 
       expr2tc alloc_size_heap;
       migrate_expr(symbol_expr(*ns.lookup(alloc_size_heap_name)), alloc_size_heap);
+
+      unsigned int &nondet_counter = get_nondet_counter();
+      nondet_counter++;
+      expr2tc size_sym =
+        symbol2tc(
+          get_int64_type(),
+          std::string("INVALID_SIZE_") + std::to_string(nondet_counter)
+        );
+      expr2tc pt = points_to2tc(obj_expr, size_sym);
+
+      expr2tc heap_ct = heap_contain2tc(alloc_size_heap, pt);
+
+      expr = not2tc(heap_ct);
     }
   }
   else if (is_deallocated_obj2t(expr))

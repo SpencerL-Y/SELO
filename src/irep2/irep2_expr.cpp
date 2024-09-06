@@ -449,6 +449,8 @@ const expr2tc &object_descriptor2t::get_root_object() const
       tmp = &to_member2t(*tmp).source_value;
     else if (is_index2t(*tmp))
       tmp = &to_index2t(*tmp).source_value;
+    else if (is_field_of2t(*tmp))
+      tmp = &to_field_of2t(*tmp).source_heap;
     else
       return *tmp;
   } while (1);

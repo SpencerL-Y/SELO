@@ -191,6 +191,7 @@ void goto_symext::symex_step(reachability_treet &art)
     {
       replace_null(tmp);
       replace_pointer_airth(tmp);
+      replace_typecast(tmp);
     }
     replace_nondet(tmp);
 
@@ -199,6 +200,7 @@ void goto_symext::symex_step(reachability_treet &art)
     dereference(tmp, dereferencet::READ);
     replace_dynamic_allocation(tmp);
 
+    log_status("herer");
     symex_goto(tmp);
   }
   break;
@@ -226,7 +228,10 @@ void goto_symext::symex_step(reachability_treet &art)
       }
 
       if (options.get_bool_option("z3-slhv"))
+      {
         replace_null(thecode);
+        replace_typecast(thecode);
+      }
       symex_return(thecode);
     }
 
@@ -414,6 +419,7 @@ void goto_symext::symex_assume()
   {
     replace_null(cond);
     replace_pointer_airth(cond);
+    replace_typecast(cond);
   }
   replace_nondet(cond);
   dereference(cond, dereferencet::READ);
@@ -440,7 +446,10 @@ void goto_symext::symex_assert()
 
   expr2tc tmp = instruction.guard;
   if (options.get_bool_option("z3-slhv"))
+  {
     replace_null(tmp);
+    replace_typecast(tmp);
+  }
   replace_nondet(tmp);
 
   intrinsic_races_check_dereference(tmp);

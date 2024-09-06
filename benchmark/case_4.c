@@ -1,19 +1,28 @@
 #include <stdlib.h>
-int *a, *b;
-int n;
-
-int main(){
-    n = 128;
-    a = malloc (n * sizeof(*a));
-    b = malloc (n * sizeof(*b));
-    *b++ = 0;
-    int i;
-    for (i = 0; i < n; i++)
-        a[i] = -1;
-    for (i = 0; i < 128 - 1; i++)
-        b[i] = -1;
-    if (b[-2]) /* invalid deref */
-    { free(a); free(b-1); }
-    else
-    { free(a); free(b-1); }
+extern int __VERIFIER_nondet_int(void);
+struct item {
+    struct item *next;
+    struct item *data;
+};
+static void append(struct item **plist)
+{
+    struct item *item = malloc(sizeof *item);
+    item->next = *plist;
+    item->data = (item->next)
+        ? item->next->data
+        : malloc(sizeof *item);
+    *plist = item;
+}
+int main()
+{
+    struct item *list = ((void *)0);
+    int i = 0;
+    append(&list);
+    if (list) {
+        struct item *next = list->next;
+        free(list->data);
+        free(list);
+        list = next;
+    }
+    return 0;
 }
