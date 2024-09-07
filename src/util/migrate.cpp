@@ -2640,7 +2640,6 @@ exprt migrate_expr_back(const expr2tc &ref)
     const heap_region2t &ref2 = to_heap_region2t(ref);
     typet thetype = migrate_type_back(ref->type);
     exprt region("heap_region", thetype);
-    region.copy_to_operands(migrate_expr_back(ref2.flag));
     region.copy_to_operands(migrate_expr_back(ref2.source_location));
     return region;
   }

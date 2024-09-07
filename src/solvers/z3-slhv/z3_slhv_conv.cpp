@@ -43,7 +43,7 @@ smt_convt *create_new_z3_slhv_solver(
 }
 
 z3_slhv_convt::z3_slhv_convt(const namespacet &_ns, const optionst& _options)
-  : z3_convt(_ns, _options) {
+  : z3_convt(_ns, _options), heap_state(mk_smt_bool(true)) {
     // initialize the z3 based slhv converter here
     int_encoding = true;
     solver = z3::solver(z3_ctx, "SLHV");
@@ -193,6 +193,238 @@ smt_sortt z3_slhv_convt::convert_slhv_sorts(const type2tc &type) {
   }
 }
 
+void z3_slhv_convt::collect_heap_state(smt_astt &a)
+{
+  if (to_solver_smt_ast<z3_smt_ast>(heap_state)->a.is_true())
+    return;
+  smt_astt simp =
+    new_ast(
+      to_solver_smt_ast<z3_smt_ast>(heap_state)->a.simplify(),
+      mk_bool_sort()
+    );
+  a = mk_and(simp, a);
+  heap_state = mk_smt_bool(true);
+}
+
+smt_astt z3_slhv_convt::convert_assign(const expr2tc &expr)
+{
+  const equality2t &eq = to_equality2t(expr);
+  smt_astt side1 = convert_ast(eq.side_1); // LHS
+  smt_astt side2 = convert_ast(eq.side_2); // RHS
+
+  smt_astt a = mk_eq(side1, side2);
+  collect_heap_state(a);
+  assert_ast(a);
+
+  // Put that into the smt cache, thus preserving the value of the assigned symbols.
+  // IMPORTANT: the cache is now a fundamental part of how some flatteners work,
+  // in that one can choose to create a set of expressions and their ASTs, then
+  // store them in the cache, rather than have a more sophisticated conversion.
+  smt_cache_entryt e = {eq.side_1, a, ctx_level};
+  smt_cache.insert(e);
+
+  return side2;
+}
+
+smt_astt z3_slhv_convt::convert_ast(const expr2tc &expr)
+{
+  log_status("------------------------------- convert ast -----------------------------");
+  expr->dump();
+  log_status("-------------------------------------------------------------------------");
+
+  smt_cachet::const_iterator cache_result = smt_cache.find(expr);
+  if (cache_result != smt_cache.end()) {
+    log_status("found!!!!!!!!");
+    cache_result->ast->dump();
+    return (cache_result->ast);
+  }
+
+  std::vector<smt_astt> args;
+  args.reserve(expr->get_num_sub_exprs());
+
+  switch (expr->expr_id)
+  {
+  case expr2t::pointer_object_id:
+  case expr2t::same_object_id:
+
+  case expr2t::constant_intloc_id:
+  case expr2t::constant_intheap_id:
+  case expr2t::location_of_id:
+  case expr2t::field_of_id:
+  case expr2t::heap_region_id:
+  case expr2t::heap_update_id:
+  case expr2t::heap_delete_id:
+    break; // Don't convert their operands
+
+  default:
+  {
+    // Convert all the arguments and store them in 'args'.
+    unsigned int i = 0;
+    expr->foreach_operand(
+      [this, &args, &i](const expr2tc &e) { args[i++] = convert_ast(e); });
+    log_status(" -------------- convert args finished ------------ ");
+    for (int i = 0; i < expr->get_num_sub_exprs(); i++) {
+      args[i]->dump();
+    }
+    log_status(" -------------- convert args finished ------------ ");
+  }
+  }
+
+  log_status("begin convert expr");
+  expr->dump();
+
+  smt_astt a;
+  switch (expr->expr_id)
+  {
+    case expr2t::constant_intheap_id:
+    case expr2t::constant_intloc_id:
+    case expr2t::heap_region_id:
+    case expr2t::location_of_id:
+    case expr2t::field_of_id:
+    case expr2t::points_to_id:
+    case expr2t::uplus_id:
+    case expr2t::locadd_id:
+    case expr2t::heap_update_id:
+    case expr2t::heap_contain_id:
+    case expr2t::heap_append_id:
+    case expr2t::heap_delete_id:
+    {
+      a = convert_slhv_opts(expr, args); 
+      break;
+    }
+
+    case expr2t::constant_int_id:
+    case expr2t::constant_bool_id:
+    case expr2t::symbol_id:
+    {
+      a = convert_terminal(expr);
+      break;
+    }
+    case expr2t::add_id:
+    {
+      const add2t &add = to_add2t(expr);
+      a = mk_add(args[0], args[1]);
+      break;
+    }
+    case expr2t::sub_id:
+    {
+      const sub2t &sub = to_sub2t(expr);
+      a = mk_sub(args[0], args[1]);
+      break;
+    }
+    case expr2t::same_object_id:
+    {
+      const same_object2t& so = to_same_object2t(expr);
+      args[0] = this->project(so.side_1);
+      args[1] = this->project(so.side_2);
+      a = mk_eq(args[0], args[1]);
+      break;
+    }
+    case expr2t::pointer_object_id:
+    {
+      const pointer_object2t &obj = to_pointer_object2t(expr);
+      const expr2tc *ptr = &obj.ptr_obj;
+
+      args[0] = convert_ast(*ptr);
+      a = args[0];
+      break;
+    }
+    case expr2t::typecast_id:
+    {
+      a = convert_typecast(expr);
+      break;
+    }
+    case expr2t::if_id:
+    {
+      // Only attempt to handle struct.s
+      const if2t &if_ref = to_if2t(expr);
+      args[0] = convert_ast(if_ref.cond);
+      args[1] = convert_ast(if_ref.true_value);
+      args[2] = convert_ast(if_ref.false_value);
+      a = args[1]->ite(this, args[0], args[2]);
+      break;
+    }
+    case expr2t::equality_id:
+    {
+      auto eq = to_equality2t(expr);
+      a = args[0]->eq(this, args[1]);
+      break;
+    }
+    case expr2t::notequal_id:
+    {
+      auto neq = to_notequal2t(expr);
+      a = args[0]->eq(this, args[1]);
+      a = mk_not(a);
+      break;
+    }
+    case expr2t::lessthan_id:
+    {
+      const lessthan2t &lt = to_lessthan2t(expr);
+      a = mk_lt(args[0], args[1]);
+      break;
+    }
+    case expr2t::lessthanequal_id:
+    {
+      const lessthanequal2t &lte = to_lessthanequal2t(expr);
+      a = mk_le(args[0], args[1]);
+      break;
+    }
+    case expr2t::greaterthan_id:
+    {
+      const greaterthan2t &gt = to_greaterthan2t(expr);
+      a = mk_gt(args[0], args[1]);
+      break;
+    }
+    case expr2t::greaterthanequal_id:
+    {
+      const greaterthanequal2t &gte = to_greaterthanequal2t(expr);
+      // Pointer relation:
+      a = mk_ge(args[0], args[1]);
+      break;
+    }
+    case expr2t::implies_id:
+    {
+      a = mk_implies(args[0], args[1]);
+      break;
+    }
+    case expr2t::not_id:
+    {
+      assert(is_bool_type(expr));
+      a = mk_not(args[0]);
+      break;
+    }
+    case expr2t::neg_id:
+    {
+      const neg2t &neg = to_neg2t(expr);
+      a = mk_neg(args[0]);
+      break;
+    }
+    case expr2t::and_id:
+    {
+      a = mk_and(args[0], args[1]);
+      break;
+    }
+    case expr2t::or_id:
+    {
+      a = mk_or(args[0], args[1]);
+      break;
+    }
+    default:
+      log_error("Couldn't convert expression in unrecognised format\n{}", *expr);
+      abort();
+  }
+
+  if (is_bool_type(expr->type)) collect_heap_state(a);
+
+  struct smt_cache_entryt entry = {expr, a, ctx_level};
+  smt_cache.insert(entry);
+
+  log_status("==== converted reuslt: ");
+  a->dump();
+  log_status("====");
+  return a;
+}
+
 smt_astt
 z3_slhv_convt::convert_slhv_opts(
   const expr2tc &expr, const std::vector<smt_astt>& args)
@@ -250,20 +482,37 @@ z3_slhv_convt::convert_slhv_opts(
         const intheap_type2t &_type = to_intheap_type(heap_region->type);
         loc = convert_ast(_type.location);
       }
-      else if (is_pointer_type(locof.source_heap) ||
-          is_intloc_type(locof.source_heap))
+      else if (is_symbol2t(locof.source_heap) && 
+          (is_pointer_type(locof.source_heap) ||
+           is_intloc_type(locof.source_heap)))
       {
-        if (!is_symbol2t(locof.source_heap))
-        {
-          log_error("Do not support yet");
-          locof.source_heap->dump();
-          abort();
-        }
-        
         std::string loc_name =
           to_symbol2t(locof.source_heap).get_symbol_name() + std::string("_LOC_");
-        
         loc = mk_smt_symbol(loc_name, mk_intloc_sort());
+      }
+      else if (is_field_of2t(locof.source_heap))
+      {
+        const field_of2t &fieldof = to_field_of2t(locof.source_heap);
+        if(!is_intheap_type(fieldof.source_heap->type) ||
+           !to_intheap_type(fieldof.source_heap->type).is_region ||
+           is_nil_expr(to_intheap_type(fieldof.source_heap->type).location))
+        {
+          log_status("Incomplete intheap type for field of");
+          fieldof.dump();
+          abort();
+        }
+
+        const intheap_type2t &_type = to_intheap_type(fieldof.source_heap->type);
+        loc = mk_locadd(
+          convert_ast(_type.location),
+          convert_ast(fieldof.operand)
+        );
+      }
+      else
+      {
+        log_error("Do not support yet");
+        locof.source_heap->dump();
+        abort();
       }
       return loc;
     }
@@ -349,7 +598,12 @@ z3_slhv_convt::convert_slhv_opts(
       }
       smt_astt v1 = mk_fresh(s1, name);
 
-      assert_ast(mk_subh(mk_pt(loc, v1), convert_ast(heap_region)));
+      // assert_ast(mk_subh(mk_pt(loc, v1), convert_ast(heap_region)));
+      heap_state =
+        mk_and(
+          heap_state,
+          mk_subh(mk_pt(loc, v1), convert_ast(heap_region))
+        );
       return v1;
     }
     case expr2t::heap_update_id:
@@ -379,7 +633,8 @@ z3_slhv_convt::convert_slhv_opts(
 
       // current heap state
       smt_astt old_state = mk_uplus(h1, mk_pt(loc, v1));
-      assert_ast(mk_eq(h, old_state));
+      // assert_ast(mk_eq(h, old_state));
+      heap_state = mk_and(heap_state, mk_eq(h, old_state));
 
       // new heap state
       smt_astt new_state = mk_uplus(h1, mk_pt(loc, val));
@@ -395,7 +650,8 @@ z3_slhv_convt::convert_slhv_opts(
       smt_astt h1 = mk_fresh(mk_intheap_sort(), mk_fresh_name("tmp_heap::"));
       smt_astt v1 = mk_fresh(mk_int_sort(), mk_fresh_name("tmp_val::"));
       
-      assert_ast(mk_eq(h, mk_uplus(h1, mk_pt(l, v1))));
+      // assert_ast(mk_eq(h, mk_uplus(h1, mk_pt(l, v1))));
+      heap_state = mk_and(heap_state, mk_eq(h, mk_uplus(h1, mk_pt(l, v1))));
       return h1;
     }
     case expr2t::same_object_id:

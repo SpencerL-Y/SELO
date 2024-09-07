@@ -213,11 +213,6 @@ void goto_symext::symex_assign(
   replace_nondet(lhs);
   replace_nondet(rhs);
 
-  log_status("symex assign lhs : ------------- ");
-  lhs->dump();
-  log_status("symex assign rhs : ------------- ");
-  rhs->dump();
-
   intrinsic_races_check_dereference(lhs);
   log_status("dereference lhs write");
   dereference(lhs, dereferencet::WRITE);
@@ -229,7 +224,7 @@ void goto_symext::symex_assign(
   replace_dynamic_allocation(rhs);
   log_status("replace done");
 
-  log_status("after deref and replace : =-====");
+  log_status("after deref and replace -------------");
   lhs->dump();
   rhs->dump();
 
@@ -288,10 +283,6 @@ void goto_symext::symex_assign(
                     (s.find("__ESBMC_") != std::string::npos);
     }
   }
-
-  log_status("before symex assign rec : =-====");
-  lhs->dump();
-  rhs->dump();
 
   guardt g(guard); // NOT the state guard!
   symex_assign_rec(lhs, original_lhs, rhs, expr2tc(), g, hidden_ssa);
@@ -1104,10 +1095,16 @@ type2tc goto_symext::create_heap_region_type(
     _heap_type.total_bytes = bytes;
     const struct_type2t &_type = to_struct_type(type);
     _heap_type.field_types.clear();
-    for(auto inner_type : _type.get_structure_members())
+    const std::vector<type2tc> &inner_types = _type.get_structure_members();
+    const std::vector<irep_idt> &inner_field_names = _type.get_structure_member_names();
+    for (unsigned int i = 0; i < inner_field_names.size(); i++)
+    {
+      const std::string &field_name = inner_field_names[i].as_string();
+      if (field_name.find("anon_pad") != std::string::npos) continue;
       _heap_type.field_types.push_back(
-        is_pointer_type(inner_type) ? get_intloc_type() : get_int64_type()
+        is_pointer_type(inner_types[i]) ? get_intloc_type() : get_int64_type()
       );
+    }
   }
 
   return heap_type;
@@ -1141,8 +1138,6 @@ expr2tc goto_symext::create_heap_region(const sideeffect2t &effect, expr2tc &fla
   {
     expr2tc op = effect.operand;
     cur_state->rename(op);
-    log_status("malloc size:");
-    op->dump();
     do_simplify(op);
     if (!is_constant_int2t(op))
     {
@@ -1152,12 +1147,13 @@ expr2tc goto_symext::create_heap_region(const sideeffect2t &effect, expr2tc &fla
     bytes = to_constant_int2t(op).value.to_uint64();
   }
 
+  log_status("malloc size : {}", bytes);
+
   type2tc heap_type = create_heap_region_type(type, bytes, base_loc);
   flag->type = heap_type;
 
   log_status(" ======= create a heap region ========== ");
-
-  return heap_region2tc(heap_type, flag, base_loc);
+  return heap_region2tc(heap_type, base_loc);
 }
 
 void goto_symext::symex_nondet(const expr2tc &lhs, const expr2tc &effect)

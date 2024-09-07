@@ -626,10 +626,18 @@ void value_sett::get_value_set_rec(
   if (is_location_of2t(expr))
   {
     // TODO : maybe we should introduce reference
-    const location_of2t &loc_of = to_location_of2t(expr);
-    expr2tc new_obj = loc_of.source_heap;
-    
-    insert(dest, new_obj, BigInt(0));
+    const location_of2t &locof = to_location_of2t(expr);
+    expr2tc new_obj = locof.source_heap;
+    BigInt off(0);
+
+    if (is_field_of2t(locof.source_heap))
+    {
+      const field_of2t &fieldof = to_field_of2t(locof.source_heap);
+      new_obj = fieldof.source_heap;
+      off = to_constant_int2t(fieldof.operand).value;
+    }
+
+    insert(dest, new_obj, off);
     return;
   }
 

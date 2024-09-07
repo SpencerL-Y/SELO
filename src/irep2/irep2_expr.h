@@ -987,22 +987,18 @@ public:
   heap_region_data(
     const type2tc &t,
     datatype_ops::expr_ids id,
-    const expr2tc &f,
-    const expr2tc &sl)
-    : expr2t(t, id), flag(f), source_location(sl)
+    const expr2tc &l)
+    : expr2t(t, id), source_location(l)
   {
   }
   heap_region_data(const heap_region_data& ref) = default;
 
-  expr2tc flag;
   expr2tc source_location;
 
   // Type mangling:
-  typedef esbmct::field_traits<expr2tc, heap_region_data, &heap_region_data::flag>
-    flag_field;
   typedef esbmct::field_traits<expr2tc, heap_region_data, &heap_region_data::source_location>
     source_location_field;
-  typedef esbmct::expr2t_traits<flag_field, source_location_field> traits;
+  typedef esbmct::expr2t_traits<source_location_field> traits;
 };
 
 class heap_ops : public expr2t
@@ -3220,9 +3216,8 @@ class heap_region2t : public heap_region_expr_methods
 public:
   heap_region2t(
     const type2tc &type,
-    const expr2tc &flag,
     const expr2tc &source_location)
-    : heap_region_expr_methods(type, heap_region_id, flag, source_location)
+    : heap_region_expr_methods(type, heap_region_id, source_location)
   {
   }
   heap_region2t(const heap_region2t &ref) = default;

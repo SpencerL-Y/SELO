@@ -141,8 +141,6 @@ const expr2tc &dereferencet::get_symbol(const expr2tc &expr)
 
 void dereferencet::dereference_expr(expr2tc &expr, guardt &guard, modet mode)
 {
-  log_status("deref expr:");
-  expr->dump();
   if (!has_dereference(expr))
     return;
 
@@ -158,8 +156,6 @@ void dereferencet::dereference_expr(expr2tc &expr, guardt &guard, modet mode)
     break;
   case expr2t::dereference_id:
   {
-    log_status("dereference expr: dereference id");
-    expr->dump();
     /* Interpret an actual dereference expression. First dereferences the
      * pointer expression, then dereferences the pointer itself, and stores the
      * result in 'expr'. */
@@ -363,8 +359,6 @@ expr2tc dereferencet::dereference_expr_nonscalar(
   modet mode,
   const expr2tc &base)
 {
-  log_status("deref expr nonscalar");
-  expr->dump();
   if (is_dereference2t(expr))
   {
     /* The first expression we're called with is index2t, member2t or non-scalar
@@ -487,8 +481,6 @@ expr2tc dereferencet::dereference(
     src = typecast2tc(pointer_type2tc(get_empty_type()), src);
 
   type2tc type = ns.follow(to_type);
-  log_status("dereference type:");
-  type->dump();
 
   // collect objects dest may point to
   value_setst::valuest points_to_set;
@@ -496,7 +488,6 @@ expr2tc dereferencet::dereference(
   log_status("---- value set for ");
   src->dump();
   dereference_callback.get_value_set(src, points_to_set);
-  log_status("---- value set: {} items", points_to_set.size());
   log_status("get value set done --------------------");
 
   /* If the value-set contains unknown or invalid, we cannot be sure it contains
@@ -806,10 +797,6 @@ expr2tc dereferencet::build_reference_to(
   } else {
     value = object;
 
-    log_status("before building pointer guard");
-    value->dump();
-    deref_expr->dump();
-    type->dump();
     if (!is_nil_expr(lexical_offset))
       lexical_offset->dump();
 
@@ -840,14 +827,9 @@ expr2tc dereferencet::build_reference_to(
     pointer_guard = same_object2tc(deref_expr, location_of2tc(value));
     tmp_guard.add(pointer_guard);
 
-    log_status("generated pointer guard:");
-    pointer_guard->dump();
-
     // Check that the object we're accessing is actually alive and valid for this
     // mode.
     valid_check(value, tmp_guard, mode);
-
-    log_status("finish checking");
 
     // Don't do anything further if we're freeing things
     if (is_free(mode))
@@ -863,13 +845,9 @@ expr2tc dereferencet::build_reference_to(
     {
       if (is_locadd2t(deref_expr))
       {
-        log_status("get offset from locadd by renaming");
         expr2tc locadd = deref_expr;
         dereference_callback.rename(locadd);
         expr2tc off = to_locadd2t(locadd).get_offset();
-        off->dump();
-        log_status("after renaming");
-        off->dump();
         final_offset = to_locadd2t(off).get_offset();
       }
       else
@@ -885,9 +863,6 @@ expr2tc dereferencet::build_reference_to(
     if (!is_nil_expr(lexical_offset))
       final_offset = add2tc(final_offset->type, final_offset, lexical_offset);
     simplify(final_offset);
-
-    log_status("final offset : ");
-    final_offset->dump();
 
     if (!is_constant_int2t(final_offset) &&
         !is_symbol2t(final_offset))
@@ -2281,9 +2256,6 @@ void dereferencet::valid_check(
   const guardt &guard,
   modet mode)
 {
-  log_status("entering valid check");
-  object->dump();
-
   const expr2tc &symbol = get_symbol(object);
 
   if (is_constant_string2t(symbol))
@@ -2303,11 +2275,7 @@ void dereferencet::valid_check(
   }
   else if(is_intheap_type(symbol))
   {
-    log_status("guard : ");
-    guard.dump();
     expr2tc not_valid_heap_region = not2tc(valid_object2tc(symbol));
-    log_status("not valid print:");
-    not_valid_heap_region->dump();
     guardt tmp_guard(guard);
     tmp_guard.add(not_valid_heap_region);
     std::string foo = is_free(mode) ?  "invalid free pointer"

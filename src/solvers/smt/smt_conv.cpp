@@ -232,11 +232,6 @@ smt_astt smt_convt::convert_assign(const expr2tc &expr)
   smt_cache_entryt e = {eq.side_1, side2, ctx_level};
   smt_cache.insert(e);
 
-  log_status(" ----------------- assignment result ----------------- ");
-  side1->dump();
-  side2->dump();
-  log_status(" ----------------- assignment result ----------------- ");
-
   return side2;
 }
 
@@ -318,6 +313,7 @@ smt_astt smt_convt::convert_ast(const expr2tc &expr)
   case expr2t::pointer_object_id:
   case expr2t::pointer_capability_id:
   
+  case expr2t::location_of_id:
   case expr2t::field_of_id:
   case expr2t::heap_region_id:
   case expr2t::heap_update_id:

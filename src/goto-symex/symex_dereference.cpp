@@ -204,12 +204,6 @@ void symex_dereference_statet::update_heap_type_rec(
     if (to_symbol2t(_type.location).get_symbol_name() ==
         to_symbol2t(type.location).get_symbol_name())
       expr->type = intheap_type2tc(type);
-    
-    if (is_heap_region2t(expr))
-    {
-      heap_region2t &heap_region = to_heap_region2t(expr);
-      update_heap_type_rec(heap_region.flag, type);
-    }
   }
   else
   {

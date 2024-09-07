@@ -39,6 +39,11 @@ public:
     smt_astt mk_smt_symbol(const std::string &name, smt_sortt s) override;
 
     smt_sortt convert_slhv_sorts(const type2tc &type) override;
+  
+    // To support encoding heap state, we override default convert
+    smt_astt convert_ast(const expr2tc &expr) override;
+    smt_astt convert_assign(const expr2tc &expr);
+
     smt_astt
     convert_slhv_opts(const expr2tc &expr, const std::vector<smt_astt>& args) override;
 
@@ -47,8 +52,11 @@ public:
     void dump_smt() override;
 
 private:
+    void collect_heap_state(smt_astt &a);
     void print_smt_formulae(std::ostream& dest);
+
     std::vector<smt_astt> assertions;
+    smt_astt heap_state;
 };
 
 #endif

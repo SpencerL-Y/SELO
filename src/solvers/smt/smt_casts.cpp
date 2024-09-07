@@ -650,6 +650,10 @@ smt_astt smt_convt::convert_typecast(const expr2tc &expr)
 {
   const typecast2t &cast = to_typecast2t(expr);
 
+  if (is_intloc_type(cast.from->type) && is_pointer_type(cast.type) ||
+      is_pointer_type(cast.from->type) && is_intloc_type(cast.type))
+    return convert_ast(cast.from);
+
   if (
     int_encoding && is_floatbv_type(cast.from->type) &&
     is_floatbv_type(cast.type))

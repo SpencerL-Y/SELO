@@ -187,7 +187,7 @@ public:
    *
    *  @param expr The expression to convert into the SMT solver
    *  @return The resulting handle to the SMT value. */
-  smt_astt convert_ast(const expr2tc &expr);
+  virtual smt_astt convert_ast(const expr2tc &expr);
 
   /** Interface to specifig SMT conversion.
    *  Takes one expression, and converts it into the underlying SMT solver,
@@ -204,7 +204,7 @@ public:
     smt_astt const *args,
     struct expr_op_convert ops);
 
-  smt_astt convert_assign(const expr2tc &expr);
+  virtual smt_astt convert_assign(const expr2tc &expr);
 
   smt_astt make_n_ary_and(const ast_vec &v);
   smt_astt make_n_ary_or(const ast_vec &v);

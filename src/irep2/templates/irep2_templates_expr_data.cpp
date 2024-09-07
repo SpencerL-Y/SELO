@@ -60,4 +60,4 @@ expr_typedefs3(extract, extract_data);
 expr_typedefs2(points_to, points_to_data);
 expr_typedefs1(uplus, uplus_data);
 expr_typedefs2(locadd, locadd_data);
-expr_typedefs3(heap_region, heap_region_data);
+expr_typedefs2(heap_region, heap_region_data);
