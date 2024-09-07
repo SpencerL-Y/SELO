@@ -362,10 +362,6 @@ void goto_symext::symex_free(const expr2tc &expr)
 
     for (auto const &item : internal_deref_items)
     {
-      log_status("internal deref item: ");
-      item.object->dump();
-      log_status("offset: ");
-      item.offset->dump();
       guardt g = cur_state->guard;
       g.add(item.guard);
 
@@ -414,19 +410,24 @@ void goto_symext::symex_free(const expr2tc &expr)
     symex_assign(code_assign2tc(valid_index_expr, falsity), true);
   } else {
     expr2tc free_ptr = code.operand;
+    dereference(free_ptr, dereferencet::READ);
+
     expr2tc when = gen_false_expr();
-    // set each heap region to empty, guarded by item.gurad
     for(auto const& item : internal_deref_items)
     {
-      assert(is_intheap_type(item.object));
-      log_status("free object guard");
-      item.guard->dump();
+      if (!is_intheap_type(item.object))
+      {
+        log_status("Wrong object to be freed");
+        item.object->dump();
+        abort();
+      }
 
+      // Maybe not ok to set emp for a freed object
       guardt g; g.add(item.guard);
       symex_assign(code_assign2tc(item.object, gen_emp()), false, g);
 
       // collect guards for deleting heap alloc size
-      when = or2tc(when, item.guard);
+      when = or2tc(when, guard);
     }
     // delete the pointer in alloc_size heap
     expr2tc alloc_size_heap = symbol2tc(get_intheap_type(), alloc_size_heap_name);
