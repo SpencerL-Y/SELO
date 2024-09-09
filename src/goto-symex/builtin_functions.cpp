@@ -262,6 +262,7 @@ expr2tc goto_symext::symex_mem(
     log_status("symex assign in symex_mem: allocated_heap = heaplet");
     symex_assign(code_assign2tc(rhs_heap, rhs_region));
 
+    // only used for invalid pointer
     // link pointer variable and heap variable
     log_status("track new pointer - {}", to_symbol2t(rhs_base_loc).get_symbol_name());
     track_new_pointer(
@@ -369,6 +370,14 @@ void goto_symext::symex_free(const expr2tc &expr)
       expr2tc offset = item.offset;
       expr2tc eq = equality2tc(offset, gen_ulong(0));
       g.guard_expr(eq);
+
+      log_status("check freed pointer offset");
+      item.object->dump();
+      item.offset->dump();
+      eq->dump();
+      g.as_expr()->dump();
+      log_status("-------------");
+
       claim(eq, "Operand of free must have zero pointer offset");
 
       // Check if we are not freeing an dynamic object allocated using alloca
@@ -427,8 +436,9 @@ void goto_symext::symex_free(const expr2tc &expr)
       symex_assign(code_assign2tc(item.object, gen_emp()), false, g);
 
       // collect guards for deleting heap alloc size
-      when = or2tc(when, guard);
+      when = or2tc(when, item.guard);
     }
+    // only used for invalid pointer
     // delete the pointer in alloc_size heap
     expr2tc alloc_size_heap = symbol2tc(get_intheap_type(), alloc_size_heap_name);
     expr2tc new_heap = heap_delete2tc(alloc_size_heap, free_ptr);

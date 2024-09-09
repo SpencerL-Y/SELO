@@ -40,18 +40,7 @@ void goto_symext::default_replace_dynamic_allocation(expr2tc &expr)
         abort();
       }
 
-      const intheap_type2t &_type = to_intheap_type(heap_region->type);
-      // get alloc size heap
-      expr2tc alloc_size_heap;
-      migrate_expr(symbol_expr(*ns.lookup(alloc_size_heap_name)), alloc_size_heap);
-
-      expr2tc size = gen_ulong(_type.total_bytes);
-      expr2tc heap_contain =
-        heap_contain2tc(
-          alloc_size_heap,
-          points_to2tc(_type.location, size)
-        );
-      expr = heap_contain;
+      expr = not2tc(equality2tc(heap_region, gen_emp()));
     }
   }
   else if (is_invalid_pointer2t(expr))
@@ -95,7 +84,7 @@ void goto_symext::default_replace_dynamic_allocation(expr2tc &expr)
     }
     else
     {
-      log_status("replace invalid pointer");
+      log_status("replace invalid pointer");      
       obj_expr->dump();
 
       expr2tc alloc_size_heap;

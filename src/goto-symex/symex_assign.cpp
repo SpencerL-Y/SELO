@@ -153,8 +153,7 @@ void goto_symext::symex_assign(
           if(
               (to_symbol2t(assign_target).get_symbol_name().compare(alloc_size_arr_name.as_string()) == 0) && 
               is_constant_array_of2t(assign_source)) {
-            // construct the initialization code of allocsize heap in slhv
-            // and do the symbolic execution for it
+            // used to track valid pointer            
             symbolt allocsize_heap;
             allocsize_heap.name = alloc_size_heap_name;
             allocsize_heap.id = alloc_size_heap_name;
