@@ -370,14 +370,6 @@ void goto_symext::symex_free(const expr2tc &expr)
       expr2tc offset = item.offset;
       expr2tc eq = equality2tc(offset, gen_ulong(0));
       g.guard_expr(eq);
-
-      log_status("check freed pointer offset");
-      item.object->dump();
-      item.offset->dump();
-      eq->dump();
-      g.as_expr()->dump();
-      log_status("-------------");
-
       claim(eq, "Operand of free must have zero pointer offset");
 
       // Check if we are not freeing an dynamic object allocated using alloca

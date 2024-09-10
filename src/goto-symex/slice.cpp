@@ -40,6 +40,26 @@ void symex_slicet::run_on_assert(symex_target_equationt::SSA_stept &SSA_step)
 
 void symex_slicet::run_on_assume(symex_target_equationt::SSA_stept &SSA_step)
 {
+  if (SSA_step.is_assign_to_assume)
+  {
+    if (!get_symbols<false>(SSA_step.lhs))
+    {
+      // we don't really need it
+      SSA_step.ignore = true;
+      ++sliced;
+      log_debug(
+        "slice",
+        "slice ignoring assignment to symbol {}",
+        to_symbol2t(SSA_step.lhs).get_symbol_name());
+    }
+    else
+    {
+      get_symbols<true>(SSA_step.cond);
+      depends.erase(to_symbol2t(SSA_step.lhs).get_symbol_name());
+    }
+    return;
+  }
+
   if (!slice_assumes)
   {
     get_symbols<true>(SSA_step.guard);

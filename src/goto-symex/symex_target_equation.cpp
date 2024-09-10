@@ -73,7 +73,9 @@ void symex_target_equationt::assumption(
   const expr2tc &guard,
   const expr2tc &cond,
   const sourcet &source,
-  unsigned loop_number)
+  unsigned loop_number,
+  const expr2tc &lhs,
+  const bool is_assign_to_assume)
 {
   SSA_steps.emplace_back();
   SSA_stept &SSA_step = SSA_steps.back();
@@ -83,6 +85,9 @@ void symex_target_equationt::assumption(
   SSA_step.type = goto_trace_stept::ASSUME;
   SSA_step.source = source;
   SSA_step.loop_number = loop_number;
+  SSA_step.is_assign_to_assume = is_assign_to_assume;
+
+  if (is_assign_to_assume) SSA_step.lhs = lhs;
 
   if (debug_print)
     debug_print_step(SSA_step);
@@ -226,7 +231,12 @@ void symex_target_equationt::convert_internal_step(
     assert(0 && "Unexpected SSA step type in conversion");
   }
 
-  if (step.is_assert())
+  if (step.is_assign_to_assume)
+  {
+    log_status("step is assign to assume");
+    smt_conv.assert_ast(step.cond_ast);
+  }
+  else if (step.is_assert())
   {
     log_status("step is_assert");
     step.cond_ast = smt_conv.imply_ast(assumpt_ast, step.cond_ast);
@@ -240,7 +250,7 @@ void symex_target_equationt::convert_internal_step(
     step.cond_ast->dump();
   }
 
-    log_status("-------------- over -----------------");
+  log_status("-------------- over -----------------");
 }
 
 void symex_target_equationt::output(std::ostream &out) const

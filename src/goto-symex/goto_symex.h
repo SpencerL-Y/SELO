@@ -869,6 +869,26 @@ protected:
   void symex_nondet(const expr2tc &lhs, const expr2tc &effect);
 
   /**
+   * @brief Check whether an expr has field_of, heap_update or heap_delete
+   * 
+   * @param expr 
+   * @return true 
+   * @return false 
+   */
+  bool has_cond_expr(const expr2tc &expr);
+
+  /**
+   * @brief Transfer v = (ite cond v1 v2) to (ite cond (= v v1) (= v v2)
+   * where has_cond_expr(v1) || has_cond_expr(v2) holds.
+   * 
+   * @param expr 
+   * @param cond
+   * @param lhs 
+   * @return expr2tc 
+   */
+  expr2tc transfer_to_assume(const expr2tc &expr, const expr2tc &cond, const expr2tc &lhs);
+
+  /**
    *  Fetch reference to global dynamic object counter.
    *  @return Reference to global dynamic object counter.
    */

@@ -377,11 +377,6 @@ void goto_symext::symex_assign_symbol(
   if (!guard.is_true())
     rhs = if2tc(rhs->type, guard.as_expr(), rhs, lhs);
 
-  log_status("lhs:");
-  lhs->dump();
-  log_status("rhs:");
-  rhs->dump();
-
   cur_state->rename(rhs);
   do_simplify(rhs);
 
@@ -394,14 +389,7 @@ void goto_symext::symex_assign_symbol(
   expr2tc renamed_lhs = lhs;
   cur_state->rename_type(renamed_lhs);
 
-  log_status("renamed lhs:");
-  renamed_lhs->dump();
-  log_status("renamed rhs:");
-  rhs->dump();
-
   cur_state->assignment(renamed_lhs, rhs);
-
-  log_status("cur state assignment done!!!");
 
   // Special case when the lhs is an array access, we need to get the
   // right symbol for the index
@@ -411,6 +399,22 @@ void goto_symext::symex_assign_symbol(
 
   guardt tmp_guard(cur_state->guard);
   tmp_guard.append(guard);
+
+  if (has_cond_expr(rhs))
+  {
+    // Transfer assignment to assume
+    expr2tc new_cond = transfer_to_assume(rhs, expr2tc(), renamed_lhs);
+
+    target->assumption(
+      tmp_guard.as_expr(),
+      new_cond,
+      cur_state->source,
+      first_loop,
+      renamed_lhs,
+      true
+    );
+    return;
+  }
 
   // do the assignment
   target->assignment(
@@ -1185,4 +1189,49 @@ void goto_symext::symex_nondet(const expr2tc &lhs, const expr2tc &effect)
   }
 
   log_status(" ======== symex nondet ===== ");
+}
+
+bool goto_symext::has_cond_expr(const expr2tc &expr)
+{
+  if (is_nil_expr(expr)) return false;
+  if (is_field_of2t(expr) || is_heap_update2t(expr) ||
+      is_heap_delete2t(expr))
+      return true;
+  
+  bool has_cond = false;
+  expr->foreach_operand([this, &has_cond](const expr2tc &e) {
+      has_cond |= has_cond_expr(e);
+    });
+  
+  return has_cond;
+}
+
+expr2tc goto_symext::transfer_to_assume(
+  const expr2tc &expr, const expr2tc &cond, const expr2tc &lhs)
+{
+  if (is_if2t(expr))
+  {
+    const if2t &_if = to_if2t(expr);
+
+    expr2tc true_cond, false_cond;
+    if (!is_nil_expr(cond))
+    {
+      true_cond = and2tc(cond, _if.cond);
+      false_cond = and2tc(cond, not2tc(_if.cond));
+    }
+    else
+    {
+      true_cond = _if.cond;
+      false_cond = not2tc(_if.cond);
+    }
+
+    return or2tc(
+      transfer_to_assume(_if.true_value, true_cond, lhs),
+      transfer_to_assume(_if.false_value, false_cond, lhs)
+    );
+  }
+  
+  // find the terminal valuew
+  expr2tc eq = equality2tc(lhs, expr);
+  return is_nil_expr(cond) ? eq : and2tc(cond, eq);
 }
