@@ -142,7 +142,6 @@ void bmct::generate_smt_from_equation(
   smt_convt &smt_conv,
   symex_target_equationt &eq)
 {
-  log_status("generate smt from equation");
   std::string logic;
 
   if (options.get_bool_option("z3-slhv")) {
@@ -191,8 +190,6 @@ bmct::run_decision_procedure(smt_convt &smt_conv, symex_target_equationt &eq)
 
   return dec_result;
 }
-
-
 
 void bmct::report_success()
 {

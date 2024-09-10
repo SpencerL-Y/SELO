@@ -162,6 +162,8 @@ std::string member2t::field_names[esbmct::num_type_fields] =
   {"source_value", "member_name", "", "", ""};
 std::string index2t::field_names[esbmct::num_type_fields] =
   {"source_value", "index", "", "", ""};
+std::string disjh2t::field_names[esbmct::num_type_fields] = 
+  {"source_heap", "other_heaps", "", "", ""};
 std::string points_to2t::field_names[esbmct::num_type_fields] = 
   {"location", "content", "", "", ""};
 std::string uplus2t::field_names[esbmct::num_type_fields] = 

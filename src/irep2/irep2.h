@@ -103,12 +103,13 @@
   BOOST_PP_LIST_CONS(with,                                                     \
   BOOST_PP_LIST_CONS(member,                                                   \
   BOOST_PP_LIST_CONS(index,                                                    \
+  BOOST_PP_LIST_CONS(disjh,                                                    \
   BOOST_PP_LIST_CONS(points_to,                                                \
   BOOST_PP_LIST_CONS(uplus,                                                    \
   BOOST_PP_LIST_CONS(locadd,                                                   \
   BOOST_PP_LIST_CONS(heap_region,                                              \
-  BOOST_PP_LIST_CONS(location_of,                                               \
-  BOOST_PP_LIST_CONS(field_of,                                                  \
+  BOOST_PP_LIST_CONS(location_of,                                              \
+  BOOST_PP_LIST_CONS(field_of,                                                 \
   BOOST_PP_LIST_CONS(heap_update,                                              \
   BOOST_PP_LIST_CONS(heap_append,                                              \
   BOOST_PP_LIST_CONS(heap_delete,                                              \
@@ -153,7 +154,7 @@
   BOOST_PP_LIST_CONS(signbit,                                                  \
   BOOST_PP_LIST_CONS(concat,                                                   \
   BOOST_PP_LIST_CONS(extract,                                                  \
-  BOOST_PP_LIST_NIL))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
+  BOOST_PP_LIST_NIL)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
 
 #define ESBMC_LIST_OF_TYPES                                                    \
   BOOST_PP_LIST_CONS(bool,                                                     \

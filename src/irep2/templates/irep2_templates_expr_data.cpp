@@ -57,6 +57,7 @@ expr_typedefs1(code_cpp_throw_decl_end, code_cpp_throw_decl_data);
 expr_typedefs3(extract, extract_data);
 
 
+expr_typedefs1(disjh, disjh_data);
 expr_typedefs2(points_to, points_to_data);
 expr_typedefs1(uplus, uplus_data);
 expr_typedefs2(locadd, locadd_data);

@@ -59,6 +59,32 @@ void symex_slicet::run_on_assume(symex_target_equationt::SSA_stept &SSA_step)
     }
     return;
   }
+  else if (is_disjh2t(SSA_step.cond))
+  {
+    disjh2t &disj = to_disjh2t(SSA_step.cond);
+
+    if (!get_symbols<false>(disj.source_heap))
+    {
+      // we don't really need it
+      SSA_step.ignore = true;
+      ++sliced;
+      log_debug(
+        "slice",
+        "slice ignoring assignment to symbol {}",
+        to_symbol2t(SSA_step.lhs).get_symbol_name());
+    }
+    else
+    {
+      get_symbols<true>(SSA_step.guard);
+      get_symbols<true>(SSA_step.cond);
+    }
+
+    // for (unsigned int i = 0; i < disj.other_heaps.size(); i++)
+    //   disj.is_sliced = !get_symbols<false>(disj.other_heaps[i]);
+
+    // for (unsigned int i = 0; i < disj.other_heaps.size(); i++)
+    //   disj.is_sliced = !get_symbols<false>(disj.other_heaps[i]);
+  }
 
   if (!slice_assumes)
   {

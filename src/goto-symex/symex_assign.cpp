@@ -923,6 +923,11 @@ void goto_symext::symex_assign_fieldof(
     heap_update2tc(heap_region->type, heap_region, field, rhs);
 
   symex_assign_rec(heap_region, full_lhs, update_heap, full_rhs, guard, hidden);
+
+  expr2tc disj = disjh2tc(heap_region);
+  for (auto const& it : dynamic_memory)
+    to_disjh2t(disj).do_disjh(it.obj);
+  assume(disj);
 }
 
 void goto_symext::replace_nondet(expr2tc &expr)
@@ -1159,6 +1164,27 @@ expr2tc goto_symext::create_heap_region(const sideeffect2t &effect, expr2tc &fla
   return heap_region2tc(heap_type, base_loc);
 }
 
+expr2tc goto_symext::symex_disj_heaps(const expr2tc &heap)
+{
+  if (!is_symbol2t(heap) || !is_intheap_type(heap))
+  {
+    log_status("Wrong heap region");
+    abort();
+  }
+
+  expr2tc l0_heap = heap;
+  cur_state->get_original_name(l0_heap);
+
+  expr2tc disj;
+  for (auto const &it : dynamic_memory)
+  {
+    expr2tc h = it.obj;
+    if (to_symbol2t(h).get_symbol_name()
+        == to_symbol2t(l0_heap).get_symbol_name())
+      continue;
+  }
+}
+
 void goto_symext::symex_nondet(const expr2tc &lhs, const expr2tc &effect)
 {
   log_status(" ======== symex nondet ===== ");
@@ -1177,6 +1203,8 @@ void goto_symext::symex_nondet(const expr2tc &lhs, const expr2tc &effect)
     new_rhs = create_heap_region(to_sideeffect2t(effect), new_lhs);
 
   symex_assign(code_assign2tc(lhs, new_rhs));
+  
+  // TODO : maybe added to set to do disjh
 
   if (is_intheap_type(new_lhs->type))
   {

@@ -74,6 +74,7 @@ static const char *expr_names[] = {
   "with",
   "member",
   "index",
+  "disjh",
   "points_to",
   "uplus",
   "locadd",
@@ -487,6 +488,21 @@ arith_2ops::arith_2ops(
   }
   // TODO: Add consistency checks for vectors
 #endif
+}
+
+
+void disjh2t::do_disjh(const expr2tc &heap)
+{
+  if (!is_intheap_type(heap) ||
+      !is_symbol2t(heap))
+  {
+    log_status("Wrong object");
+    heap->dump();
+    abort();
+  }
+
+  other_heaps.push_back(heap);
+  is_sliced.push_back(false);
 }
 
 expr2tc locadd2t::get_base_location() const

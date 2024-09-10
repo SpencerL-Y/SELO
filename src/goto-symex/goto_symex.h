@@ -861,6 +861,13 @@ protected:
   expr2tc create_heap_region(const sideeffect2t &effect, expr2tc &flag);
 
   /**
+   * @brief Encode disjointness among all heap regions
+   * 
+   * @param heap 
+   */
+  expr2tc symex_disj_heaps(const expr2tc &heap);
+
+  /**
    * @brief In SLHV, struct/array are heap variable
    * 
    * @param lhs 

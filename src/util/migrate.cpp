@@ -2605,6 +2605,16 @@ exprt migrate_expr_back(const expr2tc &ref)
       migrate_expr_back(ref2.source_value), migrate_expr_back(ref2.index));
     return index;
   }
+  case expr2t::disjh_id:
+  {
+    const disjh2t &ref2 = to_disjh2t(ref);
+    typet thetype = migrate_type_back(ref->type);
+    exprt disj("disjh", thetype);
+    disj.copy_to_operands(migrate_expr_back(ref2.source_heap));
+    for (expr2tc h : ref2.other_heaps)
+      disj.copy_to_operands(migrate_expr_back(h));
+    return disj;
+  }
   case expr2t::points_to_id:
   {
     const points_to2t &ref2 = to_points_to2t(ref);
@@ -2621,9 +2631,8 @@ exprt migrate_expr_back(const expr2tc &ref)
     const uplus2t & ref2 = to_uplus2t(ref);
     typet thetype = migrate_type_back(ref->type);
     exprt uplus("uplus", thetype);
-    for(expr2tc op2 : ref2.heap_terms) {
+    for(expr2tc op2 : ref2.heap_terms)
       uplus.copy_to_operands(migrate_expr_back(op2));
-    }
     return uplus;
   }
   case expr2t::locadd_id:

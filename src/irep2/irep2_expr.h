@@ -913,6 +913,94 @@ public:
 
 /* ================================ SLHV ================================ */
 
+class heap_ops : public expr2t
+{
+public:
+  heap_ops(
+    const type2tc &t,
+    expr2t::expr_ids id,
+    const expr2tc &h)
+    : expr2t(t, id), source_heap(h)
+  {
+  }
+  heap_ops(const heap_ops& ref) = default;
+
+  expr2tc source_heap;
+
+  // Type mangling:
+  typedef esbmct::field_traits<expr2tc, heap_ops, &heap_ops::source_heap>
+    source_heap_field;
+  typedef esbmct::expr2t_traits<source_heap_field> traits;
+};
+
+class heap_1op : public heap_ops
+{
+public:
+  heap_1op(
+    const type2tc &t,
+    heap_ops::expr_ids id,
+    const expr2tc &h,
+    const expr2tc &op)
+    : heap_ops(t, id, h), operand(op)
+  {
+  }
+  heap_1op(const heap_1op &ref) = default;
+
+  expr2tc operand;
+
+  // Type mangling:
+  typedef esbmct::field_traits<expr2tc, heap_1op, &heap_1op::operand>
+    operand_field;
+  typedef esbmct::expr2t_traits<source_heap_field, operand_field> traits;
+};
+
+class heap_2ops : public heap_ops
+{
+public:
+  heap_2ops(
+    const type2tc &t,
+    heap_ops::expr_ids id,
+    const expr2tc &h,
+    const expr2tc &op1,
+    const expr2tc &op2)
+    : heap_ops(t, id, h), operand_1(op1), operand_2(op2)
+  {
+  }
+  heap_2ops(const heap_2ops &ref) = default;
+
+  expr2tc operand_1;
+  expr2tc operand_2;
+
+  // Type mangling:
+  typedef esbmct::field_traits<expr2tc, heap_2ops, &heap_2ops::operand_1>
+    operand_1_field;
+  typedef esbmct::field_traits<expr2tc, heap_2ops, &heap_2ops::operand_2>
+    operand_2_field;
+  typedef esbmct::expr2t_traits<
+    source_heap_field, operand_1_field, operand_2_field> traits;
+};
+
+class disjh_data : public heap_ops
+{
+public:
+  disjh_data(const type2tc &t, datatype_ops::expr_ids id, const expr2tc &h)
+    : heap_ops(t, id, h)
+  {
+  }
+  disjh_data(const disjh_data& ref) = default;
+
+  std::vector<expr2tc> other_heaps;
+  std::vector<bool> is_sliced;
+
+  // Type mangling:
+  typedef esbmct::field_traits<
+    std::vector<expr2tc>, disjh_data, &disjh_data::other_heaps>
+    other_heaps_field;
+  typedef esbmct::expr2t_traits<
+    heap_ops::source_heap_field,
+    other_heaps_field> traits;
+};
+
 class points_to_data : public expr2t 
 {
 public:
@@ -999,73 +1087,6 @@ public:
   typedef esbmct::field_traits<expr2tc, heap_region_data, &heap_region_data::source_location>
     source_location_field;
   typedef esbmct::expr2t_traits<source_location_field> traits;
-};
-
-class heap_ops : public expr2t
-{
-public:
-  heap_ops(
-    const type2tc &t,
-    expr2t::expr_ids id,
-    const expr2tc &h)
-    : expr2t(t, id), source_heap(h)
-  {
-  }
-  heap_ops(const heap_ops& ref) = default;
-
-  expr2tc source_heap;
-
-  // Type mangling:
-  typedef esbmct::field_traits<expr2tc, heap_ops, &heap_ops::source_heap>
-    source_heap_field;
-  typedef esbmct::expr2t_traits<source_heap_field> traits;
-};
-
-class heap_1op : public heap_ops
-{
-public:
-  heap_1op(
-    const type2tc &t,
-    heap_ops::expr_ids id,
-    const expr2tc &h,
-    const expr2tc &op)
-    : heap_ops(t, id, h), operand(op)
-  {
-  }
-  heap_1op(const heap_1op &ref) = default;
-
-  expr2tc operand;
-
-  // Type mangling:
-  typedef esbmct::field_traits<expr2tc, heap_1op, &heap_1op::operand>
-    operand_field;
-  typedef esbmct::expr2t_traits<source_heap_field, operand_field> traits;
-};
-
-class heap_2ops : public heap_ops
-{
-public:
-  heap_2ops(
-    const type2tc &t,
-    heap_ops::expr_ids id,
-    const expr2tc &h,
-    const expr2tc &op1,
-    const expr2tc &op2)
-    : heap_ops(t, id, h), operand_1(op1), operand_2(op2)
-  {
-  }
-  heap_2ops(const heap_2ops &ref) = default;
-
-  expr2tc operand_1;
-  expr2tc operand_2;
-
-  // Type mangling:
-  typedef esbmct::field_traits<expr2tc, heap_2ops, &heap_2ops::operand_1>
-    operand_1_field;
-  typedef esbmct::field_traits<expr2tc, heap_2ops, &heap_2ops::operand_2>
-    operand_2_field;
-  typedef esbmct::expr2t_traits<
-    source_heap_field, operand_1_field, operand_2_field> traits;
 };
 
 /* ================================ SLHV ================================ */
@@ -1696,6 +1717,7 @@ irep_typedefs(byte_update, byte_update_data);
 irep_typedefs(with, with_data);
 irep_typedefs(member, member_data);
 irep_typedefs(index, index_data);
+irep_typedefs(disjh, disjh_data);
 irep_typedefs(points_to, points_to_data);
 irep_typedefs(uplus, uplus_data);
 irep_typedefs(locadd, locadd_data);
@@ -3169,6 +3191,20 @@ public:
 };
 
 /* ================================ SLHV ================================ */
+
+class disjh2t : public disjh_expr_methods
+{
+public:
+  disjh2t(const expr2tc &source_heap)
+    : disjh_expr_methods(get_bool_type(), disjh_id, source_heap)
+  {
+  }
+  disjh2t(const disjh2t &ref) = default;
+
+  void do_disjh(const expr2tc &heap);
+  
+  static std::string field_names[esbmct::num_type_fields];
+};
 
 class points_to2t : public points_to_expr_methods
 {

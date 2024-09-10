@@ -244,7 +244,6 @@ smt_astt z3_slhv_convt::convert_ast(const expr2tc &expr)
   {
     case expr2t::pointer_object_id:
     case expr2t::same_object_id:
-
     case expr2t::constant_intloc_id:
     case expr2t::constant_intheap_id:
     case expr2t::location_of_id:
@@ -268,6 +267,7 @@ smt_astt z3_slhv_convt::convert_ast(const expr2tc &expr)
   {
     case expr2t::constant_intheap_id:
     case expr2t::constant_intloc_id:
+    case expr2t::disjh_id:
     case expr2t::heap_region_id:
     case expr2t::location_of_id:
     case expr2t::field_of_id:
@@ -427,6 +427,17 @@ z3_slhv_convt::convert_slhv_opts(
       return mk_emp();
     case expr2t::constant_intloc_id:
       return mk_nil();
+    case expr2t::disjh_id:
+    {
+      const disjh2t &disj = to_disjh2t(expr);
+      smt_astt res = mk_disjh(args[0], args[1]);
+      for (unsigned int i = 2; i <= disj.other_heaps.size(); i++)
+      {
+        smt_astt dis = mk_disjh(args[0], args[i]);
+        res = mk_and(res, dis);
+      }
+      return res;
+    }
     case expr2t::heap_region_id:
     {
       const intheap_type2t &_type = to_intheap_type(expr->type);

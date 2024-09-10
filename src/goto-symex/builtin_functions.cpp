@@ -269,7 +269,15 @@ expr2tc goto_symext::symex_mem(
       rhs_base_loc,
       get_intheap_type(),
       gen_ulong(to_intheap_type(rhs_region->type).total_bytes));
-
+    
+    if (dynamic_memory.size() > 0)
+    {
+      expr2tc disj = disjh2tc(rhs_heap);
+      for (auto const &it : dynamic_memory)
+        to_disjh2t(disj).do_disjh(it.obj);
+      assume(disj);
+    }
+    
     log_status("use dynamic memory to track malloc heap - {}",
       to_symbol2t(rhs_heap).get_symbol_name());
     dynamic_memory.emplace_back(
