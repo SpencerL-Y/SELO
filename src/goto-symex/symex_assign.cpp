@@ -925,6 +925,7 @@ void goto_symext::symex_assign_fieldof(
   symex_assign_rec(heap_region, full_lhs, update_heap, full_rhs, guard, hidden);
 
   expr2tc disj = disjh2tc(heap_region);
+  cur_state->get_original_name(disj);
   for (auto const& it : dynamic_memory)
     to_disjh2t(disj).do_disjh(it.obj);
   assume(disj);

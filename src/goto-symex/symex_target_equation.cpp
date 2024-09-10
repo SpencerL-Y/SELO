@@ -220,7 +220,7 @@ void symex_target_equationt::convert_internal_step(
     assert(0 && "Unexpected SSA step type in conversion");
   }
 
-  if (step.is_assign_to_assume)
+  if (step.is_assign_to_assume || is_disjh2t(step.cond))
   {
     smt_conv.assert_ast(step.cond_ast);
   }

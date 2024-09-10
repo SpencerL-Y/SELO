@@ -501,6 +501,10 @@ void disjh2t::do_disjh(const expr2tc &heap)
     abort();
   }
 
+  if (to_symbol2t(source_heap).get_symbol_name() ==
+      to_symbol2t(heap).get_symbol_name())
+    return;
+
   other_heaps.push_back(heap);
   is_sliced.push_back(false);
 }

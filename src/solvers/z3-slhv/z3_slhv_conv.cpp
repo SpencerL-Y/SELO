@@ -430,13 +430,15 @@ z3_slhv_convt::convert_slhv_opts(
     case expr2t::disjh_id:
     {
       const disjh2t &disj = to_disjh2t(expr);
-      smt_astt res = mk_disjh(args[0], args[1]);
-      for (unsigned int i = 2; i <= disj.other_heaps.size(); i++)
+      int n = 0;
+      smt_astt res;
+      for (unsigned int i = 0; i < disj.other_heaps.size(); i++)
       {
-        smt_astt dis = mk_disjh(args[0], args[i]);
-        res = mk_and(res, dis);
+        smt_astt disj = mk_disjh(args[0], args[i + 1]);
+        res = n == 0 ? disj : mk_and(res, disj);
+        ++n;
       }
-      return res;
+      return n == 0 ? mk_smt_bool(true) : res;
     }
     case expr2t::heap_region_id:
     {

@@ -273,12 +273,6 @@ void goto_symex_statet::rename(expr2tc &expr)
     address_of2t &addrof = to_address_of2t(expr);
     rename_address(addrof.ptr_obj);
   }
-  else if (is_location_of2t(expr))
-  {
-    location_of2t &loc_of = to_location_of2t(expr);
-    // Only do l1 rename
-    rename_address(loc_of.source_heap);
-  }
   else
   {
     // do this recursively
