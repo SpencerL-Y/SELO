@@ -230,11 +230,9 @@ smt_astt z3_slhv_convt::convert_ast(const expr2tc &expr)
 {
   log_status("------------------------------- convert ast -----------------------------");
   expr->dump();
-  log_status("-------------------------------------------------------------------------");
 
   smt_cachet::const_iterator cache_result = smt_cache.find(expr);
   if (cache_result != smt_cache.end()) {
-    log_status("found!!!!!!!!");
     cache_result->ast->dump();
     return (cache_result->ast);
   }
@@ -244,34 +242,26 @@ smt_astt z3_slhv_convt::convert_ast(const expr2tc &expr)
 
   switch (expr->expr_id)
   {
-  case expr2t::pointer_object_id:
-  case expr2t::same_object_id:
+    case expr2t::pointer_object_id:
+    case expr2t::same_object_id:
 
-  case expr2t::constant_intloc_id:
-  case expr2t::constant_intheap_id:
-  case expr2t::location_of_id:
-  case expr2t::field_of_id:
-  case expr2t::heap_region_id:
-  case expr2t::heap_update_id:
-  case expr2t::heap_delete_id:
-    break; // Don't convert their operands
+    case expr2t::constant_intloc_id:
+    case expr2t::constant_intheap_id:
+    case expr2t::location_of_id:
+    case expr2t::field_of_id:
+    case expr2t::heap_region_id:
+    case expr2t::heap_update_id:
+    case expr2t::heap_delete_id:
+      break; // Don't convert their operands
 
-  default:
-  {
-    // Convert all the arguments and store them in 'args'.
-    unsigned int i = 0;
-    expr->foreach_operand(
-      [this, &args, &i](const expr2tc &e) { args[i++] = convert_ast(e); });
-    log_status(" -------------- convert args finished ------------ ");
-    for (int i = 0; i < expr->get_num_sub_exprs(); i++) {
-      args[i]->dump();
+    default:
+    {
+      // Convert all the arguments and store them in 'args'.
+      unsigned int i = 0;
+      expr->foreach_operand(
+        [this, &args, &i](const expr2tc &e) { args[i++] = convert_ast(e); });
     }
-    log_status(" -------------- convert args finished ------------ ");
   }
-  }
-
-  log_status("begin convert expr");
-  expr->dump();
 
   smt_astt a;
   switch (expr->expr_id)
@@ -410,8 +400,10 @@ smt_astt z3_slhv_convt::convert_ast(const expr2tc &expr)
       break;
     }
     default:
+    {
       log_error("Couldn't convert expression in unrecognised format\n{}", *expr);
       abort();
+    }
   }
 
   if (is_bool_type(expr->type)) collect_heap_state(a);
@@ -419,9 +411,9 @@ smt_astt z3_slhv_convt::convert_ast(const expr2tc &expr)
   struct smt_cache_entryt entry = {expr, a, ctx_level};
   smt_cache.insert(entry);
 
-  log_status("==== converted reuslt: ");
+  log_status("====================== converted reuslt: ");
   a->dump();
-  log_status("====");
+  log_status("-------------------------------------------------------------------------");
   return a;
 }
 
@@ -663,7 +655,8 @@ z3_slhv_convt::convert_slhv_opts(
       smt_astt eq = mk_eq(p1, p2);
       return eq;
     }
-    default: {
+    default:
+    {
       log_status("Invalid SLHV operations!!!");
       abort();
     }
@@ -722,7 +715,8 @@ void z3_slhv_convt::dump_smt() {
   }
 }
 
-void z3_slhv_convt::print_smt_formulae(std::ostream& dest) {
+void z3_slhv_convt::print_smt_formulae(std::ostream& dest)
+{
   auto smt_formula = solver.to_smt2();
   std::replace(smt_formula.begin(), smt_formula.end(), '\\', '_');
   Z3_ast_vector __z3_assertions = Z3_solver_get_assertions(z3_ctx, solver);

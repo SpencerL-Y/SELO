@@ -628,10 +628,8 @@ smt_convt::resultt bmct::run_thread(std::shared_ptr<symex_target_equationt> &eq)
       // show_vcc(*eq);
       // return smt_convt::P_SMTLIB;
       const std::string &output_file = options.get_option("output");
-      if (!output_file.empty() && output_file != "-"){
+      if (!output_file.empty() && output_file != "-")
         truncate(output_file.c_str(), 0);
-      }
-        // std::ofstream(output_file.c_str()) << "";
     }
 
     if (result.remaining_claims == 0)

@@ -221,13 +221,7 @@ void goto_symex_statet::assignment(expr2tc &lhs, const expr2tc &rhs)
     // update value sets
     expr2tc l1_rhs = rhs; // rhs is const; Rename into new container.
     level2.get_original_name(l1_rhs);
-    log_status("##### begin value set assignment from");
-    l1_rhs->dump();
-    log_status("##### to");
-    l1_lhs->dump();
-    log_status("#####");
     value_set.assign(l1_lhs, l1_rhs);
-    log_status("update value set done!!!!");
   }
 }
 

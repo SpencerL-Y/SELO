@@ -142,14 +142,11 @@ void symex_target_equationt::convert(smt_convt &smt_conv)
   smt_convt::ast_vec assertions;
   smt_astt assumpt_ast = smt_conv.convert_ast(gen_true_expr());
 
-  log_status("============= begin converting ssa steps");
   for (auto &SSA_step : SSA_steps)
     convert_internal_step(smt_conv, assumpt_ast, assertions, SSA_step);
-  log_status("convert internal step done");
 
   if (!assertions.empty())
     smt_conv.assert_ast(smt_conv.make_n_ary_or(assertions));
-  log_status("final convert result =============  ");
 }
 
 void symex_target_equationt::convert_internal_step(
@@ -158,7 +155,6 @@ void symex_target_equationt::convert_internal_step(
   smt_convt::ast_vec &assertions,
   SSA_stept &step)
 {
-  log_status("------ convert internal step ------ ");
   static unsigned output_count = 0; // Temporary hack; should become scoped.
   smt_astt true_val = smt_conv.convert_ast(gen_true_expr());
   smt_astt false_val = smt_conv.convert_ast(gen_false_expr());
@@ -172,17 +168,13 @@ void symex_target_equationt::convert_internal_step(
 
   log_status(" ============================== step ======================== ");
   step.dump();
-  log_status(" ============================== step ======================== ");
 
-  // log_status("convert step guard ast: ");
   // guard_ast is used for generating witness
-  // not used now
   // step.guard_ast = smt_conv.convert_ast(step.guard);
 
   if (step.is_assume() || step.is_assert())
   {
     // step.cond_ast = false_val;
-    log_status("step is_assume || step is_assert");
     expr2tc tmp(step.cond);
     step.cond_ast = smt_conv.convert_ast(tmp);
     if (ssa_smt_trace)
@@ -192,7 +184,6 @@ void symex_target_equationt::convert_internal_step(
   }
   else if (step.is_assignment())
   {
-    log_status("step is_assignment");
     smt_astt assign = smt_conv.convert_assign(step.cond);
     if (ssa_smt_trace)
     {
@@ -201,7 +192,6 @@ void symex_target_equationt::convert_internal_step(
   }
   else if (step.is_output())
   {
-    log_status("step is_output");
     for (std::list<expr2tc>::const_iterator o_it = step.output_args.begin();
          o_it != step.output_args.end();
          o_it++)
@@ -223,7 +213,6 @@ void symex_target_equationt::convert_internal_step(
   }
   else if (step.is_renumber())
   {
-    log_status("step is_renumber");
     smt_conv.renumber_symbol_address(step.guard, step.lhs, step.rhs);
   }
   else if (!step.is_skip())
@@ -233,24 +222,21 @@ void symex_target_equationt::convert_internal_step(
 
   if (step.is_assign_to_assume)
   {
-    log_status("step is assign to assume");
     smt_conv.assert_ast(step.cond_ast);
   }
   else if (step.is_assert())
   {
-    log_status("step is_assert");
     step.cond_ast = smt_conv.imply_ast(assumpt_ast, step.cond_ast);
     assertions.push_back(smt_conv.invert_ast(step.cond_ast));
     smt_conv.invert_ast(step.cond_ast)->dump();
   }
   else if (step.is_assume())
   {
-    log_status("step is_assume");
     assumpt_ast = smt_conv.mk_and(assumpt_ast, step.cond_ast);
     step.cond_ast->dump();
   }
 
-  log_status("-------------- over -----------------");
+  log_status(" ============================== step ======================== ");
 }
 
 void symex_target_equationt::output(std::ostream &out) const

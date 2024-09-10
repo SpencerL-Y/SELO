@@ -212,9 +212,6 @@ void value_sett::get_value_set_rec(
   const type2tc &original_type,
   bool under_deref) const
 {
-  log_status("get value set rec for: ");
-  expr->dump();
-
   if (is_unknown2t(expr) || is_invalid2t(expr))
   {
     log_status("is unknown expr or invalid expr");
@@ -1138,7 +1135,6 @@ void value_sett::assign(
 
   if (is_if2t(rhs))
   {
-    log_status("value set assign: rhs is_if2t");
     // If the rhs could be either side of this if, perform the assigment of
     // either side. In case it refers to itself, assign to a temporary first,
     // then assign back.
@@ -1163,7 +1159,6 @@ void value_sett::assign(
 
   if (is_struct_type(lhs_type) || is_union_type(lhs_type))
   {
-    log_status("value set assign: lhs struct or union");
     if (lhs_type->type_id == rhs->type->type_id)
     {
       /* either both union or both struct */

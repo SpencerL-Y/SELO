@@ -237,15 +237,9 @@ smt_astt smt_convt::convert_assign(const expr2tc &expr)
 
 smt_astt smt_convt::convert_ast(const expr2tc &expr)
 {
-  log_status("------------------------------- convert ast ");
-  expr->dump();
-  log_status("-------------------------------");
   smt_cachet::const_iterator cache_result = smt_cache.find(expr);
-  if (cache_result != smt_cache.end()) {
-    log_status("found!!!!!!!!");
-    cache_result->ast->dump();
-    return (cache_result->ast);
-  }
+  if (cache_result != smt_cache.end())
+    return cache_result->ast;
 
   bool use_old_encoding = !options.get_bool_option("z3-slhv");
 
@@ -295,1010 +289,1002 @@ smt_astt smt_convt::convert_ast(const expr2tc &expr)
 
   switch (expr->expr_id)
   {
-  case expr2t::with_id:
-  case expr2t::constant_array_id:
-  case expr2t::constant_vector_id:
-  case expr2t::constant_array_of_id:
-  case expr2t::constant_intloc_id:
-  case expr2t::constant_intheap_id:
-  case expr2t::index_id:
-  case expr2t::address_of_id:
-  case expr2t::ieee_add_id:
-  case expr2t::ieee_sub_id:
-  case expr2t::ieee_mul_id:
-  case expr2t::ieee_div_id:
-  case expr2t::ieee_fma_id:
-  case expr2t::ieee_sqrt_id:
-  case expr2t::pointer_offset_id:
-  case expr2t::pointer_object_id:
-  case expr2t::pointer_capability_id:
-  
-  case expr2t::location_of_id:
-  case expr2t::field_of_id:
-  case expr2t::heap_region_id:
-  case expr2t::heap_update_id:
-  case expr2t::heap_delete_id:
-    break; // Don't convert their operands
+    case expr2t::with_id:
+    case expr2t::constant_array_id:
+    case expr2t::constant_vector_id:
+    case expr2t::constant_array_of_id:
+    case expr2t::constant_intloc_id:
+    case expr2t::constant_intheap_id:
+    case expr2t::index_id:
+    case expr2t::address_of_id:
+    case expr2t::ieee_add_id:
+    case expr2t::ieee_sub_id:
+    case expr2t::ieee_mul_id:
+    case expr2t::ieee_div_id:
+    case expr2t::ieee_fma_id:
+    case expr2t::ieee_sqrt_id:
+    case expr2t::pointer_offset_id:
+    case expr2t::pointer_object_id:
+    case expr2t::pointer_capability_id:
+    
+    case expr2t::location_of_id:
+    case expr2t::field_of_id:
+    case expr2t::heap_region_id:
+    case expr2t::heap_update_id:
+    case expr2t::heap_delete_id:
+      break; // Don't convert their operands
 
-  default:
-  {
-    if (is_same_object2t(expr) && !use_old_encoding) break;
+    default:
+    {
+      if (is_same_object2t(expr) && !use_old_encoding) break;
 
-    // Convert all the arguments and store them in 'args'.
-    unsigned int i = 0;
-    expr->foreach_operand(
-      [this, &args, &i](const expr2tc &e) { args[i++] = convert_ast(e); });
-    log_status(" -------------- convert args finished ------------ ");
-    for (int i = 0; i < expr->get_num_sub_exprs(); i++) {
-      args[i]->dump();
+      // Convert all the arguments and store them in 'args'.
+      unsigned int i = 0;
+      expr->foreach_operand(
+        [this, &args, &i](const expr2tc &e) { args[i++] = convert_ast(e); });
     }
-    log_status(" -------------- convert args finished ------------ ");
-  }
   }
 
-  log_status("begin convert expr");
-  expr->dump();
-
-  smt_astt a;
+    smt_astt a;
 
   switch (expr->expr_id)
   {
-  case expr2t::constant_intheap_id:
-  case expr2t::constant_intloc_id:
-  case expr2t::heap_region_id:
-  case expr2t::location_of_id:
-  case expr2t::field_of_id:
-  case expr2t::points_to_id:
-  case expr2t::uplus_id:
-  case expr2t::locadd_id:
-  case expr2t::heap_update_id:
-  case expr2t::heap_contain_id:
-  case expr2t::heap_append_id:
-  case expr2t::heap_delete_id: {
-    a = convert_slhv_opts(expr, args); 
-    break;
-  }
-
-  case expr2t::constant_int_id:
-  case expr2t::constant_fixedbv_id:
-  case expr2t::constant_floatbv_id:
-  case expr2t::constant_bool_id:
-  case expr2t::symbol_id:
-  {
-    a = convert_terminal(expr);
-    break;
-  }
-  case expr2t::constant_string_id:
-  {
-    const constant_string2t &str = to_constant_string2t(expr);
-    expr2tc newarr = str.to_array();
-    a = convert_ast(newarr);
-    break;
-  }
-  case expr2t::constant_struct_id:
-  {
-    a = tuple_api->tuple_create(expr);
-    break;
-  }
-  case expr2t::constant_union_id:
-  {
-    // Get size
-    const constant_union2t &cu = to_constant_union2t(expr);
-    const std::vector<expr2tc> &dt_memb = cu.datatype_members;
-    expr2tc src_expr =
-      dt_memb.empty() ? gen_zero(get_uint_type(0)) : dt_memb[0];
-#ifndef NDEBUG
-    if (!cu.init_field.empty())
+    case expr2t::constant_intheap_id:
+    case expr2t::constant_intloc_id:
+    case expr2t::heap_region_id:
+    case expr2t::location_of_id:
+    case expr2t::field_of_id:
+    case expr2t::points_to_id:
+    case expr2t::uplus_id:
+    case expr2t::locadd_id:
+    case expr2t::heap_update_id:
+    case expr2t::heap_contain_id:
+    case expr2t::heap_append_id:
+    case expr2t::heap_delete_id:
     {
-      const union_type2t &ut = to_union_type(expr->type);
-      unsigned c = ut.get_component_number(cu.init_field);
-      /* Can only initialize unions by expressions of same type as init_field */
-      assert(src_expr->type->type_id == ut.members[c]->type_id);
-    }
-#endif
-    a = convert_ast(typecast2tc(
-      get_uint_type(type_byte_size_bits(expr->type).to_uint64()),
-      bitcast2tc(
-        get_uint_type(type_byte_size_bits(src_expr->type).to_uint64()),
-        src_expr)));
-    break;
-  }
-  case expr2t::constant_vector_id:
-  {
-    a = array_create(expr);
-    break;
-  }
-  case expr2t::constant_array_id:
-  case expr2t::constant_array_of_id:
-  {
-    const array_type2t &arr = to_array_type(expr->type);
-    if (!array_api->can_init_infinite_arrays && arr.size_is_infinite)
-    {
-      smt_sortt sort = convert_sort(expr->type);
-
-      // Don't honour inifinite sized array initializers. Modelling only.
-      // If we have an array of tuples and no tuple support, use tuple_fresh.
-      // Otherwise, mk_fresh.
-      if (is_tuple_ast_type(arr.subtype))
-        a = tuple_api->tuple_fresh(sort);
-      else
-        a = mk_fresh(
-          sort,
-          "inf_array",
-          convert_sort(get_flattened_array_subtype(expr->type)));
+      a = convert_slhv_opts(expr, args); 
       break;
     }
 
-    expr2tc flat_expr = expr;
-    if (
-      is_array_type(get_array_subtype(expr->type)) && is_constant_array2t(expr))
-      flat_expr = flatten_array_body(expr);
+    case expr2t::constant_int_id:
+    case expr2t::constant_fixedbv_id:
+    case expr2t::constant_floatbv_id:
+    case expr2t::constant_bool_id:
+    case expr2t::symbol_id:
+    {
+      a = convert_terminal(expr);
+      break;
+    }
+    case expr2t::constant_string_id:
+    {
+      const constant_string2t &str = to_constant_string2t(expr);
+      expr2tc newarr = str.to_array();
+      a = convert_ast(newarr);
+      break;
+    }
+    case expr2t::constant_struct_id:
+    {
+      a = tuple_api->tuple_create(expr);
+      break;
+    }
+    case expr2t::constant_union_id:
+    {
+      // Get size
+      const constant_union2t &cu = to_constant_union2t(expr);
+      const std::vector<expr2tc> &dt_memb = cu.datatype_members;
+      expr2tc src_expr =
+        dt_memb.empty() ? gen_zero(get_uint_type(0)) : dt_memb[0];
+  #ifndef NDEBUG
+      if (!cu.init_field.empty())
+      {
+        const union_type2t &ut = to_union_type(expr->type);
+        unsigned c = ut.get_component_number(cu.init_field);
+        /* Can only initialize unions by expressions of same type as init_field */
+        assert(src_expr->type->type_id == ut.members[c]->type_id);
+      }
+  #endif
+      a = convert_ast(typecast2tc(
+        get_uint_type(type_byte_size_bits(expr->type).to_uint64()),
+        bitcast2tc(
+          get_uint_type(type_byte_size_bits(src_expr->type).to_uint64()),
+          src_expr)));
+      break;
+    }
+    case expr2t::constant_vector_id:
+    {
+      a = array_create(expr);
+      break;
+    }
+    case expr2t::constant_array_id:
+    case expr2t::constant_array_of_id:
+    {
+      const array_type2t &arr = to_array_type(expr->type);
+      if (!array_api->can_init_infinite_arrays && arr.size_is_infinite)
+      {
+        smt_sortt sort = convert_sort(expr->type);
 
-    if (is_struct_type(arr.subtype) || is_pointer_type(arr.subtype))
-    {
-      // Domain sort may be mesed with:
-      smt_sortt domain = mk_int_bv_sort(
-        int_encoding ? config.ansi_c.int_width
-                     : calculate_array_domain_width(arr));
+        // Don't honour inifinite sized array initializers. Modelling only.
+        // If we have an array of tuples and no tuple support, use tuple_fresh.
+        // Otherwise, mk_fresh.
+        if (is_tuple_ast_type(arr.subtype))
+          a = tuple_api->tuple_fresh(sort);
+        else
+          a = mk_fresh(
+            sort,
+            "inf_array",
+            convert_sort(get_flattened_array_subtype(expr->type)));
+        break;
+      }
 
-      a = tuple_array_create_despatch(flat_expr, domain);
-    }
-    else
-      a = array_create(flat_expr);
-    break;
-  }
-  case expr2t::add_id:
-  {
-    const add2t &add = to_add2t(expr);
-    if (
-      is_pointer_type(expr->type) || is_pointer_type(add.side_1) ||
-      is_pointer_type(add.side_2))
-    {
-      a = !use_old_encoding ?
-        convert_slhv_opts(expr, args) : 
-        convert_pointer_arith(expr, expr->type);
-    }
-    else if (int_encoding)
-    {
-      a = mk_add(args[0], args[1]);
-    }
-    else
-    {
-      a = mk_bvadd(args[0], args[1]);
-    }
-    break;
-  }
-  case expr2t::sub_id:
-  {
-    const sub2t &sub = to_sub2t(expr);
-    if (
-      is_pointer_type(expr->type) || is_pointer_type(sub.side_1) ||
-      is_pointer_type(sub.side_2))
-    {
-      a = !use_old_encoding ?
-        convert_slhv_opts(expr, args) : 
-        convert_pointer_arith(expr, expr->type);
-    }
-    else if (int_encoding)
-    {
-      a = mk_sub(args[0], args[1]);
-    }
-    else
-    {
-      a = mk_bvsub(args[0], args[1]);
-    }
-    break;
-  }
-  case expr2t::mul_id:
-  {
-    // Fixedbvs are handled separately
-    if (is_fixedbv_type(expr) && !int_encoding)
-    {
-      auto mul = to_mul2t(expr);
-      auto fbvt = to_fixedbv_type(mul.type);
+      expr2tc flat_expr = expr;
+      if (
+        is_array_type(get_array_subtype(expr->type)) && is_constant_array2t(expr))
+        flat_expr = flatten_array_body(expr);
 
-      unsigned int fraction_bits = fbvt.width - fbvt.integer_bits;
+      if (is_struct_type(arr.subtype) || is_pointer_type(arr.subtype))
+      {
+        // Domain sort may be mesed with:
+        smt_sortt domain = mk_int_bv_sort(
+          int_encoding ? config.ansi_c.int_width
+                      : calculate_array_domain_width(arr));
 
-      args[0] = mk_sign_ext(convert_ast(mul.side_1), fraction_bits);
-      args[1] = mk_sign_ext(convert_ast(mul.side_2), fraction_bits);
-
-      a = mk_bvmul(args[0], args[1]);
-      a = mk_extract(a, fbvt.width + fraction_bits - 1, fraction_bits);
+        a = tuple_array_create_despatch(flat_expr, domain);
+      }
+      else
+        a = array_create(flat_expr);
+      break;
     }
-    else if (int_encoding)
+    case expr2t::add_id:
     {
-      a = mk_mul(args[0], args[1]);
+      const add2t &add = to_add2t(expr);
+      if (
+        is_pointer_type(expr->type) || is_pointer_type(add.side_1) ||
+        is_pointer_type(add.side_2))
+      {
+        a = !use_old_encoding ?
+          convert_slhv_opts(expr, args) : 
+          convert_pointer_arith(expr, expr->type);
+      }
+      else if (int_encoding)
+      {
+        a = mk_add(args[0], args[1]);
+      }
+      else
+      {
+        a = mk_bvadd(args[0], args[1]);
+      }
+      break;
     }
-    else
+    case expr2t::sub_id:
     {
-      a = mk_bvmul(args[0], args[1]);
+      const sub2t &sub = to_sub2t(expr);
+      if (
+        is_pointer_type(expr->type) || is_pointer_type(sub.side_1) ||
+        is_pointer_type(sub.side_2))
+      {
+        a = !use_old_encoding ?
+          convert_slhv_opts(expr, args) : 
+          convert_pointer_arith(expr, expr->type);
+      }
+      else if (int_encoding)
+      {
+        a = mk_sub(args[0], args[1]);
+      }
+      else
+      {
+        a = mk_bvsub(args[0], args[1]);
+      }
+      break;
     }
-    break;
-  }
-  case expr2t::div_id:
-  {
-    auto d = to_div2t(expr);
-
-    // Fixedbvs are handled separately
-    if (is_fixedbv_type(expr) && !int_encoding)
+    case expr2t::mul_id:
     {
-      auto fbvt = to_fixedbv_type(d.type);
+      // Fixedbvs are handled separately
+      if (is_fixedbv_type(expr) && !int_encoding)
+      {
+        auto mul = to_mul2t(expr);
+        auto fbvt = to_fixedbv_type(mul.type);
 
-      unsigned int fraction_bits = fbvt.width - fbvt.integer_bits;
+        unsigned int fraction_bits = fbvt.width - fbvt.integer_bits;
 
-      args[1] = mk_sign_ext(convert_ast(d.side_2), fraction_bits);
+        args[0] = mk_sign_ext(convert_ast(mul.side_1), fraction_bits);
+        args[1] = mk_sign_ext(convert_ast(mul.side_2), fraction_bits);
 
-      smt_astt zero = mk_smt_bv(BigInt(0), fraction_bits);
-      smt_astt op0 = convert_ast(d.side_1);
-
-      args[0] = mk_concat(op0, zero);
-
-      // Sorts.
-      a = mk_bvsdiv(args[0], args[1]);
-      a = mk_extract(a, fbvt.width - 1, 0);
+        a = mk_bvmul(args[0], args[1]);
+        a = mk_extract(a, fbvt.width + fraction_bits - 1, fraction_bits);
+      }
+      else if (int_encoding)
+      {
+        a = mk_mul(args[0], args[1]);
+      }
+      else
+      {
+        a = mk_bvmul(args[0], args[1]);
+      }
+      break;
     }
-    else if (int_encoding)
+    case expr2t::div_id:
     {
-      a = mk_div(args[0], args[1]);
+      auto d = to_div2t(expr);
+
+      // Fixedbvs are handled separately
+      if (is_fixedbv_type(expr) && !int_encoding)
+      {
+        auto fbvt = to_fixedbv_type(d.type);
+
+        unsigned int fraction_bits = fbvt.width - fbvt.integer_bits;
+
+        args[1] = mk_sign_ext(convert_ast(d.side_2), fraction_bits);
+
+        smt_astt zero = mk_smt_bv(BigInt(0), fraction_bits);
+        smt_astt op0 = convert_ast(d.side_1);
+
+        args[0] = mk_concat(op0, zero);
+
+        // Sorts.
+        a = mk_bvsdiv(args[0], args[1]);
+        a = mk_extract(a, fbvt.width - 1, 0);
+      }
+      else if (int_encoding)
+      {
+        a = mk_div(args[0], args[1]);
+      }
+      else if (is_unsignedbv_type(d.side_1) && is_unsignedbv_type(d.side_2))
+      {
+        a = mk_bvudiv(args[0], args[1]);
+      }
+      else
+      {
+        assert(is_signedbv_type(d.side_1) && is_signedbv_type(d.side_2));
+        a = mk_bvsdiv(args[0], args[1]);
+      }
+      break;
     }
-    else if (is_unsignedbv_type(d.side_1) && is_unsignedbv_type(d.side_2))
+    case expr2t::ieee_add_id:
     {
-      a = mk_bvudiv(args[0], args[1]);
+      if (int_encoding)
+      {
+        a = mk_add(
+          convert_ast(to_ieee_add2t(expr).side_1),
+          convert_ast(to_ieee_add2t(expr).side_2));
+      }
+      else
+      {
+        assert(is_floatbv_type(expr));
+        a = fp_api->mk_smt_fpbv_add(
+          convert_ast(to_ieee_add2t(expr).side_1),
+          convert_ast(to_ieee_add2t(expr).side_2),
+          convert_rounding_mode(to_ieee_add2t(expr).rounding_mode));
+      }
+      break;
     }
-    else
-    {
-      assert(is_signedbv_type(d.side_1) && is_signedbv_type(d.side_2));
-      a = mk_bvsdiv(args[0], args[1]);
-    }
-    break;
-  }
-  case expr2t::ieee_add_id:
-  {
-    if (int_encoding)
-    {
-      a = mk_add(
-        convert_ast(to_ieee_add2t(expr).side_1),
-        convert_ast(to_ieee_add2t(expr).side_2));
-    }
-    else
+    case expr2t::ieee_sub_id:
     {
       assert(is_floatbv_type(expr));
-      a = fp_api->mk_smt_fpbv_add(
-        convert_ast(to_ieee_add2t(expr).side_1),
-        convert_ast(to_ieee_add2t(expr).side_2),
-        convert_rounding_mode(to_ieee_add2t(expr).rounding_mode));
+      if (int_encoding)
+      {
+        a = mk_sub(
+          convert_ast(to_ieee_sub2t(expr).side_1),
+          convert_ast(to_ieee_sub2t(expr).side_2));
+      }
+      else
+      {
+        a = fp_api->mk_smt_fpbv_sub(
+          convert_ast(to_ieee_sub2t(expr).side_1),
+          convert_ast(to_ieee_sub2t(expr).side_2),
+          convert_rounding_mode(to_ieee_sub2t(expr).rounding_mode));
+      }
+      break;
     }
-    break;
-  }
-  case expr2t::ieee_sub_id:
-  {
-    assert(is_floatbv_type(expr));
-    if (int_encoding)
+    case expr2t::ieee_mul_id:
     {
-      a = mk_sub(
-        convert_ast(to_ieee_sub2t(expr).side_1),
-        convert_ast(to_ieee_sub2t(expr).side_2));
+      assert(is_floatbv_type(expr));
+      if (int_encoding)
+      {
+        a = mk_mul(
+          convert_ast(to_ieee_mul2t(expr).side_1),
+          convert_ast(to_ieee_mul2t(expr).side_2));
+      }
+      else
+      {
+        a = fp_api->mk_smt_fpbv_mul(
+          convert_ast(to_ieee_mul2t(expr).side_1),
+          convert_ast(to_ieee_mul2t(expr).side_2),
+          convert_rounding_mode(to_ieee_mul2t(expr).rounding_mode));
+      }
+      break;
     }
-    else
+    case expr2t::ieee_div_id:
     {
-      a = fp_api->mk_smt_fpbv_sub(
-        convert_ast(to_ieee_sub2t(expr).side_1),
-        convert_ast(to_ieee_sub2t(expr).side_2),
-        convert_rounding_mode(to_ieee_sub2t(expr).rounding_mode));
+      assert(is_floatbv_type(expr));
+      if (int_encoding)
+      {
+        a = mk_div(
+          convert_ast(to_ieee_div2t(expr).side_1),
+          convert_ast(to_ieee_div2t(expr).side_2));
+      }
+      else
+      {
+        a = fp_api->mk_smt_fpbv_div(
+          convert_ast(to_ieee_div2t(expr).side_1),
+          convert_ast(to_ieee_div2t(expr).side_2),
+          convert_rounding_mode(to_ieee_div2t(expr).rounding_mode));
+      }
+      break;
     }
-    break;
-  }
-  case expr2t::ieee_mul_id:
-  {
-    assert(is_floatbv_type(expr));
-    if (int_encoding)
+    case expr2t::ieee_fma_id:
     {
-      a = mk_mul(
-        convert_ast(to_ieee_mul2t(expr).side_1),
-        convert_ast(to_ieee_mul2t(expr).side_2));
-    }
-    else
-    {
-      a = fp_api->mk_smt_fpbv_mul(
-        convert_ast(to_ieee_mul2t(expr).side_1),
-        convert_ast(to_ieee_mul2t(expr).side_2),
-        convert_rounding_mode(to_ieee_mul2t(expr).rounding_mode));
-    }
-    break;
-  }
-  case expr2t::ieee_div_id:
-  {
-    assert(is_floatbv_type(expr));
-    if (int_encoding)
-    {
-      a = mk_div(
-        convert_ast(to_ieee_div2t(expr).side_1),
-        convert_ast(to_ieee_div2t(expr).side_2));
-    }
-    else
-    {
-      a = fp_api->mk_smt_fpbv_div(
-        convert_ast(to_ieee_div2t(expr).side_1),
-        convert_ast(to_ieee_div2t(expr).side_2),
-        convert_rounding_mode(to_ieee_div2t(expr).rounding_mode));
-    }
-    break;
-  }
-  case expr2t::ieee_fma_id:
-  {
-    assert(is_floatbv_type(expr));
-    if (int_encoding)
-    {
-      a = mk_add(
-        mk_mul(
+      assert(is_floatbv_type(expr));
+      if (int_encoding)
+      {
+        a = mk_add(
+          mk_mul(
+            convert_ast(to_ieee_fma2t(expr).value_1),
+            convert_ast(to_ieee_fma2t(expr).value_2)),
+          convert_ast(to_ieee_fma2t(expr).value_3));
+      }
+      else
+      {
+        a = fp_api->mk_smt_fpbv_fma(
           convert_ast(to_ieee_fma2t(expr).value_1),
-          convert_ast(to_ieee_fma2t(expr).value_2)),
-        convert_ast(to_ieee_fma2t(expr).value_3));
+          convert_ast(to_ieee_fma2t(expr).value_2),
+          convert_ast(to_ieee_fma2t(expr).value_3),
+          convert_rounding_mode(to_ieee_fma2t(expr).rounding_mode));
+      }
+      break;
     }
-    else
+    case expr2t::ieee_sqrt_id:
     {
-      a = fp_api->mk_smt_fpbv_fma(
-        convert_ast(to_ieee_fma2t(expr).value_1),
-        convert_ast(to_ieee_fma2t(expr).value_2),
-        convert_ast(to_ieee_fma2t(expr).value_3),
-        convert_rounding_mode(to_ieee_fma2t(expr).rounding_mode));
+      assert(is_floatbv_type(expr));
+      // TODO: no integer mode implementation
+      a = fp_api->mk_smt_fpbv_sqrt(
+        convert_ast(to_ieee_sqrt2t(expr).value),
+        convert_rounding_mode(to_ieee_sqrt2t(expr).rounding_mode));
+      break;
     }
-    break;
-  }
-  case expr2t::ieee_sqrt_id:
-  {
-    assert(is_floatbv_type(expr));
-    // TODO: no integer mode implementation
-    a = fp_api->mk_smt_fpbv_sqrt(
-      convert_ast(to_ieee_sqrt2t(expr).value),
-      convert_rounding_mode(to_ieee_sqrt2t(expr).rounding_mode));
-    break;
-  }
-  case expr2t::modulus_id:
-  {
-    auto m = to_modulus2t(expr);
+    case expr2t::modulus_id:
+    {
+      auto m = to_modulus2t(expr);
 
-    if (int_encoding)
-    {
-      a = mk_mod(args[0], args[1]);
+      if (int_encoding)
+      {
+        a = mk_mod(args[0], args[1]);
+      }
+      else if (is_fixedbv_type(m.side_1) && is_fixedbv_type(m.side_2))
+      {
+        a = mk_bvsmod(args[0], args[1]);
+      }
+      else if (is_unsignedbv_type(m.side_1) && is_unsignedbv_type(m.side_2))
+      {
+        a = mk_bvumod(args[0], args[1]);
+      }
+      else
+      {
+        assert(is_signedbv_type(m.side_1) || is_signedbv_type(m.side_2));
+        a = mk_bvsmod(args[0], args[1]);
+      }
+      break;
     }
-    else if (is_fixedbv_type(m.side_1) && is_fixedbv_type(m.side_2))
+    case expr2t::index_id:
     {
-      a = mk_bvsmod(args[0], args[1]);
+      a = convert_array_index(expr);
+      break;
     }
-    else if (is_unsignedbv_type(m.side_1) && is_unsignedbv_type(m.side_2))
+    case expr2t::with_id:
     {
-      a = mk_bvumod(args[0], args[1]);
-    }
-    else
-    {
-      assert(is_signedbv_type(m.side_1) || is_signedbv_type(m.side_2));
-      a = mk_bvsmod(args[0], args[1]);
-    }
-    break;
-  }
-  case expr2t::index_id:
-  {
-    a = convert_array_index(expr);
-    break;
-  }
-  case expr2t::with_id:
-  {
-    const with2t &with = to_with2t(expr);
+      const with2t &with = to_with2t(expr);
 
-    // We reach here if we're with'ing a struct, not an array. Or a bool.
-    if (is_struct_type(expr) || is_pointer_type(expr))
-    {
-      unsigned int idx = get_member_name_field(expr->type, with.update_field);
-      smt_astt srcval = convert_ast(with.source_value);
+      // We reach here if we're with'ing a struct, not an array. Or a bool.
+      if (is_struct_type(expr) || is_pointer_type(expr))
+      {
+        unsigned int idx = get_member_name_field(expr->type, with.update_field);
+        smt_astt srcval = convert_ast(with.source_value);
 
-#ifndef NDEBUG
-      const struct_union_data &data = get_type_def(with.type);
-      assert(idx < data.members.size() && "Out of bounds with expression");
-      // Base type eq examines pointer types to closely
+  #ifndef NDEBUG
+        const struct_union_data &data = get_type_def(with.type);
+        assert(idx < data.members.size() && "Out of bounds with expression");
+        // Base type eq examines pointer types to closely
+        assert(
+          (base_type_eq(data.members[idx], with.update_value->type, ns) ||
+          (is_pointer_type(data.members[idx]) &&
+            is_pointer_type(with.update_value))) &&
+          "Assigned tuple member has type mismatch");
+  #endif
+
+        a = srcval->update(this, convert_ast(with.update_value), idx);
+      }
+      else if (is_union_type(expr))
+      {
+        uint64_t bits = type_byte_size_bits(expr->type).to_uint64();
+        const union_type2t &tu = to_union_type(expr->type);
+        assert(is_constant_string2t(with.update_field));
+        unsigned c =
+          tu.get_component_number(to_constant_string2t(with.update_field).value);
+        uint64_t mem_bits = type_byte_size_bits(tu.members[c]).to_uint64();
+        expr2tc upd = bitcast2tc(
+          get_uint_type(mem_bits), typecast2tc(tu.members[c], with.update_value));
+        if (mem_bits < bits)
+          upd = concat2tc(
+            get_uint_type(bits),
+            extract2tc(
+              get_uint_type(bits - mem_bits),
+              with.source_value,
+              bits - 1,
+              mem_bits),
+            upd);
+        a = convert_ast(upd);
+      }
+      else
+      {
+        a = convert_array_store(expr);
+      }
+      break;
+    }
+    case expr2t::member_id:
+    {
+      a = convert_member(expr);
+      break;
+    }
+    case expr2t::same_object_id:
+    {
+      const same_object2t& so = to_same_object2t(expr);
+      // Two projects, then comparison.
+      if (use_old_encoding) {
+        args[0] = args[0]->project(this, 0);
+        args[1] = args[1]->project(this, 0);
+        a = mk_eq(args[0], args[1]);
+      } else {
+        a = convert_slhv_opts(expr, args);
+      }
+      break;
+    }
+    case expr2t::pointer_offset_id:
+    {
+      const pointer_offset2t &obj = to_pointer_offset2t(expr);
+      // Potentially walk through some typecasts
+      const expr2tc *ptr = &obj.ptr_obj;
+      while (is_typecast2t(*ptr) && !is_pointer_type(*ptr))
+        ptr = &to_typecast2t(*ptr).from;
+
+      args[0] = convert_ast(*ptr);
+      a = !use_old_encoding ? args[0] : args[0]->project(this, 0);
+      break;
+    }
+    case expr2t::pointer_object_id:
+    {
+      const pointer_object2t &obj = to_pointer_object2t(expr);
+      // Potentially walk through some typecasts
+      const expr2tc *ptr = &obj.ptr_obj;
+      while (is_typecast2t(*ptr) && !is_pointer_type((*ptr)))
+        ptr = &to_typecast2t(*ptr).from;
+
+      args[0] = convert_ast(*ptr);
+      a = !use_old_encoding ? args[0] : args[0]->project(this, 0);
+      break;
+    }
+    case expr2t::pointer_capability_id:
+    {
+      assert(config.ansi_c.cheri);
+      const pointer_capability2t &obj = to_pointer_capability2t(expr);
+      // Potentially walk through some typecasts
+      const expr2tc *ptr = &obj.ptr_obj;
+      while (is_typecast2t(*ptr) && !is_pointer_type((*ptr)))
+        ptr = &to_typecast2t(*ptr).from;
+
+      args[0] = convert_ast(*ptr);
+      a = args[0]->project(this, 2);
+      break;
+    }
+    case expr2t::typecast_id:
+    {
+      a = convert_typecast(expr);
+      break;
+    }
+    case expr2t::nearbyint_id:
+    {
+      assert(is_floatbv_type(expr));
+      a = fp_api->mk_smt_nearbyint_from_float(
+        convert_ast(to_nearbyint2t(expr).from),
+        convert_rounding_mode(to_nearbyint2t(expr).rounding_mode));
+      break;
+    }
+    case expr2t::if_id:
+    {
+      // Only attempt to handle struct.s
+      const if2t &if_ref = to_if2t(expr);
+      args[0] = convert_ast(if_ref.cond);
+      args[1] = convert_ast(if_ref.true_value);
+      args[2] = convert_ast(if_ref.false_value);
+      a = args[1]->ite(this, args[0], args[2]);
+      break;
+    }
+    case expr2t::isnan_id:
+    {
+      a = convert_is_nan(expr);
+      break;
+    }
+    case expr2t::isinf_id:
+    {
+      a = convert_is_inf(expr);
+      break;
+    }
+    case expr2t::isnormal_id:
+    {
+      a = convert_is_normal(expr);
+      break;
+    }
+    case expr2t::isfinite_id:
+    {
+      a = convert_is_finite(expr);
+      break;
+    }
+    case expr2t::signbit_id:
+    {
+      a = convert_signbit(expr);
+      break;
+    }
+    case expr2t::popcount_id:
+    {
+      a = convert_popcount(expr);
+      break;
+    }
+    case expr2t::bswap_id:
+    {
+      a = convert_bswap(expr);
+      break;
+    }
+    case expr2t::overflow_id:
+    {
+      a = overflow_arith(expr);
+      break;
+    }
+    case expr2t::overflow_cast_id:
+    {
+      a = overflow_cast(expr);
+      break;
+    }
+    case expr2t::overflow_neg_id:
+    {
+      a = overflow_neg(expr);
+      break;
+    }
+    case expr2t::byte_extract_id:
+    {
+      a = convert_byte_extract(expr);
+      break;
+    }
+    case expr2t::byte_update_id:
+    {
+      a = convert_byte_update(expr);
+      break;
+    }
+    case expr2t::address_of_id:
+    {
+      a = convert_addr_of(expr);
+      break;
+    }
+    case expr2t::equality_id:
+    {
+      /* Compare the representations directly.
+      *
+      * This also applies to pointer-typed expressions which are represented as
+      * (object, offset) structs, i.e., two pointers compare equal iff both
+      * members are the same.
+      *
+      * 'offset' is between 0 and the size of the object, both inclusively. This
+      * is in line with what's allowed by C99 and what current GCC assumes
+      * regarding the one-past the end pointer:
+      *
+      *   Two pointers compare equal if and only if both are null pointers, both
+      *   are pointers to the same object (including a pointer to an object and a
+      *   subobject at its beginning) or function, both are pointers to one past
+      *   the last element of the same array object, or one is a pointer to one
+      *   past the end of one array object and the other is a pointer to the
+      *   start of a different array object that happens to immediately follow
+      *   the first array object in the address space.
+      *
+      * It's not strictly what Clang does, though, but de-facto, C compilers do
+      * perform optimizations based on provenance, i.e., "one past the end
+      * pointers cannot alias another object" as soon as it *cannot* be proven
+      * that they do. Sigh. For instance
+      * <https://gcc.gnu.org/bugzilla/show_bug.cgi?id=61502> makes for a "fun"
+      * read illuminating how reasoning works from a certain compiler's
+      * writers' points of view.
+      *
+      * C++ has changed this one-past behaviour in [expr.eq] to "unspecified"
+      * <https://www.open-std.org/jtc1/sc22/wg21/docs/cwg_defects.html#1652>
+      * and C might eventually follow the same path.
+      *
+      * CHERI-C semantics say that only addresses should be compared, but this
+      * might also change in the future, see e.g.
+      * <https://github.com/CTSRD-CHERI/llvm-project/issues/649>.
+      *
+      * TODO: As languages begin to differ in their pointer equality semantics,
+      *       we could move pointer comparisons to symex in order to express
+      *       them properly according to the input language.
+      */
+
+      auto eq = to_equality2t(expr);
+
+      if (
+        is_floatbv_type(eq.side_1) && is_floatbv_type(eq.side_2) && !int_encoding)
+        a = fp_api->mk_smt_fpbv_eq(args[0], args[1]);
+      else
+        a = args[0]->eq(this, args[1]);
+      break;
+    }
+    case expr2t::notequal_id:
+    {
+      // Handle all kinds of structs by inverted equality. The only that's really
+      // going to turn up is pointers though.
+
+      auto neq = to_notequal2t(expr);
+
+      if (
+        is_floatbv_type(neq.side_1) && is_floatbv_type(neq.side_2) &&
+        !int_encoding)
+        a = fp_api->mk_smt_fpbv_eq(args[0], args[1]);
+      else
+        a = args[0]->eq(this, args[1]);
+      a = mk_not(a);
+      break;
+    }
+    case expr2t::shl_id:
+    {
+      const shl2t &shl = to_shl2t(expr);
+      if (shl.side_1->type->get_width() != shl.side_2->type->get_width())
+      {
+        // frontend doesn't cast the second operand up to the width of
+        // the first, which SMT does not enjoy.
+        expr2tc cast = typecast2tc(shl.side_1->type, shl.side_2);
+        args[1] = convert_ast(cast);
+      }
+
+      if (int_encoding)
+      {
+        // Raise 2^shift, then multiply first operand by that value. If it's
+        // negative, what to do? FIXME.
+        smt_astt powval = int_shift_op_array->select(this, shl.side_2);
+        args[1] = powval;
+        a = mk_mul(args[0], args[1]);
+      }
+      else
+      {
+        a = mk_bvshl(args[0], args[1]);
+      }
+      break;
+    }
+    case expr2t::ashr_id:
+    {
+      const ashr2t &ashr = to_ashr2t(expr);
+      if (ashr.side_1->type->get_width() != ashr.side_2->type->get_width())
+      {
+        // frontend doesn't cast the second operand up to the width of
+        // the first, which SMT does not enjoy.
+        expr2tc cast = typecast2tc(ashr.side_1->type, ashr.side_2);
+        args[1] = convert_ast(cast);
+      }
+
+      if (int_encoding)
+      {
+        // Raise 2^shift, then divide first operand by that value. If it's
+        // negative, I suspect the correct operation is to latch to -1,
+        smt_astt powval = int_shift_op_array->select(this, ashr.side_2);
+        args[1] = powval;
+        a = mk_div(args[0], args[1]);
+      }
+      else
+      {
+        a = mk_bvashr(args[0], args[1]);
+      }
+      break;
+    }
+    case expr2t::lshr_id:
+    {
+      const lshr2t &lshr = to_lshr2t(expr);
+      if (lshr.side_1->type->get_width() != lshr.side_2->type->get_width())
+      {
+        // frontend doesn't cast the second operand up to the width of
+        // the first, which SMT does not enjoy.
+        expr2tc cast = typecast2tc(lshr.side_1->type, lshr.side_2);
+        args[1] = convert_ast(cast);
+      }
+
+      if (int_encoding)
+      {
+        // Raise 2^shift, then divide first operand by that value. If it's
+        // negative, I suspect the correct operation is to latch to -1,
+        smt_astt powval = int_shift_op_array->select(this, lshr.side_2);
+        args[1] = powval;
+        a = mk_div(args[0], args[1]);
+      }
+      else
+      {
+        a = mk_bvlshr(args[0], args[1]);
+      }
+      break;
+    }
+    case expr2t::abs_id:
+    {
+      const abs2t &abs = to_abs2t(expr);
+      if (is_unsignedbv_type(abs.value))
+      {
+        // No need to do anything.
+        a = args[0];
+      }
+      else if (is_floatbv_type(abs.value) && !int_encoding)
+      {
+        a = fp_api->mk_smt_fpbv_abs(args[0]);
+      }
+      else
+      {
+        expr2tc lt = lessthan2tc(abs.value, gen_zero(abs.value->type));
+        expr2tc neg = neg2tc(abs.value->type, abs.value);
+        expr2tc ite = if2tc(abs.type, lt, neg, abs.value);
+
+        a = convert_ast(ite);
+      }
+      break;
+    }
+    case expr2t::lessthan_id:
+    {
+      const lessthan2t &lt = to_lessthan2t(expr);
+      // Pointer relation:
+      if (is_pointer_type(lt.side_1))
+      {
+        a = convert_ptr_cmp(lt.side_1, lt.side_2, expr);
+      }
+      else if (int_encoding)
+      {
+        a = mk_lt(args[0], args[1]);
+      }
+      else if (is_floatbv_type(lt.side_1) && is_floatbv_type(lt.side_2))
+      {
+        a = fp_api->mk_smt_fpbv_lt(args[0], args[1]);
+      }
+      else if (is_fixedbv_type(lt.side_1) && is_fixedbv_type(lt.side_2))
+      {
+        a = mk_bvslt(args[0], args[1]);
+      }
+      else if (is_unsignedbv_type(lt.side_1) && is_unsignedbv_type(lt.side_2))
+      {
+        a = mk_bvult(args[0], args[1]);
+      }
+      else
+      {
+        assert(is_signedbv_type(lt.side_1) && is_signedbv_type(lt.side_2));
+        a = mk_bvslt(args[0], args[1]);
+      }
+      break;
+    }
+    case expr2t::lessthanequal_id:
+    {
+      const lessthanequal2t &lte = to_lessthanequal2t(expr);
+      // Pointer relation:
+      if (is_pointer_type(lte.side_1))
+      {
+        a = convert_ptr_cmp(lte.side_1, lte.side_2, expr);
+      }
+      else if (int_encoding)
+      {
+        a = mk_le(args[0], args[1]);
+      }
+      else if (is_floatbv_type(lte.side_1) && is_floatbv_type(lte.side_2))
+      {
+        a = fp_api->mk_smt_fpbv_lte(args[0], args[1]);
+      }
+      else if (is_fixedbv_type(lte.side_1) && is_fixedbv_type(lte.side_2))
+      {
+        a = mk_bvsle(args[0], args[1]);
+      }
+      else if (is_unsignedbv_type(lte.side_1) && is_unsignedbv_type(lte.side_2))
+      {
+        a = mk_bvule(args[0], args[1]);
+      }
+      else
+      {
+        assert(is_signedbv_type(lte.side_1) && is_signedbv_type(lte.side_2));
+        a = mk_bvsle(args[0], args[1]);
+      }
+      break;
+    }
+    case expr2t::greaterthan_id:
+    {
+      const greaterthan2t &gt = to_greaterthan2t(expr);
+      // Pointer relation:
+      if (is_pointer_type(gt.side_1))
+      {
+        a = convert_ptr_cmp(gt.side_1, gt.side_2, expr);
+      }
+      else if (int_encoding)
+      {
+        a = mk_gt(args[0], args[1]);
+      }
+      else if (is_floatbv_type(gt.side_1) && is_floatbv_type(gt.side_2))
+      {
+        a = fp_api->mk_smt_fpbv_gt(args[0], args[1]);
+      }
+      else if (is_fixedbv_type(gt.side_1) && is_fixedbv_type(gt.side_2))
+      {
+        a = mk_bvsgt(args[0], args[1]);
+      }
+      else if (is_unsignedbv_type(gt.side_1) && is_unsignedbv_type(gt.side_2))
+      {
+        a = mk_bvugt(args[0], args[1]);
+      }
+      else
+      {
+        assert(is_signedbv_type(gt.side_1) && is_signedbv_type(gt.side_2));
+        a = mk_bvsgt(args[0], args[1]);
+      }
+      break;
+    }
+    case expr2t::greaterthanequal_id:
+    {
+      const greaterthanequal2t &gte = to_greaterthanequal2t(expr);
+      // Pointer relation:
+      if (is_pointer_type(gte.side_1))
+      {
+        a = convert_ptr_cmp(gte.side_1, gte.side_2, expr);
+      }
+      else if (int_encoding)
+      {
+        a = mk_ge(args[0], args[1]);
+      }
+      else if (is_floatbv_type(gte.side_1) && is_floatbv_type(gte.side_2))
+      {
+        a = fp_api->mk_smt_fpbv_gte(args[0], args[1]);
+      }
+      else if (is_fixedbv_type(gte.side_1) && is_fixedbv_type(gte.side_2))
+      {
+        a = mk_bvsge(args[0], args[1]);
+      }
+      else if (is_unsignedbv_type(gte.side_1) && is_unsignedbv_type(gte.side_2))
+      {
+        a = mk_bvuge(args[0], args[1]);
+      }
+      else
+      {
+        assert(is_signedbv_type(gte.side_1) && is_signedbv_type(gte.side_2));
+        a = mk_bvsge(args[0], args[1]);
+      }
+      break;
+    }
+    case expr2t::concat_id:
+    {
       assert(
-        (base_type_eq(data.members[idx], with.update_value->type, ns) ||
-         (is_pointer_type(data.members[idx]) &&
-          is_pointer_type(with.update_value))) &&
-        "Assigned tuple member has type mismatch");
-#endif
+        !int_encoding &&
+        "Concatenate encountered in integer mode; unimplemented (and funky)");
+      a = mk_concat(args[0], args[1]);
+      break;
+    }
+    case expr2t::implies_id:
+    {
+      a = mk_implies(args[0], args[1]);
+      break;
+    }
+    case expr2t::bitand_id:
+    {
+      assert(!int_encoding);
+      a = mk_bvand(args[0], args[1]);
+      break;
+    }
+    case expr2t::bitor_id:
+    {
+      assert(!int_encoding);
+      a = mk_bvor(args[0], args[1]);
+      break;
+    }
+    case expr2t::bitxor_id:
+    {
+      assert(!int_encoding);
+      a = mk_bvxor(args[0], args[1]);
+      break;
+    }
+    case expr2t::bitnand_id:
+    {
+      assert(!int_encoding);
+      a = mk_bvnand(args[0], args[1]);
+      break;
+    }
+    case expr2t::bitnor_id:
+    {
+      assert(!int_encoding);
+      a = mk_bvnor(args[0], args[1]);
+      break;
+    }
+    case expr2t::bitnxor_id:
+    {
+      assert(!int_encoding);
+      a = mk_bvnxor(args[0], args[1]);
+      break;
+    }
+    case expr2t::bitnot_id:
+    {
+      assert(!int_encoding);
+      a = mk_bvnot(args[0]);
+      break;
+    }
+    case expr2t::not_id:
+    {
+      assert(is_bool_type(expr));
+      a = mk_not(args[0]);
+      break;
+    }
+    case expr2t::neg_id:
+    {
+      const neg2t &neg = to_neg2t(expr);
+      if (int_encoding)
+      {
+        a = mk_neg(args[0]);
+      }
+      else if (is_floatbv_type(neg.value))
+      {
+        a = fp_api->mk_smt_fpbv_neg(args[0]);
+      }
+      else
+      {
+        a = mk_bvneg(args[0]);
+      }
+      break;
+    }
+    case expr2t::and_id:
+    {
+      a = mk_and(args[0], args[1]);
+      break;
+    }
+    case expr2t::or_id:
+    {
+      a = mk_or(args[0], args[1]);
+      break;
+    }
+    case expr2t::xor_id:
+    {
+      a = mk_xor(args[0], args[1]);
+      break;
+    }
+    case expr2t::bitcast_id:
+    {
+      a = convert_bitcast(expr);
+      break;
+    }
+    case expr2t::extract_id:
+    {
+      const extract2t &ex = to_extract2t(expr);
+      a = convert_ast(ex.from);
+      if (ex.from->type->get_width() == ex.upper - ex.lower + 1)
+        return a;
+      a = mk_extract(a, ex.upper, ex.lower);
+      break;
+    }
+    case expr2t::code_comma_id:
+    {
+      /* 
+        TODO: for some reason comma expressions survive when they are under
+        * RETURN statements. They should have been taken care of at the GOTO
+        * level. Remove this code once we do!
 
-      a = srcval->update(this, convert_ast(with.update_value), idx);
-    }
-    else if (is_union_type(expr))
-    {
-      uint64_t bits = type_byte_size_bits(expr->type).to_uint64();
-      const union_type2t &tu = to_union_type(expr->type);
-      assert(is_constant_string2t(with.update_field));
-      unsigned c =
-        tu.get_component_number(to_constant_string2t(with.update_field).value);
-      uint64_t mem_bits = type_byte_size_bits(tu.members[c]).to_uint64();
-      expr2tc upd = bitcast2tc(
-        get_uint_type(mem_bits), typecast2tc(tu.members[c], with.update_value));
-      if (mem_bits < bits)
-        upd = concat2tc(
-          get_uint_type(bits),
-          extract2tc(
-            get_uint_type(bits - mem_bits),
-            with.source_value,
-            bits - 1,
-            mem_bits),
-          upd);
-      a = convert_ast(upd);
-    }
-    else
-    {
-      a = convert_array_store(expr);
-    }
-    break;
-  }
-  case expr2t::member_id:
-  {
-    a = convert_member(expr);
-    break;
-  }
-  case expr2t::same_object_id:
-  {
-    const same_object2t& so = to_same_object2t(expr);
-    // Two projects, then comparison.
-    if (use_old_encoding) {
-      args[0] = args[0]->project(this, 0);
-      args[1] = args[1]->project(this, 0);
-      a = mk_eq(args[0], args[1]);
-    } else {
-      a = convert_slhv_opts(expr, args);
-    }
-    break;
-  }
-  case expr2t::pointer_offset_id:
-  {
-    const pointer_offset2t &obj = to_pointer_offset2t(expr);
-    // Potentially walk through some typecasts
-    const expr2tc *ptr = &obj.ptr_obj;
-    while (is_typecast2t(*ptr) && !is_pointer_type(*ptr))
-      ptr = &to_typecast2t(*ptr).from;
+        the expression on the right side will become the value of the entire comma-separated expression.
 
-    args[0] = convert_ast(*ptr);
-    a = !use_old_encoding ? args[0] : args[0]->project(this, 0);
-    break;
-  }
-  case expr2t::pointer_object_id:
-  {
-    const pointer_object2t &obj = to_pointer_object2t(expr);
-    // Potentially walk through some typecasts
-    const expr2tc *ptr = &obj.ptr_obj;
-    while (is_typecast2t(*ptr) && !is_pointer_type((*ptr)))
-      ptr = &to_typecast2t(*ptr).from;
-
-    args[0] = convert_ast(*ptr);
-    a = !use_old_encoding ? args[0] : args[0]->project(this, 0);
-    break;
-  }
-  case expr2t::pointer_capability_id:
-  {
-    assert(config.ansi_c.cheri);
-    const pointer_capability2t &obj = to_pointer_capability2t(expr);
-    // Potentially walk through some typecasts
-    const expr2tc *ptr = &obj.ptr_obj;
-    while (is_typecast2t(*ptr) && !is_pointer_type((*ptr)))
-      ptr = &to_typecast2t(*ptr).from;
-
-    args[0] = convert_ast(*ptr);
-    a = args[0]->project(this, 2);
-    break;
-  }
-  case expr2t::typecast_id:
-  {
-    a = convert_typecast(expr);
-    break;
-  }
-  case expr2t::nearbyint_id:
-  {
-    assert(is_floatbv_type(expr));
-    a = fp_api->mk_smt_nearbyint_from_float(
-      convert_ast(to_nearbyint2t(expr).from),
-      convert_rounding_mode(to_nearbyint2t(expr).rounding_mode));
-    break;
-  }
-  case expr2t::if_id:
-  {
-    // Only attempt to handle struct.s
-    const if2t &if_ref = to_if2t(expr);
-    args[0] = convert_ast(if_ref.cond);
-    args[1] = convert_ast(if_ref.true_value);
-    args[2] = convert_ast(if_ref.false_value);
-    a = args[1]->ite(this, args[0], args[2]);
-    break;
-  }
-  case expr2t::isnan_id:
-  {
-    a = convert_is_nan(expr);
-    break;
-  }
-  case expr2t::isinf_id:
-  {
-    a = convert_is_inf(expr);
-    break;
-  }
-  case expr2t::isnormal_id:
-  {
-    a = convert_is_normal(expr);
-    break;
-  }
-  case expr2t::isfinite_id:
-  {
-    a = convert_is_finite(expr);
-    break;
-  }
-  case expr2t::signbit_id:
-  {
-    a = convert_signbit(expr);
-    break;
-  }
-  case expr2t::popcount_id:
-  {
-    a = convert_popcount(expr);
-    break;
-  }
-  case expr2t::bswap_id:
-  {
-    a = convert_bswap(expr);
-    break;
-  }
-  case expr2t::overflow_id:
-  {
-    a = overflow_arith(expr);
-    break;
-  }
-  case expr2t::overflow_cast_id:
-  {
-    a = overflow_cast(expr);
-    break;
-  }
-  case expr2t::overflow_neg_id:
-  {
-    a = overflow_neg(expr);
-    break;
-  }
-  case expr2t::byte_extract_id:
-  {
-    a = convert_byte_extract(expr);
-    break;
-  }
-  case expr2t::byte_update_id:
-  {
-    a = convert_byte_update(expr);
-    break;
-  }
-  case expr2t::address_of_id:
-  {
-    a = convert_addr_of(expr);
-    break;
-  }
-  case expr2t::equality_id:
-  {
-    /* Compare the representations directly.
-     *
-     * This also applies to pointer-typed expressions which are represented as
-     * (object, offset) structs, i.e., two pointers compare equal iff both
-     * members are the same.
-     *
-     * 'offset' is between 0 and the size of the object, both inclusively. This
-     * is in line with what's allowed by C99 and what current GCC assumes
-     * regarding the one-past the end pointer:
-     *
-     *   Two pointers compare equal if and only if both are null pointers, both
-     *   are pointers to the same object (including a pointer to an object and a
-     *   subobject at its beginning) or function, both are pointers to one past
-     *   the last element of the same array object, or one is a pointer to one
-     *   past the end of one array object and the other is a pointer to the
-     *   start of a different array object that happens to immediately follow
-     *   the first array object in the address space.
-     *
-     * It's not strictly what Clang does, though, but de-facto, C compilers do
-     * perform optimizations based on provenance, i.e., "one past the end
-     * pointers cannot alias another object" as soon as it *cannot* be proven
-     * that they do. Sigh. For instance
-     * <https://gcc.gnu.org/bugzilla/show_bug.cgi?id=61502> makes for a "fun"
-     * read illuminating how reasoning works from a certain compiler's
-     * writers' points of view.
-     *
-     * C++ has changed this one-past behaviour in [expr.eq] to "unspecified"
-     * <https://www.open-std.org/jtc1/sc22/wg21/docs/cwg_defects.html#1652>
-     * and C might eventually follow the same path.
-     *
-     * CHERI-C semantics say that only addresses should be compared, but this
-     * might also change in the future, see e.g.
-     * <https://github.com/CTSRD-CHERI/llvm-project/issues/649>.
-     *
-     * TODO: As languages begin to differ in their pointer equality semantics,
-     *       we could move pointer comparisons to symex in order to express
-     *       them properly according to the input language.
-     */
-
-    auto eq = to_equality2t(expr);
-
-    if (
-      is_floatbv_type(eq.side_1) && is_floatbv_type(eq.side_2) && !int_encoding)
-      a = fp_api->mk_smt_fpbv_eq(args[0], args[1]);
-    else
-      a = args[0]->eq(this, args[1]);
-    break;
-  }
-  case expr2t::notequal_id:
-  {
-    // Handle all kinds of structs by inverted equality. The only that's really
-    // going to turn up is pointers though.
-
-    auto neq = to_notequal2t(expr);
-
-    if (
-      is_floatbv_type(neq.side_1) && is_floatbv_type(neq.side_2) &&
-      !int_encoding)
-      a = fp_api->mk_smt_fpbv_eq(args[0], args[1]);
-    else
-      a = args[0]->eq(this, args[1]);
-    a = mk_not(a);
-    break;
-  }
-  case expr2t::shl_id:
-  {
-    const shl2t &shl = to_shl2t(expr);
-    if (shl.side_1->type->get_width() != shl.side_2->type->get_width())
-    {
-      // frontend doesn't cast the second operand up to the width of
-      // the first, which SMT does not enjoy.
-      expr2tc cast = typecast2tc(shl.side_1->type, shl.side_2);
-      args[1] = convert_ast(cast);
+        e.g.
+          return side_1, side_2;
+        equals to
+          side1;
+          return side_2;
+      */
+      const code_comma2t &cm = to_code_comma2t(expr);
+      a = convert_ast(cm.side_2);
+      break;
     }
-
-    if (int_encoding)
+    default:
     {
-      // Raise 2^shift, then multiply first operand by that value. If it's
-      // negative, what to do? FIXME.
-      smt_astt powval = int_shift_op_array->select(this, shl.side_2);
-      args[1] = powval;
-      a = mk_mul(args[0], args[1]);
+      log_error("Couldn't convert expression in unrecognised format\n{}", *expr);
+      abort();
     }
-    else
-    {
-      a = mk_bvshl(args[0], args[1]);
-    }
-    break;
-  }
-  case expr2t::ashr_id:
-  {
-    const ashr2t &ashr = to_ashr2t(expr);
-    if (ashr.side_1->type->get_width() != ashr.side_2->type->get_width())
-    {
-      // frontend doesn't cast the second operand up to the width of
-      // the first, which SMT does not enjoy.
-      expr2tc cast = typecast2tc(ashr.side_1->type, ashr.side_2);
-      args[1] = convert_ast(cast);
-    }
-
-    if (int_encoding)
-    {
-      // Raise 2^shift, then divide first operand by that value. If it's
-      // negative, I suspect the correct operation is to latch to -1,
-      smt_astt powval = int_shift_op_array->select(this, ashr.side_2);
-      args[1] = powval;
-      a = mk_div(args[0], args[1]);
-    }
-    else
-    {
-      a = mk_bvashr(args[0], args[1]);
-    }
-    break;
-  }
-  case expr2t::lshr_id:
-  {
-    const lshr2t &lshr = to_lshr2t(expr);
-    if (lshr.side_1->type->get_width() != lshr.side_2->type->get_width())
-    {
-      // frontend doesn't cast the second operand up to the width of
-      // the first, which SMT does not enjoy.
-      expr2tc cast = typecast2tc(lshr.side_1->type, lshr.side_2);
-      args[1] = convert_ast(cast);
-    }
-
-    if (int_encoding)
-    {
-      // Raise 2^shift, then divide first operand by that value. If it's
-      // negative, I suspect the correct operation is to latch to -1,
-      smt_astt powval = int_shift_op_array->select(this, lshr.side_2);
-      args[1] = powval;
-      a = mk_div(args[0], args[1]);
-    }
-    else
-    {
-      a = mk_bvlshr(args[0], args[1]);
-    }
-    break;
-  }
-  case expr2t::abs_id:
-  {
-    const abs2t &abs = to_abs2t(expr);
-    if (is_unsignedbv_type(abs.value))
-    {
-      // No need to do anything.
-      a = args[0];
-    }
-    else if (is_floatbv_type(abs.value) && !int_encoding)
-    {
-      a = fp_api->mk_smt_fpbv_abs(args[0]);
-    }
-    else
-    {
-      expr2tc lt = lessthan2tc(abs.value, gen_zero(abs.value->type));
-      expr2tc neg = neg2tc(abs.value->type, abs.value);
-      expr2tc ite = if2tc(abs.type, lt, neg, abs.value);
-
-      a = convert_ast(ite);
-    }
-    break;
-  }
-  case expr2t::lessthan_id:
-  {
-    const lessthan2t &lt = to_lessthan2t(expr);
-    // Pointer relation:
-    if (is_pointer_type(lt.side_1))
-    {
-      a = convert_ptr_cmp(lt.side_1, lt.side_2, expr);
-    }
-    else if (int_encoding)
-    {
-      a = mk_lt(args[0], args[1]);
-    }
-    else if (is_floatbv_type(lt.side_1) && is_floatbv_type(lt.side_2))
-    {
-      a = fp_api->mk_smt_fpbv_lt(args[0], args[1]);
-    }
-    else if (is_fixedbv_type(lt.side_1) && is_fixedbv_type(lt.side_2))
-    {
-      a = mk_bvslt(args[0], args[1]);
-    }
-    else if (is_unsignedbv_type(lt.side_1) && is_unsignedbv_type(lt.side_2))
-    {
-      a = mk_bvult(args[0], args[1]);
-    }
-    else
-    {
-      assert(is_signedbv_type(lt.side_1) && is_signedbv_type(lt.side_2));
-      a = mk_bvslt(args[0], args[1]);
-    }
-    break;
-  }
-  case expr2t::lessthanequal_id:
-  {
-    const lessthanequal2t &lte = to_lessthanequal2t(expr);
-    // Pointer relation:
-    if (is_pointer_type(lte.side_1))
-    {
-      a = convert_ptr_cmp(lte.side_1, lte.side_2, expr);
-    }
-    else if (int_encoding)
-    {
-      a = mk_le(args[0], args[1]);
-    }
-    else if (is_floatbv_type(lte.side_1) && is_floatbv_type(lte.side_2))
-    {
-      a = fp_api->mk_smt_fpbv_lte(args[0], args[1]);
-    }
-    else if (is_fixedbv_type(lte.side_1) && is_fixedbv_type(lte.side_2))
-    {
-      a = mk_bvsle(args[0], args[1]);
-    }
-    else if (is_unsignedbv_type(lte.side_1) && is_unsignedbv_type(lte.side_2))
-    {
-      a = mk_bvule(args[0], args[1]);
-    }
-    else
-    {
-      assert(is_signedbv_type(lte.side_1) && is_signedbv_type(lte.side_2));
-      a = mk_bvsle(args[0], args[1]);
-    }
-    break;
-  }
-  case expr2t::greaterthan_id:
-  {
-    const greaterthan2t &gt = to_greaterthan2t(expr);
-    // Pointer relation:
-    if (is_pointer_type(gt.side_1))
-    {
-      a = convert_ptr_cmp(gt.side_1, gt.side_2, expr);
-    }
-    else if (int_encoding)
-    {
-      a = mk_gt(args[0], args[1]);
-    }
-    else if (is_floatbv_type(gt.side_1) && is_floatbv_type(gt.side_2))
-    {
-      a = fp_api->mk_smt_fpbv_gt(args[0], args[1]);
-    }
-    else if (is_fixedbv_type(gt.side_1) && is_fixedbv_type(gt.side_2))
-    {
-      a = mk_bvsgt(args[0], args[1]);
-    }
-    else if (is_unsignedbv_type(gt.side_1) && is_unsignedbv_type(gt.side_2))
-    {
-      a = mk_bvugt(args[0], args[1]);
-    }
-    else
-    {
-      assert(is_signedbv_type(gt.side_1) && is_signedbv_type(gt.side_2));
-      a = mk_bvsgt(args[0], args[1]);
-    }
-    break;
-  }
-  case expr2t::greaterthanequal_id:
-  {
-    const greaterthanequal2t &gte = to_greaterthanequal2t(expr);
-    // Pointer relation:
-    if (is_pointer_type(gte.side_1))
-    {
-      a = convert_ptr_cmp(gte.side_1, gte.side_2, expr);
-    }
-    else if (int_encoding)
-    {
-      a = mk_ge(args[0], args[1]);
-    }
-    else if (is_floatbv_type(gte.side_1) && is_floatbv_type(gte.side_2))
-    {
-      a = fp_api->mk_smt_fpbv_gte(args[0], args[1]);
-    }
-    else if (is_fixedbv_type(gte.side_1) && is_fixedbv_type(gte.side_2))
-    {
-      a = mk_bvsge(args[0], args[1]);
-    }
-    else if (is_unsignedbv_type(gte.side_1) && is_unsignedbv_type(gte.side_2))
-    {
-      a = mk_bvuge(args[0], args[1]);
-    }
-    else
-    {
-      assert(is_signedbv_type(gte.side_1) && is_signedbv_type(gte.side_2));
-      a = mk_bvsge(args[0], args[1]);
-    }
-    break;
-  }
-  case expr2t::concat_id:
-  {
-    assert(
-      !int_encoding &&
-      "Concatenate encountered in integer mode; unimplemented (and funky)");
-    a = mk_concat(args[0], args[1]);
-    break;
-  }
-  case expr2t::implies_id:
-  {
-    a = mk_implies(args[0], args[1]);
-    break;
-  }
-  case expr2t::bitand_id:
-  {
-    assert(!int_encoding);
-    a = mk_bvand(args[0], args[1]);
-    break;
-  }
-  case expr2t::bitor_id:
-  {
-    assert(!int_encoding);
-    a = mk_bvor(args[0], args[1]);
-    break;
-  }
-  case expr2t::bitxor_id:
-  {
-    assert(!int_encoding);
-    a = mk_bvxor(args[0], args[1]);
-    break;
-  }
-  case expr2t::bitnand_id:
-  {
-    assert(!int_encoding);
-    a = mk_bvnand(args[0], args[1]);
-    break;
-  }
-  case expr2t::bitnor_id:
-  {
-    assert(!int_encoding);
-    a = mk_bvnor(args[0], args[1]);
-    break;
-  }
-  case expr2t::bitnxor_id:
-  {
-    assert(!int_encoding);
-    a = mk_bvnxor(args[0], args[1]);
-    break;
-  }
-  case expr2t::bitnot_id:
-  {
-    assert(!int_encoding);
-    a = mk_bvnot(args[0]);
-    break;
-  }
-  case expr2t::not_id:
-  {
-    assert(is_bool_type(expr));
-    a = mk_not(args[0]);
-    break;
-  }
-  case expr2t::neg_id:
-  {
-    const neg2t &neg = to_neg2t(expr);
-    if (int_encoding)
-    {
-      a = mk_neg(args[0]);
-    }
-    else if (is_floatbv_type(neg.value))
-    {
-      a = fp_api->mk_smt_fpbv_neg(args[0]);
-    }
-    else
-    {
-      a = mk_bvneg(args[0]);
-    }
-    break;
-  }
-  case expr2t::and_id:
-  {
-    a = mk_and(args[0], args[1]);
-    break;
-  }
-  case expr2t::or_id:
-  {
-    a = mk_or(args[0], args[1]);
-    break;
-  }
-  case expr2t::xor_id:
-  {
-    a = mk_xor(args[0], args[1]);
-    break;
-  }
-  case expr2t::bitcast_id:
-  {
-    a = convert_bitcast(expr);
-    break;
-  }
-  case expr2t::extract_id:
-  {
-    const extract2t &ex = to_extract2t(expr);
-    a = convert_ast(ex.from);
-    if (ex.from->type->get_width() == ex.upper - ex.lower + 1)
-      return a;
-    a = mk_extract(a, ex.upper, ex.lower);
-    break;
-  }
-  case expr2t::code_comma_id:
-  {
-    /* 
-      TODO: for some reason comma expressions survive when they are under
-      * RETURN statements. They should have been taken care of at the GOTO
-      * level. Remove this code once we do!
-
-      the expression on the right side will become the value of the entire comma-separated expression.
-
-      e.g.
-        return side_1, side_2;
-      equals to
-        side1;
-        return side_2;
-    */
-    const code_comma2t &cm = to_code_comma2t(expr);
-    a = convert_ast(cm.side_2);
-    break;
-  }
-  default:
-    log_error("Couldn't convert expression in unrecognised format\n{}", *expr);
-    abort();
   }
 
   struct smt_cache_entryt entry = {expr, a, ctx_level};
   smt_cache.insert(entry);
 
-  log_status("==== converted reuslt: ");
-  a->dump();
-  log_status("====");
   return a;
 }
 
