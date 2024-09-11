@@ -52,9 +52,8 @@ z3_slhv_convt::z3_slhv_convt(const namespacet &_ns, const optionst& _options)
 
 z3_slhv_convt::~z3_slhv_convt() { delete_all_asts(); }
 
-smt_convt::resultt z3_slhv_convt::dec_solve() {
-  log_status("z3-slhv debug: before slhv check");
-
+smt_convt::resultt z3_slhv_convt::dec_solve()
+{
   const std::string &path = options.get_option("output");
   if (path != "-")
   {
@@ -67,12 +66,6 @@ smt_convt::resultt z3_slhv_convt::dec_solve() {
   }
 
   z3::check_result result = solver.check();
-
-  log_status("z3-slhv debug: after check");
-  log_status("Dec result - {}",
-    result == z3::sat ? "sat" :
-      result == z3::unsat ? "unsat" :
-        "error");
 
   if (result == z3::sat)
     return P_SATISFIABLE;

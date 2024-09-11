@@ -780,17 +780,34 @@ smt_convt::resultt bmct::multi_property_check(
     std::unique_ptr<smt_convt> runtime_solver(create_solver("", ns, options));
     // Save current instance
     generate_smt_from_equation(*runtime_solver, local_eq);
-    
-    log_status(
-      "Solving claim '{}' with solver {}",
-      claim.claim_msg,
-      runtime_solver->solver_text());
 
     fine_timet sat_start = current_time();
     smt_convt::resultt result = runtime_solver->dec_solve();
     fine_timet sat_stop = current_time();
+
+    log_status("---------------------------------------------");
+    log_status(
+      "Solving claim '{}' with solver {}",
+      claim.claim_msg,
+      runtime_solver->solver_text());
+    
+    for (auto it = local_eq.SSA_steps.begin();
+        it != local_eq.SSA_steps.end();
+        it++)
+      if (it->is_assert() && !it->ignore)
+      {
+        log_status("{}", it->source.pc->location);
+        log_status("{}", it->comment);
+        break;
+      }
+    log_status("Dec result - {}",
+      result == smt_convt::P_SATISFIABLE ? "sat" :
+        result == smt_convt::P_UNSATISFIABLE ? "unsat" :
+          "error");
+
     log_status(
       "Runtime decision procedure: {}s", time2string(sat_stop - sat_start));
+    log_status("---------------------------------------------");
 
     // If an assertion instance is verified to be violated
     if (result == smt_convt::P_SATISFIABLE)
