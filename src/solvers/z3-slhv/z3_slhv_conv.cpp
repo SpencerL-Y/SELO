@@ -186,39 +186,6 @@ smt_sortt z3_slhv_convt::convert_slhv_sorts(const type2tc &type) {
   }
 }
 
-void z3_slhv_convt::collect_heap_state(smt_astt &a)
-{
-  if (to_solver_smt_ast<z3_smt_ast>(heap_state)->a.is_true())
-    return;
-  smt_astt simp =
-    new_ast(
-      to_solver_smt_ast<z3_smt_ast>(heap_state)->a.simplify(),
-      mk_bool_sort()
-    );
-  a = mk_implies(simp, a);
-  heap_state = mk_smt_bool(true);
-}
-
-smt_astt z3_slhv_convt::convert_assign(const expr2tc &expr)
-{
-  const equality2t &eq = to_equality2t(expr);
-  smt_astt side1 = convert_ast(eq.side_1); // LHS
-  smt_astt side2 = convert_ast(eq.side_2); // RHS
-
-  smt_astt a = mk_eq(side1, side2);
-  collect_heap_state(a);
-  assert_ast(a);
-
-  // Put that into the smt cache, thus preserving the value of the assigned symbols.
-  // IMPORTANT: the cache is now a fundamental part of how some flatteners work,
-  // in that one can choose to create a set of expressions and their ASTs, then
-  // store them in the cache, rather than have a more sophisticated conversion.
-  smt_cache_entryt e = {eq.side_1, a, ctx_level};
-  smt_cache.insert(e);
-
-  return side2;
-}
-
 smt_astt z3_slhv_convt::convert_ast(const expr2tc &expr)
 {
   log_status("------------------------------- convert ast -----------------------------");
@@ -240,12 +207,8 @@ smt_astt z3_slhv_convt::convert_ast(const expr2tc &expr)
     case expr2t::constant_intloc_id:
     case expr2t::constant_intheap_id:
     case expr2t::location_of_id:
-    case expr2t::field_of_id:
     case expr2t::heap_region_id:
-    case expr2t::heap_update_id:
-    case expr2t::heap_delete_id:
       break; // Don't convert their operands
-
     default:
     {
       // Convert all the arguments and store them in 'args'.
@@ -399,8 +362,6 @@ smt_astt z3_slhv_convt::convert_ast(const expr2tc &expr)
     }
   }
 
-  if (is_bool_type(expr->type)) collect_heap_state(a);
-
   struct smt_cache_entryt entry = {expr, a, ctx_level};
   smt_cache.insert(entry);
 
@@ -529,8 +490,6 @@ z3_slhv_convt::convert_slhv_opts(
       }
       return h;
     }
-    case expr2t::add_id:
-    case expr2t::sub_id:
     case expr2t::locadd_id:
     {
       assert(args.size() == 2);
@@ -597,12 +556,8 @@ z3_slhv_convt::convert_slhv_opts(
       }
       smt_astt v1 = mk_fresh(s1, name);
 
-      // assert_ast(mk_subh(mk_pt(loc, v1), convert_ast(heap_region)));
-      heap_state =
-        mk_and(
-          heap_state,
-          mk_subh(mk_pt(loc, v1), convert_ast(heap_region))
-        );
+      // current heap state
+      assert_ast(mk_subh(mk_pt(loc, v1), args[0]));
       return v1;
     }
     case expr2t::heap_update_id:
@@ -621,9 +576,9 @@ z3_slhv_convt::convert_slhv_opts(
 
       unsigned int _field = to_constant_int2t(upd_field).value.to_uint64();
 
-      smt_astt h = convert_ast(heap_region);
+      smt_astt h = args[0];
       smt_astt source_loc = convert_ast(_type.location);
-      smt_astt field = convert_ast(upd_field);
+      smt_astt field = args[1];
       smt_astt loc = _field == 0 ? source_loc : mk_locadd(source_loc, field);
       smt_astt val = convert_ast(upd_value);
 
@@ -632,25 +587,23 @@ z3_slhv_convt::convert_slhv_opts(
 
       // current heap state
       smt_astt old_state = mk_uplus(h1, mk_pt(loc, v1));
-      // assert_ast(mk_eq(h, old_state));
-      heap_state = mk_and(heap_state, mk_eq(h, old_state));
+      assert_ast(mk_eq(h, old_state));
 
       // new heap state
-      smt_astt new_state = mk_uplus(h1, mk_pt(loc, val));
-      return new_state;
+      return mk_uplus(h1, mk_pt(loc, val));
     }
     case expr2t::heap_delete_id:
     {
       const heap_delete2t &heap_del = to_heap_delete2t(expr);
 
-      smt_astt h = convert_ast(heap_del.source_heap);
-      smt_astt l = convert_ast(heap_del.operand);
+      smt_astt h = args[0];
+      smt_astt l = args[1];
 
       smt_astt h1 = mk_fresh(mk_intheap_sort(), mk_fresh_name("tmp_heap::"));
       smt_astt v1 = mk_fresh(mk_int_sort(), mk_fresh_name("tmp_val::"));
       
-      // assert_ast(mk_eq(h, mk_uplus(h1, mk_pt(l, v1))));
-      heap_state = mk_and(heap_state, mk_eq(h, mk_uplus(h1, mk_pt(l, v1))));
+      // current heap state
+      assert_ast(mk_eq(h, mk_uplus(h1, mk_pt(l, v1))));
       return h1;
     }
     case expr2t::same_object_id:
