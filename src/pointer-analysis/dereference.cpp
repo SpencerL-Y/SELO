@@ -2550,7 +2550,7 @@ void dereferencet::check_heap_region_access(
 
   expr2tc bound_check = not2tc(offset_cond);
   guardt tmp_guard = guard;
-  tmp_guard.add(offset_cond);
+  tmp_guard.add(bound_check);
   dereference_failure(
     "pointer dereference",
     "Access of heap out of region",

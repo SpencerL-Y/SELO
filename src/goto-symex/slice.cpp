@@ -284,8 +284,6 @@ void symex_slicet::run_on_disjhs(symex_target_equationt::SSA_stepst &eq)
     if (!step.is_assume()) continue;
     if (!is_disjh2t(step.cond)) continue;
     disjh2t &disj = to_disjh2t(step.cond);
-    log_status("run on disjhs");
-    disj.dump();
     for (unsigned int i = 0; i < disj.other_heaps.size(); i++)
       disj.is_sliced[i] = !get_symbols<false>(disj.other_heaps[i]);
   }
