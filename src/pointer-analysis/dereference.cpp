@@ -2519,13 +2519,9 @@ void dereferencet::check_heap_region_access(
   const guardt &guard,
   modet mode)
 {
-  // This check is in word-level;
+  if(options.get_bool_option("no-bounds-check")) return;
 
-  // log_status(" ------------------ check heap region access ------------------ ");
-  // value->dump();
-  // offset->dump();
-  // type->dump();
-  // guard.dump();
+  // This check is in word-level;
 
   expr2tc offset_cond;
   if (is_intheap_type(value))
@@ -2552,22 +2548,14 @@ void dereferencet::check_heap_region_access(
     offset_cond = equality2tc(offset, gen_ulong(0));
   }
 
-  // log_status("offset condition:");
-  // offset_cond->dump();
-
   expr2tc bound_check = not2tc(offset_cond);
-  if(!options.get_bool_option("no-bounds-check"))
-  {
-    guardt tmp_guard = guard;
-    tmp_guard.add(bound_check);
-    dereference_failure(
-      "pointer dereference",
-      "Access of heap out of region",
-      tmp_guard
-    );
-  }
-
-  // log_status(" ------------------ check heap region access ------------------ ");
+  guardt tmp_guard = guard;
+  tmp_guard.add(offset_cond);
+  dereference_failure(
+    "pointer dereference",
+    "Access of heap out of region",
+    tmp_guard
+  );
 }
 
 void dereferencet::check_alignment(

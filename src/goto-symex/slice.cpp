@@ -51,7 +51,6 @@ void symex_slicet::run_on_assume(symex_target_equationt::SSA_stept &SSA_step)
     {
       get_symbols<true>(SSA_step.guard);
       get_symbols<true>(SSA_step.cond);
-      depends.erase(to_symbol2t(SSA_step.lhs).get_symbol_name());
     }
   }
   else if (is_disjh2t(SSA_step.cond))
@@ -61,11 +60,6 @@ void symex_slicet::run_on_assume(symex_target_equationt::SSA_stept &SSA_step)
 
     if (!get_symbols<false>(disj.source_heap))
       is_sliced = true;
-    else
-    {
-      for (unsigned int i = 0; i < disj.other_heaps.size(); i++)
-        get_symbols<true>(disj.other_heaps[i]);
-    }
   }
 
   if (is_special_assume)
@@ -141,7 +135,7 @@ void symex_slicet::run_on_assignment(symex_target_equationt::SSA_stept &SSA_step
 
     // Remove this symbol as we won't be seeing any references to it further
     // into the history.
-    depends.erase(to_symbol2t(SSA_step.lhs).get_symbol_name());
+    // depends.erase(to_symbol2t(SSA_step.lhs).get_symbol_name());
   }
 }
 
@@ -248,6 +242,7 @@ bool claim_slicer::run(symex_target_equationt::SSA_stepst &steps)
 
   return true;
 }
+
 // Recursively try to extract the nondet symbol of an expression
 expr2tc symex_slicet::get_nondet_symbol(const expr2tc &expr)
 {
@@ -278,5 +273,20 @@ expr2tc symex_slicet::get_nondet_symbol(const expr2tc &expr)
   }
   default:
     return expr2tc();
+  }
+}
+
+void symex_slicet::run_on_disjhs(symex_target_equationt::SSA_stepst &eq)
+{
+  for (auto &step : eq)
+  {
+    if (step.ignore) continue;
+    if (!step.is_assume()) continue;
+    if (!is_disjh2t(step.cond)) continue;
+    disjh2t &disj = to_disjh2t(step.cond);
+    log_status("run on disjhs");
+    disj.dump();
+    for (unsigned int i = 0; i < disj.other_heaps.size(); i++)
+      disj.is_sliced[i] = !get_symbols<false>(disj.other_heaps[i]);
   }
 }

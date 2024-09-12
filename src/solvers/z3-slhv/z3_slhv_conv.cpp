@@ -195,7 +195,7 @@ void z3_slhv_convt::collect_heap_state(smt_astt &a)
       to_solver_smt_ast<z3_smt_ast>(heap_state)->a.simplify(),
       mk_bool_sort()
     );
-  a = mk_and(simp, a);
+  a = mk_implies(simp, a);
   heap_state = mk_smt_bool(true);
 }
 
@@ -427,6 +427,7 @@ z3_slhv_convt::convert_slhv_opts(
       smt_astt res;
       for (unsigned int i = 0; i < disj.other_heaps.size(); i++)
       {
+        if (disj.is_sliced[i]) continue;
         smt_astt disj = mk_disjh(args[0], args[i + 1]);
         res = n == 0 ? disj : mk_and(res, disj);
         ++n;
