@@ -590,6 +590,11 @@ bool dereferencet::dereference_type_compare(
   // Test for simple equality
   if (object->type == dereference_type)
     return true;
+  
+  // intloc is pointer
+  if (is_intloc_type(object->type) && is_pointer_type(dereference_type) ||
+      is_pointer_type(object->type) && is_intloc_type(dereference_type))
+    return true;
 
   // Check for C++ subclasses; we can cast derived up to base safely.
   if (is_struct_type(object) && is_struct_type(dereference_type))

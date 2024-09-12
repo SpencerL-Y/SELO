@@ -1014,12 +1014,10 @@ void goto_symext::replace_address_of(expr2tc &expr)
 {
   if (is_nil_expr(expr)) return;
 
-  expr->Foreach_operand([this](expr2tc &e) { replace_pointer_airth(e); });
+  expr->Foreach_operand([this](expr2tc &e) { replace_address_of(e); });
 
   if (is_address_of2t(expr))
-  {
     expr = location_of2tc(to_address_of2t(expr).ptr_obj);
-  }
 }
 
 void goto_symext::replace_typecast(expr2tc &expr)

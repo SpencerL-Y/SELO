@@ -288,6 +288,7 @@ expr2tc goto_symext::symex_mem(
     );
 
     log_status("create valueset base loc symbol and assign");
+    cur_state->rename(rhs_heap);
     symex_assign(code_assign2tc(lhs, location_of2tc(rhs_heap)));
 
     return expr2tc();
