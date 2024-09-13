@@ -95,13 +95,30 @@ void goto_symext::default_replace_dynamic_allocation(expr2tc &expr)
       expr2tc size_sym =
         symbol2tc(
           get_int64_type(),
-          std::string("INVALID_SIZE_") + std::to_string(nondet_counter)
+          std::string("SOME_SIZE_") + std::to_string(nondet_counter)
         );
-      expr2tc pt = points_to2tc(obj_expr, size_sym);
 
-      expr2tc heap_ct = heap_contain2tc(alloc_size_heap, pt);
+      expr2tc loc;
+      expr2tc extra_eq;
+      if (!is_if2t(obj_expr))
+        loc = obj_expr;
+      else
+      {
+        loc =
+          symbol2tc(
+            get_int64_type(),
+            std::string("assigned_loc_") + std::to_string(nondet_counter)
+          );
+        extra_eq = equality2tc(loc, obj_expr);
+      }
 
-      expr = not2tc(heap_ct);
+      expr2tc pt = points_to2tc(loc, size_sym);
+      expr2tc is_invalid = disjh2tc(alloc_size_heap);
+      to_disjh2t(is_invalid).do_disjh(pt);
+      if (!is_nil_expr(extra_eq))
+        is_invalid = and2tc(extra_eq, is_invalid);
+
+      expr = is_invalid;
     }
   }
   else if (is_deallocated_obj2t(expr))

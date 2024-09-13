@@ -40,33 +40,11 @@ void symex_slicet::run_on_assert(symex_target_equationt::SSA_stept &SSA_step)
 
 void symex_slicet::run_on_assume(symex_target_equationt::SSA_stept &SSA_step)
 {
-  bool is_special_assume = false;
-  bool is_sliced = false;
-  if (SSA_step.is_assign_to_assume)
+  if (is_disjh2t(SSA_step.cond))
   {
-    is_special_assume = true;
-    if (!get_symbols<false>(SSA_step.lhs))
-      is_sliced = true;
-    else
-    {
-      get_symbols<true>(SSA_step.guard);
-      get_symbols<true>(SSA_step.cond);
-    }
-  }
-  else if (is_disjh2t(SSA_step.cond))
-  {
-    is_special_assume = true;
     disjh2t &disj = to_disjh2t(SSA_step.cond);
-
     if (!get_symbols<false>(disj.source_heap))
-      is_sliced = true;
-  }
-
-  if (is_special_assume)
-  {
-    if (is_sliced)
     {
-      // we don't really need it
       SSA_step.ignore = true;
       ++sliced;
     }

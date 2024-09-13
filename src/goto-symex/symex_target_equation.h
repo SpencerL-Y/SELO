@@ -54,9 +54,7 @@ public:
     const expr2tc &guard,
     const expr2tc &cond,
     const sourcet &source,
-    unsigned loop_number,
-    const expr2tc &lhs = expr2tc(),
-    const bool is_assign_to_assume = false) override;
+    unsigned loop_number) override;
 
   // record an assertion
   // cond is destroyed
@@ -131,7 +129,6 @@ public:
     // for ASSUME/ASSERT
     expr2tc cond;
     std::string comment;
-    bool is_assign_to_assume;
 
     // for OUTPUT
     std::string format_string;
@@ -150,7 +147,7 @@ public:
     // for bidirectional search
     unsigned loop_number;
 
-    SSA_stept() : ignore(false), hidden(false), is_assign_to_assume(false)
+    SSA_stept() : ignore(false), hidden(false)
     {
     }
 
@@ -207,6 +204,8 @@ public:
   void push_ctx() override;
   void pop_ctx() override;
 
+  void reconstruct_cond_expr(expr2tc &expr);
+
 protected:
   const namespacet &ns;
 
@@ -216,6 +215,11 @@ protected:
 
 private:
   void debug_print_step(const SSA_stept &step) const;
+
+  typedef std::pair<expr2tc, expr2tc> cond_val;
+  typedef std::vector<cond_val> cond_val_set;
+  void get_cond_val(const expr2tc &expr, const expr2tc &cond, cond_val_set &s);
+  bool has_cond_val(const expr2tc &expr, bool is_in_if = false);
 };
 
 class runtime_encoded_equationt : public symex_target_equationt

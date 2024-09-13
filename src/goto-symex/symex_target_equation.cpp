@@ -73,9 +73,7 @@ void symex_target_equationt::assumption(
   const expr2tc &guard,
   const expr2tc &cond,
   const sourcet &source,
-  unsigned loop_number,
-  const expr2tc &lhs,
-  const bool is_assign_to_assume)
+  unsigned loop_number)
 {
   SSA_steps.emplace_back();
   SSA_stept &SSA_step = SSA_steps.back();
@@ -85,9 +83,6 @@ void symex_target_equationt::assumption(
   SSA_step.type = goto_trace_stept::ASSUME;
   SSA_step.source = source;
   SSA_step.loop_number = loop_number;
-  SSA_step.is_assign_to_assume = is_assign_to_assume;
-
-  if (is_assign_to_assume) SSA_step.lhs = lhs;
 
   if (debug_print)
     debug_print_step(SSA_step);
@@ -142,8 +137,21 @@ void symex_target_equationt::convert(smt_convt &smt_conv)
   smt_convt::ast_vec assertions;
   smt_astt assumpt_ast = smt_conv.convert_ast(gen_true_expr());
 
-  for (auto &SSA_step : SSA_steps)
+  for (auto SSA_step : SSA_steps)
+  {
+    if (!SSA_step.ignore && has_cond_val(SSA_step.cond))
+    {
+      log_status("========================================================");
+      log_status("before reconstruct : ");
+      SSA_step.cond->dump();
+      reconstruct_cond_expr(SSA_step.cond);
+
+      log_status("after reconstruct : ");
+      SSA_step.cond->dump();
+      log_status("========================================================");
+    }
     convert_internal_step(smt_conv, assumpt_ast, assertions, SSA_step);
+  }
 
   if (!assertions.empty())
     smt_conv.assert_ast(smt_conv.make_n_ary_or(assertions));
@@ -184,10 +192,19 @@ void symex_target_equationt::convert_internal_step(
   }
   else if (step.is_assignment())
   {
-    smt_astt assign = smt_conv.convert_assign(step.cond);
-    if (ssa_smt_trace)
+    if (!is_equality2t(step.cond) ||
+        is_field_of2t(to_equality2t(step.cond).side_2))
     {
-      assign->dump();
+      smt_astt assign = smt_conv.convert_ast(step.cond);
+      smt_conv.assert_ast(assign);
+    }
+    else
+    {
+      smt_astt assign = smt_conv.convert_assign(step.cond);
+      if (ssa_smt_trace)
+      {
+        assign->dump();
+      }
     }
   }
   else if (step.is_output())
@@ -220,7 +237,7 @@ void symex_target_equationt::convert_internal_step(
     assert(0 && "Unexpected SSA step type in conversion");
   }
 
-  if (step.is_assign_to_assume || is_disjh2t(step.cond))
+  if (is_disjh2t(step.cond))
   {
     smt_conv.assert_ast(step.cond_ast);
   }
@@ -424,6 +441,94 @@ void symex_target_equationt::reconstruct_symbolic_expression(
 
     replace_rec(*rit, expr, keep_local_variables);
   }
+}
+
+void symex_target_equationt::reconstruct_cond_expr(expr2tc &expr)
+{
+  if (is_nil_expr(expr)) return;
+
+  expr->Foreach_operand([this](expr2tc &e){
+    reconstruct_cond_expr(e);
+  });
+
+  switch (expr->expr_id)
+  {
+    case expr2t::same_object_id:
+    case expr2t::equality_id:
+    {
+      expr2tc side_1 =
+        is_equality2t(expr) ?
+          to_equality2t(expr).side_1 : to_same_object2t(expr).side_1;
+      expr2tc side_2 = 
+        is_equality2t(expr) ?
+          to_equality2t(expr).side_2 : to_same_object2t(expr).side_2;
+
+      if (!has_cond_val(side_1) && !has_cond_val(side_2)) break;
+
+      cond_val_set s1, s2;
+      get_cond_val(side_1, constant_bool2tc(true), s1);
+      get_cond_val(side_2, constant_bool2tc(true), s2);
+
+      expr2tc new_expr;
+      int n = 0;
+      for (const cond_val &v1 : s1)
+        for (const cond_val &v2 : s2)
+        {
+          expr2tc cond = and2tc(v1.first, v2.first);
+          simplify(cond);
+          expr2tc bexpr = 
+            is_equality2t(expr) ?
+              equality2tc(v1.second, v2.second) :
+                same_object2tc(v1.second, v2.second);
+          simplify(bexpr);
+          expr2tc e = and2tc(cond, bexpr);
+          new_expr = (n == 0) ? e : or2tc(new_expr, e);
+          n++;
+        }
+      expr = new_expr;
+      break;
+    }
+    // add more cases if exists
+    default:
+      break;
+  }
+}
+
+void symex_target_equationt::get_cond_val(
+  const expr2tc &expr, const expr2tc &cond, cond_val_set &s)
+{
+  if (is_if2t(expr))
+  {
+    const if2t &_if = to_if2t(expr);
+
+    expr2tc true_cond = and2tc(cond, _if.cond);
+    expr2tc false_cond = and2tc(cond, not2tc(_if.cond));
+
+    get_cond_val(_if.true_value, true_cond, s);
+    get_cond_val(_if.false_value, false_cond, s);
+    return;
+  }
+  else if (is_typecast2t(expr))
+  {
+    get_cond_val(to_typecast2t(expr).from, cond, s);
+    return;
+  }
+
+  s.push_back(std::make_pair(cond, expr));
+}
+
+bool symex_target_equationt::has_cond_val(const expr2tc &expr, bool is_in_if)
+{
+  if (is_nil_expr(expr)) return false;
+  if (is_field_of2t(expr)) return is_in_if;
+  
+  is_in_if |= is_if2t(expr);
+  bool has_cond = false;
+  expr->foreach_operand([this, &has_cond, &is_in_if](const expr2tc &e) {
+      has_cond |= has_cond_val(e, is_in_if);
+    });
+  
+  return has_cond; 
 }
 
 runtime_encoded_equationt::runtime_encoded_equationt(

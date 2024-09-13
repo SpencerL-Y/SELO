@@ -3201,7 +3201,7 @@ public:
   }
   disjh2t(const disjh2t &ref) = default;
 
-  void do_disjh(const expr2tc &heap);
+  void do_disjh(const expr2tc &heap_term);
   
   static std::string field_names[esbmct::num_type_fields];
 };

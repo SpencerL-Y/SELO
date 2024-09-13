@@ -490,22 +490,21 @@ arith_2ops::arith_2ops(
 #endif
 }
 
-
-void disjh2t::do_disjh(const expr2tc &heap)
+void disjh2t::do_disjh(const expr2tc &heap_term)
 {
-  if (!is_intheap_type(heap) ||
-      !is_symbol2t(heap))
+  if (!is_intheap_type(heap_term))
   {
     log_status("Wrong object");
-    heap->dump();
+    heap_term->dump();
     abort();
   }
 
-  if (to_symbol2t(source_heap).get_symbol_name() ==
-      to_symbol2t(heap).get_symbol_name())
+  if (is_symbol2t(heap_term) &&
+      to_symbol2t(source_heap).get_symbol_name() ==
+      to_symbol2t(heap_term).get_symbol_name())
     return;
 
-  other_heaps.push_back(heap);
+  other_heaps.push_back(heap_term);
   is_sliced.push_back(false);
 }
 

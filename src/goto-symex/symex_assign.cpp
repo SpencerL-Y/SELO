@@ -400,22 +400,6 @@ void goto_symext::symex_assign_symbol(
   guardt tmp_guard(cur_state->guard);
   tmp_guard.append(guard);
 
-  if (has_cond_expr(rhs))
-  {
-    // Transfer assignment to assume
-    expr2tc new_cond = transfer_to_assume(rhs, expr2tc(), renamed_lhs);
-
-    target->assumption(
-      tmp_guard.as_expr(),
-      new_cond,
-      cur_state->source,
-      first_loop,
-      renamed_lhs,
-      true
-    );
-    return;
-  }
-
   // do the assignment
   target->assignment(
     tmp_guard.as_expr(),
@@ -928,7 +912,13 @@ void goto_symext::symex_assign_fieldof(
   cur_state->get_original_name(disj);
   for (auto const& it : dynamic_memory)
     to_disjh2t(disj).do_disjh(it.obj);
-  assume(disj);
+  cur_state->rename(disj);
+  target->assumption(
+    cur_state->guard.as_expr(),
+    disj,
+    cur_state->source,
+    first_loop
+  );
 }
 
 void goto_symext::replace_nondet(expr2tc &expr)

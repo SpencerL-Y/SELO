@@ -43,7 +43,7 @@ smt_convt *create_new_z3_slhv_solver(
 }
 
 z3_slhv_convt::z3_slhv_convt(const namespacet &_ns, const optionst& _options)
-  : z3_convt(_ns, _options), heap_state(mk_smt_bool(true)) {
+  : z3_convt(_ns, _options), loaded_state(mk_smt_bool(true)) {
     // initialize the z3 based slhv converter here
     int_encoding = true;
     solver = z3::solver(z3_ctx, "SLHV");
@@ -186,6 +186,22 @@ smt_sortt z3_slhv_convt::convert_slhv_sorts(const type2tc &type) {
   }
 }
 
+smt_astt z3_slhv_convt::convert_assign(const expr2tc &expr)
+{
+  const equality2t &eq = to_equality2t(expr);
+  smt_astt side1 = convert_ast(eq.side_1); // LHS
+  smt_astt side2 = convert_ast(eq.side_2); // RHS
+  
+  smt_astt a = mk_eq(side1, side2);
+  collect_loaded_state(a);
+  assert_ast(a);
+
+  smt_cache_entryt e = {eq.side_1, side2, ctx_level};
+  smt_cache.insert(e);
+
+  return a;
+}
+
 smt_astt z3_slhv_convt::convert_ast(const expr2tc &expr)
 {
   log_status("------------------------------- convert ast -----------------------------");
@@ -207,6 +223,7 @@ smt_astt z3_slhv_convt::convert_ast(const expr2tc &expr)
     case expr2t::constant_intloc_id:
     case expr2t::constant_intheap_id:
     case expr2t::location_of_id:
+    case expr2t::field_of_id:
     case expr2t::heap_region_id:
       break; // Don't convert their operands
     default:
@@ -264,6 +281,7 @@ smt_astt z3_slhv_convt::convert_ast(const expr2tc &expr)
       args[0] = this->project(so.side_1);
       args[1] = this->project(so.side_2);
       a = mk_eq(args[0], args[1]);
+      collect_loaded_state(a);
       break;
     }
     case expr2t::pointer_object_id:
@@ -348,6 +366,7 @@ smt_astt z3_slhv_convt::convert_ast(const expr2tc &expr)
     case expr2t::and_id:
     {
       a = mk_and(args[0], args[1]);
+      collect_loaded_state(a);
       break;
     }
     case expr2t::or_id:
@@ -537,27 +556,29 @@ z3_slhv_convt::convert_slhv_opts(
       const expr2tc &field = field_of.operand;
       unsigned int _field = to_constant_int2t(field).value.to_uint64();
 
+      smt_astt h = convert_ast(heap_region);
       smt_astt source_loc = convert_ast(_type.location);
       smt_astt loc = _field == 0 ?
         source_loc : mk_locadd(source_loc, convert_ast(field));
 
       smt_sortt s1;
-      std::string name;
+      std::string n1;
       if (!_type.is_aligned)
       {
         s1 = mk_intloc_sort();
-        name = mk_fresh_name("tmp_loc::");
+        n1 = mk_fresh_name("tmp_loc::");
       }
       else
       {
         s1 = is_intloc_type(_type.field_types[_field]) ? mk_intloc_sort() : mk_int_sort();
-        name = mk_fresh_name(
+        n1 = mk_fresh_name(
           is_intloc_type(_type.field_types[_field]) ? "tmp_loc::" : "tmp_val::");
       }
-      smt_astt v1 = mk_fresh(s1, name);
+      smt_astt v1 = mk_fresh(s1, n1);
 
       // current heap state
-      assert_ast(mk_subh(mk_pt(loc, v1), args[0]));
+      smt_astt heap_state = mk_subh(mk_pt(loc, v1), h);
+      add_loaded_state(heap_state);
       return v1;
     }
     case expr2t::heap_update_id:
@@ -654,7 +675,7 @@ smt_astt z3_slhv_convt::project(const expr2tc &expr)
     const if2t &_if = to_if2t(expr);
     smt_astt cond = convert_ast(_if.cond);
     smt_astt t = this->project(_if.true_value);
-    smt_astt f = this->project(_if.true_value);
+    smt_astt f = this->project(_if.false_value);
     return mk_ite(cond, t, f);
   }
   else
@@ -697,4 +718,20 @@ void z3_slhv_convt::print_smt_formulae(std::ostream& dest)
   log_status(
     "Total number of safety properties: {}",
     Z3_ast_vector_size(z3_ctx, __z3_assertions));
+}
+
+void z3_slhv_convt::add_loaded_state(smt_astt a)
+{
+  if (to_solver_smt_ast<z3_smt_ast>(loaded_state)->a.is_true())
+    loaded_state = a;
+  else
+    loaded_state = mk_and(loaded_state, a);
+}
+
+void z3_slhv_convt::collect_loaded_state(smt_astt &a)
+{
+  if (to_solver_smt_ast<z3_smt_ast>(loaded_state)->a.is_true())
+    return;
+  a = mk_and(loaded_state, a);
+  loaded_state = mk_smt_bool(true);
 }

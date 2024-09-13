@@ -1243,32 +1243,31 @@ void dereferencet::build_deref_slhv(
       abort();
     }
     
-    bool is_field = true;
     if (field >= _type.field_types.size() ||
       access_sz != _type.total_bytes / _type.field_types.size())
     {
       // Out of bound or unaligned - undefined behavior
-      expr2tc sym = symbol2tc(
-        type, 
-        dereference_callback.get_nondet_id("undefined_behavior_var"));
-      value = sym;
-      is_field = false;
+      // expr2tc sym = symbol2tc(
+      //   type, 
+      //   dereference_callback.get_nondet_id("undefined_behavior_var"));
+      // value = sym;
+      value = expr2tc();
     }
     else
+    {
       value = field_of2tc(type, value, gen_ulong(field));
-
-    // update field type
-    if (is_field && _type.set_field_type(field, type))
-      dereference_callback.update_heap_type(_type);
+      // update field type
+      if (_type.set_field_type(field, type))
+        dereference_callback.update_heap_type(_type);
+      }
   }
   else
   {
     // pointer - return itself
   }
-  
 
-  log_status("return dereference --->");
-  value->dump();
+  log_status("return dereference ---> {}", !is_nil_expr(value));
+  if (!is_nil_expr(value)) value->dump();
 
   log_status(" ----------------- build deref slhv ----------------- ");
 }

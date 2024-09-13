@@ -275,7 +275,13 @@ expr2tc goto_symext::symex_mem(
       expr2tc disj = disjh2tc(rhs_heap);
       for (auto const &it : dynamic_memory)
         to_disjh2t(disj).do_disjh(it.obj);
-      assume(disj);
+      cur_state->rename(disj);
+      target->assumption(
+        cur_state->guard.as_expr(),
+        disj,
+        cur_state->source,
+        first_loop
+      );
     }
     
     log_status("use dynamic memory to track malloc heap - {}",

@@ -59,9 +59,7 @@ public:
     const expr2tc &guard,
     const expr2tc &cond,
     const sourcet &source,
-    unsigned loop_number,
-    const expr2tc &lhs = expr2tc(), // use to assign-to_assume
-    const bool is_assign_to_assume = false) = 0;
+    unsigned loop_number) = 0;
 
   // record an assertion
   // cond is destroyed
