@@ -353,8 +353,6 @@ void goto_symext::symex_free(const expr2tc &expr)
   log_status("tmp before dereference FREE mode: ");
   tmp->dump();
   dereference(tmp, dereferencet::FREE);
-  log_status("tmp after dereference FREE mode:");
-  tmp->dump();
   // Don't rely on the output of dereference in free mode; instead fetch all
   // the internal dereference state for pointed at objects, and creates claims
   // that if pointed at, their offset is zero.

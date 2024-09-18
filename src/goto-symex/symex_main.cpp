@@ -200,7 +200,6 @@ void goto_symext::symex_step(reachability_treet &art)
     dereference(tmp, dereferencet::READ);
     replace_dynamic_allocation(tmp);
 
-    log_status("herer");
     symex_goto(tmp);
   }
   break;

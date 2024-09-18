@@ -881,7 +881,6 @@ expr2tc dereferencet::build_reference_to(
     // to have a reference built at all.
     if (is_internal(mode))
     {
-      log_status("collect objects for doing free");
       dereference_callbackt::internal_item internal;
       internal.object = value;
       internal.offset = final_offset; // offset for SLHV
@@ -2279,6 +2278,8 @@ void dereferencet::valid_check(
   }
   else if(is_intheap_type(symbol))
   {
+    if (is_internal(mode)) return;
+
     expr2tc not_valid_heap_region = not2tc(valid_object2tc(symbol));
     guardt tmp_guard(guard);
     tmp_guard.add(not_valid_heap_region);

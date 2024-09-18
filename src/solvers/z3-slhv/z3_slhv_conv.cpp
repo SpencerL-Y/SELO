@@ -43,7 +43,7 @@ smt_convt *create_new_z3_slhv_solver(
 }
 
 z3_slhv_convt::z3_slhv_convt(const namespacet &_ns, const optionst& _options)
-  : z3_convt(_ns, _options), loaded_state(mk_smt_bool(true)) {
+  : z3_convt(_ns, _options) {
     // initialize the z3 based slhv converter here
     int_encoding = true;
     solver = z3::solver(z3_ctx, "SLHV");
@@ -186,22 +186,6 @@ smt_sortt z3_slhv_convt::convert_slhv_sorts(const type2tc &type) {
   }
 }
 
-smt_astt z3_slhv_convt::convert_assign(const expr2tc &expr)
-{
-  const equality2t &eq = to_equality2t(expr);
-  smt_astt side1 = convert_ast(eq.side_1); // LHS
-  smt_astt side2 = convert_ast(eq.side_2); // RHS
-  
-  smt_astt a = mk_eq(side1, side2);
-  collect_loaded_state(a);
-  assert_ast(a);
-
-  smt_cache_entryt e = {eq.side_1, side2, ctx_level};
-  smt_cache.insert(e);
-
-  return a;
-}
-
 smt_astt z3_slhv_convt::convert_ast(const expr2tc &expr)
 {
   log_status("------------------------------- convert ast -----------------------------");
@@ -209,6 +193,7 @@ smt_astt z3_slhv_convt::convert_ast(const expr2tc &expr)
 
   smt_cachet::const_iterator cache_result = smt_cache.find(expr);
   if (cache_result != smt_cache.end()) {
+    log_status("has been cached : ");
     cache_result->ast->dump();
     return (cache_result->ast);
   }
@@ -281,7 +266,6 @@ smt_astt z3_slhv_convt::convert_ast(const expr2tc &expr)
       args[0] = this->project(so.side_1);
       args[1] = this->project(so.side_2);
       a = mk_eq(args[0], args[1]);
-      collect_loaded_state(a);
       break;
     }
     case expr2t::pointer_object_id:
@@ -366,11 +350,21 @@ smt_astt z3_slhv_convt::convert_ast(const expr2tc &expr)
     case expr2t::and_id:
     {
       a = mk_and(args[0], args[1]);
-      collect_loaded_state(a);
       break;
     }
     case expr2t::or_id:
     {
+      // const or2t &_or = to_or2t(expr);
+      // smt_astt s1 = collect_loaded_state(_or.side_1);
+      // smt_astt s2 = collect_loaded_state(_or.side_2);
+      
+      // smt_astt side1 = args[0];
+      // if (!to_solver_smt_ast<z3_smt_ast>(s1)->a.is_true())
+      //   side1 = mk_and(s1, side1);
+      // smt_astt side2 = args[1];
+      // if (!to_solver_smt_ast<z3_smt_ast>(s2)->a.is_true())
+      //   side2 = mk_and(s2, side2);
+
       a = mk_or(args[0], args[1]);
       break;
     }
@@ -577,8 +571,11 @@ z3_slhv_convt::convert_slhv_opts(
       smt_astt v1 = mk_fresh(s1, n1);
 
       // current heap state
-      smt_astt heap_state = mk_subh(mk_pt(loc, v1), h);
-      add_loaded_state(heap_state);
+      smt_astt s = mk_subh(mk_pt(loc, v1), h);
+      // if load operation is invalid,
+      // dereference will lead to undedined behavior
+      assert_ast(mk_or(s, mk_smt_bool(false)));
+
       return v1;
     }
     case expr2t::heap_update_id:
@@ -718,20 +715,4 @@ void z3_slhv_convt::print_smt_formulae(std::ostream& dest)
   log_status(
     "Total number of safety properties: {}",
     Z3_ast_vector_size(z3_ctx, __z3_assertions));
-}
-
-void z3_slhv_convt::add_loaded_state(smt_astt a)
-{
-  if (to_solver_smt_ast<z3_smt_ast>(loaded_state)->a.is_true())
-    loaded_state = a;
-  else
-    loaded_state = mk_and(loaded_state, a);
-}
-
-void z3_slhv_convt::collect_loaded_state(smt_astt &a)
-{
-  if (to_solver_smt_ast<z3_smt_ast>(loaded_state)->a.is_true())
-    return;
-  a = mk_and(loaded_state, a);
-  loaded_state = mk_smt_bool(true);
 }

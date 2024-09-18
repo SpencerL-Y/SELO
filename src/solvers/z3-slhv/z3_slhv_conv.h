@@ -1,6 +1,8 @@
 #ifndef _ESBMC_SOLVERS_Z3_SLHV_CONV_H
 #define _ESBMC_SOLVERS_Z3_SLHV_CONV_H
 
+#include <map>
+
 #include <solvers/z3/z3_conv.h>
 #include <z3++.h>
 
@@ -40,8 +42,6 @@ public:
 
     smt_sortt convert_slhv_sorts(const type2tc &type) override;
 
-
-    smt_astt convert_assign(const expr2tc &expr) override;
     smt_astt convert_ast(const expr2tc &expr) override;
 
     smt_astt
@@ -55,10 +55,6 @@ private:
     void print_smt_formulae(std::ostream& dest);
 
     std::vector<smt_astt> assertions;
-
-    smt_astt loaded_state;
-    void add_loaded_state(smt_astt a);
-    void collect_loaded_state(smt_astt &a);
 };
 
 #endif

@@ -192,8 +192,7 @@ void symex_target_equationt::convert_internal_step(
   }
   else if (step.is_assignment())
   {
-    if (!is_equality2t(step.cond) ||
-        is_field_of2t(to_equality2t(step.cond).side_2))
+    if (!is_equality2t(step.cond))
     {
       smt_astt assign = smt_conv.convert_ast(step.cond);
       smt_conv.assert_ast(assign);
