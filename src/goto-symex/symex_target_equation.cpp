@@ -161,8 +161,8 @@ void symex_target_equationt::convert_internal_step(
     return;
   }
 
-  log_status(" ============================== step ======================== ");
-  step.dump();
+  // log_status(" ============================== step ======================== ");
+  // step.dump();
 
   // guard_ast is used for generating witness
   // step.guard_ast = smt_conv.convert_ast(step.guard);
@@ -172,18 +172,18 @@ void symex_target_equationt::convert_internal_step(
     // step.cond_ast = false_val;
     expr2tc tmp(step.cond);
     step.cond_ast = smt_conv.convert_ast(tmp);
-    if (ssa_smt_trace)
-    {
-      step.cond_ast->dump();
-    }
+    // if (ssa_smt_trace)
+    // {
+    //   step.cond_ast->dump();
+    // }
   }
   else if (step.is_assignment())
   {
     smt_astt assign = smt_conv.convert_assign(step.cond);
-    if (ssa_smt_trace)
-    {
-      assign->dump();
-    }
+    // if (ssa_smt_trace)
+    // {
+    //   assign->dump();
+    // }
   }
   else if (step.is_output())
   {
@@ -223,15 +223,15 @@ void symex_target_equationt::convert_internal_step(
   {
     step.cond_ast = smt_conv.imply_ast(assumpt_ast, step.cond_ast);
     assertions.push_back(smt_conv.invert_ast(step.cond_ast));
-    smt_conv.invert_ast(step.cond_ast)->dump();
+    // smt_conv.invert_ast(step.cond_ast)->dump();
   }
   else if (step.is_assume())
   {
     assumpt_ast = smt_conv.mk_and(assumpt_ast, step.cond_ast);
-    step.cond_ast->dump();
+    // step.cond_ast->dump();
   }
 
-  log_status(" ============================== step ======================== ");
+  // log_status(" ============================== step ======================== ");
 }
 
 void symex_target_equationt::output(std::ostream &out) const

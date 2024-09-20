@@ -1201,7 +1201,8 @@ void goto_symext::add_memory_leak_checks()
       };
   }
   bool use_old_encoding = !options.get_bool_option("z3-slhv");
-  if(use_old_encoding) {
+  if(use_old_encoding)
+  {
     for (auto const &it : dynamic_memory)
     {
       // Don't check memory leak if the object is automatically   deallocated
@@ -1212,39 +1213,39 @@ void goto_symext::add_memory_leak_checks()
         continue;
       }
 
-        // Assert that the allocated object was freed.
-        expr2tc deallocd = deallocated_obj2tc(it.obj);
+      // Assert that the allocated object was freed.
+      expr2tc deallocd = deallocated_obj2tc(it.obj);
 
-        // For each dynamic object we generate a condition checking
-        // whether it has been deallocated.
-        expr2tc eq = equality2tc(deallocd, gen_true_expr());
+      // For each dynamic object we generate a condition checking
+      // whether it has been deallocated.
+      expr2tc eq = equality2tc(deallocd, gen_true_expr());
 
-        expr2tc when = it.alloc_guard.as_expr();
+      expr2tc when = it.alloc_guard.as_expr();
 
-        if (no_reachable_memleak)
-        {
-          expr2tc obj = get_base_object(it.obj);
-          expr2tc adr = obj;
-          if (!is_if2t(obj))
-            adr = address_of2tc(obj->type, obj);
-          expr2tc targeted = maybe_global_target(adr);
-          when = and2tc(when, not2tc(targeted));
-        }
+      if (no_reachable_memleak)
+      {
+        expr2tc obj = get_base_object(it.obj);
+        expr2tc adr = obj;
+        if (!is_if2t(obj))
+          adr = address_of2tc(obj->type, obj);
+        expr2tc targeted = maybe_global_target(adr);
+        when = and2tc(when, not2tc(targeted));
+      }
 
-        // Additionally, we need to make sure that we check the above     condition
-        // only for dynamic objects that were created from successful
-        // memory allocations. This is because we always create a   dynamic  object for
-        // each dynamic allocation, and the allocation success status
-        // is described by a separate "allocation_guard".
-        // (see "symex_mem" method in "goto-symex/builtin_functions.  cpp").
-        expr2tc cond = implies2tc(when, eq);
+      // Additionally, we need to make sure that we check the above     condition
+      // only for dynamic objects that were created from successful
+      // memory allocations. This is because we always create a   dynamic  object for
+      // each dynamic allocation, and the allocation success status
+      // is described by a separate "allocation_guard".
+      // (see "symex_mem" method in "goto-symex/builtin_functions.  cpp").
+      expr2tc cond = implies2tc(when, eq);
 
-        replace_dynamic_allocation(cond);
-        cur_state->rename(cond);
-        claim(
-        cond,
-        "dereference failure: forgotten memory: " + get_pretty_name(it.name));
-      } 
+      replace_dynamic_allocation(cond);
+      cur_state->rename(cond);
+      claim(
+      cond,
+      "dereference failure: forgotten memory: " + get_pretty_name(it.name));
+    } 
   } else {
     log_status(" ----------- [memleak encoding]----------- ");
     for (auto const &it : dynamic_memory){
@@ -1257,7 +1258,6 @@ void goto_symext::add_memory_leak_checks()
         cond,
         "dereference failure, forgotten memory: " + get_pretty_name(it.name)
       );
-
     }
   }
 }

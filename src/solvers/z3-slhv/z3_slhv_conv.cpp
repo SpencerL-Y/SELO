@@ -38,7 +38,6 @@ smt_convt *create_new_z3_slhv_solver(
   *tuple_api = static_cast<tuple_iface *>(conv);
   *array_api = static_cast<array_iface *>(conv);
   *fp_api = static_cast<fp_convt *>(conv);
-  log_status("z3_slhv solver created");
   return conv;
 }
 
@@ -48,7 +47,6 @@ z3_slhv_convt::z3_slhv_convt(const namespacet &_ns, const optionst& _options)
   // initialize the z3 based slhv converter here
   int_encoding = true;
   solver = z3::solver(z3_ctx, "SLHV");
-  log_status("z3_slhv_convt created");
 }
 
 z3_slhv_convt::~z3_slhv_convt() { delete_all_asts(); }
@@ -245,15 +243,12 @@ smt_sortt z3_slhv_convt::convert_slhv_sorts(const type2tc &type)
 
 smt_astt z3_slhv_convt::convert_ast(const expr2tc &expr)
 {
-  log_status("------------------------------- convert ast -----------------------------");
-  expr->dump();
+  // log_status("------------------------------- convert ast -----------------------------");
+  // expr->dump();
 
   smt_cachet::const_iterator cache_result = smt_cache.find(expr);
-  if (cache_result != smt_cache.end()) {
-    log_status("has been cached : ");
-    cache_result->ast->dump();
+  if (cache_result != smt_cache.end())
     return (cache_result->ast);
-  }
 
   std::vector<smt_astt> args;
   args.reserve(expr->get_num_sub_exprs());
@@ -424,9 +419,9 @@ smt_astt z3_slhv_convt::convert_ast(const expr2tc &expr)
   struct smt_cache_entryt entry = {expr, a, ctx_level};
   smt_cache.insert(entry);
 
-  log_status("====================== converted reuslt: ");
-  a->dump();
-  log_status("-------------------------------------------------------------------------");
+  // log_status("====================== converted reuslt: ");
+  // a->dump();
+  // log_status("-------------------------------------------------------------------------");
   return a;
 }
 

@@ -1428,8 +1428,6 @@ static std::string fixed_point(const std::string &v, unsigned width)
 
 smt_astt smt_convt::convert_terminal(const expr2tc &expr)
 {
-  log_status("convert terminal: ");
-  expr.get()->dump();
   switch (expr->expr_id)
   {
   case expr2t::constant_int_id:
