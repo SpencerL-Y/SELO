@@ -215,11 +215,6 @@ protected:
 
 private:
   void debug_print_step(const SSA_stept &step) const;
-
-  // typedef std::pair<expr2tc, expr2tc> cond_val;
-  // typedef std::vector<cond_val> cond_val_set;
-  // void get_cond_val(const expr2tc &expr, const expr2tc &cond, cond_val_set &s);
-  // bool has_cond_val(const expr2tc &expr, bool is_in_if = false);
 };
 
 class runtime_encoded_equationt : public symex_target_equationt
