@@ -33,9 +33,6 @@ public:
     smt_astt mk_subh(smt_astt ht1, smt_astt ht2);
     smt_astt mk_disjh(smt_astt ht1, smt_astt );
     smt_astt mk_locadd(smt_astt l, smt_astt o);
-    smt_astt mk_heap_read(smt_astt h, smt_astt l, smt_sortt s);
-    smt_astt mk_heap_write(smt_astt h, smt_astt l, smt_astt c);
-    smt_astt mk_heap_delete(smt_astt h, smt_astt l);
 
     // value obtaining from solver, not supported here
     BigInt get_bv(smt_astt a, bool is_signed) override;

@@ -163,50 +163,6 @@ smt_astt z3_slhv_convt::mk_locadd(smt_astt l, smt_astt o)
   );
 }
 
-smt_astt z3_slhv_convt::mk_heap_read(smt_astt h, smt_astt l, smt_sortt s)
-{
-  z3::expr (*heap_read)(z3::expr, z3::expr);
-  if (s->id == SMT_SORT_INTLOC)
-    heap_read = z3::heap_read_loc;
-  else
-    heap_read = z3::heap_read_data;
-  return new_ast(
-    (*heap_read)(
-      to_solver_smt_ast<z3_smt_ast>(h)->a,
-      to_solver_smt_ast<z3_smt_ast>(l)->a
-    ),
-    s
-  );
-}
-
-smt_astt z3_slhv_convt::mk_heap_write(smt_astt h, smt_astt l, smt_astt c)
-{
-  z3::expr (*heap_write)(z3::expr, z3::expr, z3::expr);
-  if (c->sort->id == SMT_SORT_INTLOC)
-    heap_write = z3::heap_write_loc;
-  else
-    heap_write = z3::heap_write_data;
-  return new_ast(
-    (*heap_write)(
-      to_solver_smt_ast<z3_smt_ast>(h)->a,
-      to_solver_smt_ast<z3_smt_ast>(l)->a,
-      to_solver_smt_ast<z3_smt_ast>(c)->a
-    ),
-    this->mk_intheap_sort()
-  );
-}
-
-smt_astt z3_slhv_convt::mk_heap_delete(smt_astt h, smt_astt l)
-{
-  return new_ast(
-    z3::heap_delete(
-      to_solver_smt_ast<z3_smt_ast>(h)->a,
-      to_solver_smt_ast<z3_smt_ast>(l)->a
-    ),
-    this->mk_intheap_sort()
-  );
-}
-
 BigInt z3_slhv_convt::get_bv(smt_astt a, bool is_signed)
 {
   log_error("SLHV does not support bv");
@@ -596,13 +552,20 @@ z3_slhv_convt::convert_slhv_opts(
       smt_astt l = _field == 0 ?
         source_loc : mk_locadd(source_loc, convert_ast(field));
 
-      smt_sortt s;
+      smt_sortt s1;
       if (is_intloc_type(_type.field_types[_field]))
-        s = mk_intloc_sort();
+        s1 = mk_intloc_sort();
       else
-        s = mk_int_sort();
+        s1 = mk_int_sort();
+      smt_astt v1 = mk_fresh(s1, mk_fresh_name(std::string("_loaded_val_")));
 
-      return mk_heap_read(h, l, s);
+      smt_astt pt = mk_pt(l, v1);
+      smt_astt load_success = mk_subh(pt, h);
+      smt_astt load_fail = mk_eq(h, mk_emp());
+      smt_astt load_res = mk_or(load_success, load_fail);
+      assert_ast(load_res);
+
+      return v1;
     }
     case expr2t::heap_update_id:
     {
@@ -626,11 +589,28 @@ z3_slhv_convt::convert_slhv_opts(
       smt_astt l = _field == 0 ? source_loc : mk_locadd(source_loc, field);
       smt_astt v = convert_ast(upd_value);
 
-      return mk_heap_write(h, l, v);
+      smt_astt h1 = mk_fresh(h->sort, mk_fresh_name(std::string("_tmp_heap_")));
+      smt_astt v1 = mk_fresh(v->sort, mk_fresh_name(std::string("_tmp_val_")));
+
+      smt_astt heap_state = mk_eq(h, mk_uplus(h1, mk_pt(l, v1)));
+      assert_ast(heap_state);
+
+      return mk_uplus(h1, mk_pt(l, v));
     }
     case expr2t::heap_delete_id:
     {
-      return mk_heap_delete(args[0], args[1]);
+      const heap_delete2t &heap_del = to_heap_delete2t(expr);
+
+      smt_astt h = args[0];
+      smt_astt l = args[1];
+
+      smt_astt h1 = mk_fresh(h->sort, mk_fresh_name(std::string("_tmp_heap_")));
+      smt_astt v1 = mk_fresh(mk_int_sort(), mk_fresh_name(std::string("_tmp_val_")));
+
+      smt_astt heap_state = mk_eq(h, mk_uplus(h1, mk_pt(l, v1)));
+      assert_ast(heap_state);
+
+      return h1;
     }
     case expr2t::same_object_id:
     {
