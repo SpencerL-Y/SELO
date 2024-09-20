@@ -805,7 +805,9 @@ smt_convt::resultt bmct::multi_property_check(
 
     std::string short_property;
     if (property.find("invalid free") != std::string::npos ||
-             property.find("Invalid pointer freed") != std::string::npos)
+        property.find("Invalid pointer freed") != std::string::npos ||
+        property.find("Operand of free must have zero pointer offset") !=
+          std::string::npos)
       short_property = "INVALID_FREE";
     else if (property.find("forgotten memory") != std::string::npos)
       short_property = "MEMORY_LEAK";
