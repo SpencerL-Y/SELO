@@ -19,23 +19,26 @@ public:
     smt_convt::resultt dec_solve() override;
     const std::string solver_text() override;
 
-    // constant and operators
-    smt_astt mk_emp();
-    smt_astt mk_nil();
-    smt_astt mk_pt(smt_astt a, smt_astt b);
-    smt_astt mk_uplus(smt_astt a, smt_astt b);
-    smt_astt mk_uplus(std::vector<smt_astt> pts);
-    smt_astt mk_subh(smt_astt a, smt_astt b);
-    smt_astt mk_disjh(smt_astt a, smt_astt b);
-    smt_astt mk_locadd(smt_astt a, smt_astt b);
-
-    // value obtaining from solver, not supported here
-    BigInt get_bv(smt_astt a, bool is_signed) override;
-
     // sort making 
     smt_sortt mk_intheap_sort();
     smt_sortt mk_intloc_sort();
     smt_sortt mk_struct_sort(const type2tc &type) override;
+
+    // constant and operators
+    smt_astt mk_emp();
+    smt_astt mk_nil();
+    smt_astt mk_pt(smt_astt l, smt_astt v);
+    smt_astt mk_uplus(smt_astt ht1, smt_astt ht2);
+    smt_astt mk_uplus(std::vector<smt_astt> hts);
+    smt_astt mk_subh(smt_astt ht1, smt_astt ht2);
+    smt_astt mk_disjh(smt_astt ht1, smt_astt );
+    smt_astt mk_locadd(smt_astt l, smt_astt o);
+    smt_astt mk_heap_read(smt_astt h, smt_astt l, smt_sortt s);
+    smt_astt mk_heap_write(smt_astt h, smt_astt l, smt_astt c);
+    smt_astt mk_heap_delete(smt_astt h, smt_astt l);
+
+    // value obtaining from solver, not supported here
+    BigInt get_bv(smt_astt a, bool is_signed) override;
 
     // SLHV variable
     smt_astt mk_smt_symbol(const std::string &name, smt_sortt s) override;

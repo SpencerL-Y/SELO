@@ -1103,6 +1103,8 @@ type2tc goto_symext::create_heap_region_type(
       );
     }
   }
+  else
+    _heap_type.field_types.push_back(empty_type2tc());
 
   return heap_type;
 }

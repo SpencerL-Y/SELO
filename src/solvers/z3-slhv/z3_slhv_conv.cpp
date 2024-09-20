@@ -43,11 +43,12 @@ smt_convt *create_new_z3_slhv_solver(
 }
 
 z3_slhv_convt::z3_slhv_convt(const namespacet &_ns, const optionst& _options)
-  : z3_convt(_ns, _options) {
-    // initialize the z3 based slhv converter here
-    int_encoding = true;
-    solver = z3::solver(z3_ctx, "SLHV");
-    log_status("z3_slhv_convt created");
+  : z3_convt(_ns, _options)
+{
+  // initialize the z3 based slhv converter here
+  int_encoding = true;
+  solver = z3::solver(z3_ctx, "SLHV");
+  log_status("z3_slhv_convt created");
 }
 
 z3_slhv_convt::~z3_slhv_convt() { delete_all_asts(); }
@@ -76,91 +77,146 @@ smt_convt::resultt z3_slhv_convt::dec_solve()
   return smt_convt::P_ERROR;
 }
 
-const std::string z3_slhv_convt::solver_text() {
-  return "Z3-slhv";
+const std::string z3_slhv_convt::solver_text() { return "Z3-slhv"; }
+
+smt_sortt z3_slhv_convt::mk_intheap_sort()
+{
+  return new solver_smt_sort<z3::sort>(SMT_SORT_INTHEAP, z3_ctx.intheap_sort());
 }
 
-smt_astt z3_slhv_convt::mk_emp() {
+smt_sortt z3_slhv_convt::mk_intloc_sort()
+{
+  return new solver_smt_sort<z3::sort>(SMT_SORT_INTLOC, z3_ctx.intloc_sort());
+}
+
+smt_sortt z3_slhv_convt::mk_struct_sort(const type2tc &type)
+{
+  return mk_intloc_sort();
+}
+
+smt_astt z3_slhv_convt::mk_emp()
+{
   return new_ast(z3_ctx.emp_const(), this->mk_intheap_sort());
 }
-smt_astt z3_slhv_convt::mk_nil() {
+smt_astt z3_slhv_convt::mk_nil()
+{
   return new_ast(z3_ctx.nil_const(), this->mk_intloc_sort());
 }
-smt_astt z3_slhv_convt::mk_pt(smt_astt a, smt_astt b) {
-  assert(a->sort == mk_intloc_sort());
+smt_astt z3_slhv_convt::mk_pt(smt_astt l, smt_astt v)
+{
+  assert(l->sort->id == SMT_SORT_INTLOC);
   return new_ast(
     z3::points_to(
-      to_solver_smt_ast<z3_smt_ast>(a)->a,
-      to_solver_smt_ast<z3_smt_ast>(b)->a
+      to_solver_smt_ast<z3_smt_ast>(l)->a,
+      to_solver_smt_ast<z3_smt_ast>(v)->a
     ),
     this->mk_intheap_sort());
 }
-smt_astt z3_slhv_convt::mk_uplus(smt_astt a, smt_astt b) {
-  assert(a->sort == mk_intheap_sort());
-  assert(b->sort == mk_intheap_sort());
+smt_astt z3_slhv_convt::mk_uplus(smt_astt ht1, smt_astt ht2)
+{
+  assert(ht1->sort->id == SMT_SORT_INTHEAP);
+  assert(ht2->sort->id == SMT_SORT_INTHEAP);
   return new_ast(
     z3::uplus(
-      to_solver_smt_ast<z3_smt_ast>(a)->a,
-      to_solver_smt_ast<z3_smt_ast>(b)->a
+      to_solver_smt_ast<z3_smt_ast>(ht1)->a,
+      to_solver_smt_ast<z3_smt_ast>(ht2)->a
     ),
     this->mk_intheap_sort());
 }
-smt_astt z3_slhv_convt::mk_uplus(std::vector<smt_astt> pts) {
-  z3::expr_vector pt_vec(z3_ctx);
-  for (auto pt : pts) {
-    pt_vec.push_back(to_solver_smt_ast<z3_smt_ast>(pt)->a);
+smt_astt z3_slhv_convt::mk_uplus(std::vector<smt_astt> hts)
+{
+  z3::expr_vector ht_vec(z3_ctx);
+  for (auto ht : hts) {
+    ht_vec.push_back(to_solver_smt_ast<z3_smt_ast>(ht)->a);
   }
-  return new_ast(z3::uplus(pt_vec), this->mk_intheap_sort());
+  return new_ast(z3::uplus(ht_vec), this->mk_intheap_sort());
 }
-smt_astt z3_slhv_convt::mk_subh(smt_astt a, smt_astt b) {
-  assert(a->sort == mk_intheap_sort());
-  assert(b->sort == mk_intheap_sort());
+smt_astt z3_slhv_convt::mk_subh(smt_astt ht1, smt_astt ht2)
+{
+  assert(ht1->sort->id == SMT_SORT_INTHEAP);
+  assert(ht2->sort->id == SMT_SORT_INTHEAP);
   return new_ast(
     z3::subh(
-      to_solver_smt_ast<z3_smt_ast>(a)->a,
-      to_solver_smt_ast<z3_smt_ast>(b)->a
+      to_solver_smt_ast<z3_smt_ast>(ht1)->a,
+      to_solver_smt_ast<z3_smt_ast>(ht2)->a
     ),
     this->boolean_sort);
 }
-smt_astt z3_slhv_convt::mk_disjh(smt_astt a, smt_astt b) {
-  assert(a->sort == mk_intheap_sort());
-  assert(b->sort == mk_intheap_sort());
+smt_astt z3_slhv_convt::mk_disjh(smt_astt ht1, smt_astt ht2)
+{
+  assert(ht1->sort->id == SMT_SORT_INTHEAP);
+  assert(ht2->sort->id == SMT_SORT_INTHEAP);
   return new_ast(
     z3::disjh(
-      to_solver_smt_ast<z3_smt_ast>(a)->a,
-      to_solver_smt_ast<z3_smt_ast>(b)->a
+      to_solver_smt_ast<z3_smt_ast>(ht1)->a,
+      to_solver_smt_ast<z3_smt_ast>(ht2)->a
     ),
     this->boolean_sort);
 }
-smt_astt z3_slhv_convt::mk_locadd(smt_astt a, smt_astt b) {
-  assert(a->sort == mk_intloc_sort() || b->sort == mk_intloc_sort());
+smt_astt z3_slhv_convt::mk_locadd(smt_astt l, smt_astt o)
+{
+  assert(l->sort->id == SMT_SORT_INTLOC);
   return new_ast(
     z3::locadd(
-      to_solver_smt_ast<z3_smt_ast>(a)->a,
-      to_solver_smt_ast<z3_smt_ast>(b)->a
+      to_solver_smt_ast<z3_smt_ast>(l)->a,
+      to_solver_smt_ast<z3_smt_ast>(o)->a
     ),
     this->mk_intloc_sort()
   );
 }
 
-BigInt z3_slhv_convt::get_bv(smt_astt a, bool is_signed){
+smt_astt z3_slhv_convt::mk_heap_read(smt_astt h, smt_astt l, smt_sortt s)
+{
+  z3::expr (*heap_read)(z3::expr, z3::expr);
+  if (s->id == SMT_SORT_INTLOC)
+    heap_read = z3::heap_read_loc;
+  else
+    heap_read = z3::heap_read_data;
+  return new_ast(
+    (*heap_read)(
+      to_solver_smt_ast<z3_smt_ast>(h)->a,
+      to_solver_smt_ast<z3_smt_ast>(l)->a
+    ),
+    s
+  );
+}
+
+smt_astt z3_slhv_convt::mk_heap_write(smt_astt h, smt_astt l, smt_astt c)
+{
+  z3::expr (*heap_write)(z3::expr, z3::expr, z3::expr);
+  if (c->sort->id == SMT_SORT_INTLOC)
+    heap_write = z3::heap_write_loc;
+  else
+    heap_write = z3::heap_write_data;
+  return new_ast(
+    (*heap_write)(
+      to_solver_smt_ast<z3_smt_ast>(h)->a,
+      to_solver_smt_ast<z3_smt_ast>(l)->a,
+      to_solver_smt_ast<z3_smt_ast>(c)->a
+    ),
+    this->mk_intheap_sort()
+  );
+}
+
+smt_astt z3_slhv_convt::mk_heap_delete(smt_astt h, smt_astt l)
+{
+  return new_ast(
+    z3::heap_delete(
+      to_solver_smt_ast<z3_smt_ast>(h)->a,
+      to_solver_smt_ast<z3_smt_ast>(l)->a
+    ),
+    this->mk_intheap_sort()
+  );
+}
+
+BigInt z3_slhv_convt::get_bv(smt_astt a, bool is_signed)
+{
   log_error("SLHV does not support bv");
   abort();
 }
 
-smt_sortt z3_slhv_convt::mk_intheap_sort() {
-  return new solver_smt_sort<z3::sort>(SMT_SORT_INTHEAP, z3_ctx.intheap_sort());
-}
-
-smt_sortt z3_slhv_convt::mk_intloc_sort() {
-  return new solver_smt_sort<z3::sort>(SMT_SORT_INTLOC, z3_ctx.intloc_sort());
-}
-
-smt_sortt z3_slhv_convt::mk_struct_sort(const type2tc &type) {
-  return mk_intloc_sort();
-}
-
-smt_astt z3_slhv_convt::mk_smt_symbol(const std::string &name, smt_sortt s) {
+smt_astt z3_slhv_convt::mk_smt_symbol(const std::string &name, smt_sortt s)
+{
   z3::expr e(z3_ctx);
   switch (s->id) {
     case SMT_SORT_INTHEAP:
@@ -175,7 +231,8 @@ smt_astt z3_slhv_convt::mk_smt_symbol(const std::string &name, smt_sortt s) {
   return new_ast(e, s);
 }
 
-smt_sortt z3_slhv_convt::convert_slhv_sorts(const type2tc &type) {
+smt_sortt z3_slhv_convt::convert_slhv_sorts(const type2tc &type)
+{
   switch (type->type_id) {
     case type2t::intheap_id: return mk_intheap_sort();
     case type2t::intloc_id: return mk_intloc_sort();
@@ -354,17 +411,6 @@ smt_astt z3_slhv_convt::convert_ast(const expr2tc &expr)
     }
     case expr2t::or_id:
     {
-      // const or2t &_or = to_or2t(expr);
-      // smt_astt s1 = collect_loaded_state(_or.side_1);
-      // smt_astt s2 = collect_loaded_state(_or.side_2);
-      
-      // smt_astt side1 = args[0];
-      // if (!to_solver_smt_ast<z3_smt_ast>(s1)->a.is_true())
-      //   side1 = mk_and(s1, side1);
-      // smt_astt side2 = args[1];
-      // if (!to_solver_smt_ast<z3_smt_ast>(s2)->a.is_true())
-      //   side2 = mk_and(s2, side2);
-
       a = mk_or(args[0], args[1]);
       break;
     }
@@ -552,31 +598,16 @@ z3_slhv_convt::convert_slhv_opts(
 
       smt_astt h = convert_ast(heap_region);
       smt_astt source_loc = convert_ast(_type.location);
-      smt_astt loc = _field == 0 ?
+      smt_astt l = _field == 0 ?
         source_loc : mk_locadd(source_loc, convert_ast(field));
 
-      smt_sortt s1;
-      std::string n1;
-      if (!_type.is_aligned)
-      {
-        s1 = mk_intloc_sort();
-        n1 = mk_fresh_name("tmp_loc::");
-      }
+      smt_sortt s;
+      if (is_intloc_type(_type.field_types[_field]))
+        s = mk_intloc_sort();
       else
-      {
-        s1 = is_intloc_type(_type.field_types[_field]) ? mk_intloc_sort() : mk_int_sort();
-        n1 = mk_fresh_name(
-          is_intloc_type(_type.field_types[_field]) ? "tmp_loc::" : "tmp_val::");
-      }
-      smt_astt v1 = mk_fresh(s1, n1);
+        s = mk_int_sort();
 
-      // current heap state
-      smt_astt s = mk_subh(mk_pt(loc, v1), h);
-      // if load operation is invalid,
-      // dereference will lead to undedined behavior
-      assert_ast(mk_or(s, mk_smt_bool(false)));
-
-      return v1;
+      return mk_heap_read(h, l, s);
     }
     case expr2t::heap_update_id:
     {
@@ -595,34 +626,16 @@ z3_slhv_convt::convert_slhv_opts(
       unsigned int _field = to_constant_int2t(upd_field).value.to_uint64();
 
       smt_astt h = args[0];
-      smt_astt source_loc = convert_ast(_type.location);
       smt_astt field = args[1];
-      smt_astt loc = _field == 0 ? source_loc : mk_locadd(source_loc, field);
-      smt_astt val = convert_ast(upd_value);
+      smt_astt source_loc = convert_ast(_type.location);
+      smt_astt l = _field == 0 ? source_loc : mk_locadd(source_loc, field);
+      smt_astt v = convert_ast(upd_value);
 
-      smt_astt h1 = mk_fresh(mk_intheap_sort(), mk_fresh_name("tmp_heap::"));
-      smt_astt v1 = mk_fresh(val->sort, mk_fresh_name("tmp_val::"));
-
-      // current heap state
-      smt_astt old_state = mk_uplus(h1, mk_pt(loc, v1));
-      assert_ast(mk_eq(h, old_state));
-
-      // new heap state
-      return mk_uplus(h1, mk_pt(loc, val));
+      return mk_heap_write(h, l, v);
     }
     case expr2t::heap_delete_id:
     {
-      const heap_delete2t &heap_del = to_heap_delete2t(expr);
-
-      smt_astt h = args[0];
-      smt_astt l = args[1];
-
-      smt_astt h1 = mk_fresh(mk_intheap_sort(), mk_fresh_name("tmp_heap::"));
-      smt_astt v1 = mk_fresh(mk_int_sort(), mk_fresh_name("tmp_val::"));
-      
-      // current heap state
-      assert_ast(mk_eq(h, mk_uplus(h1, mk_pt(l, v1))));
-      return h1;
+      return mk_heap_delete(args[0], args[1]);
     }
     case expr2t::same_object_id:
     {
@@ -683,7 +696,8 @@ smt_astt z3_slhv_convt::project(const expr2tc &expr)
   }
 }
 
-void z3_slhv_convt::dump_smt() {
+void z3_slhv_convt::dump_smt()
+{
   const std::string &path = options.get_option("output");
   if(path == "-") {
     print_smt_formulae(std::cout);
