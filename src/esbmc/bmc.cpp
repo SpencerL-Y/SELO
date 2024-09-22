@@ -792,34 +792,35 @@ smt_convt::resultt bmct::multi_property_check(
       "Runtime decision procedure: {}s", time2string(sat_stop - sat_start));
     
     locationt location;
-    std::string property;
+    std::string comment;
     for (auto it = local_eq.SSA_steps.begin();
         it != local_eq.SSA_steps.end();
         it++)
       if (it->is_assert() && !it->ignore)
       {
         location = it->source.pc->location;
-        property = it->comment;
+        comment = it->comment;
         break;
       }
 
-    std::string short_property;
-    if (property.find("invalid free") != std::string::npos ||
-        property.find("Invalid pointer freed") != std::string::npos ||
-        property.find("Operand of free must have zero pointer offset") !=
+    std::string property;
+    if (comment.find("invalid free") != std::string::npos ||
+        comment.find("Invalid pointer freed") != std::string::npos ||
+        comment.find("Operand of free must have zero pointer offset") !=
           std::string::npos)
-      short_property = "INVALID_FREE";
-    else if (property.find("forgotten memory") != std::string::npos)
-      short_property = "MEMORY_LEAK";
+      property = "INVALID_FREE";
+    else if (comment.find("forgotten memory") != std::string::npos)
+      property = "MEMORY_LEAK";
     else
-      short_property = "INVALID_DEREF";
+      property = "INVALID_DEREF";
   
     log_status(
       "--------------------------------- Result -----------------------------------");
     log_status("Location: {}", location);
-    log_status("Property({}): {}", short_property, property);
+    log_status("Comment: {}", comment);
+    log_status("Property: {}", property);
     log_status(
-      "Result: {}, Time: {}s",
+      "Result: {} Time: {}s",
       result == smt_convt::P_SATISFIABLE ? "sat" :
         result == smt_convt::P_UNSATISFIABLE ? "unsat" :
           "error", time2string(sat_stop - sat_start));
