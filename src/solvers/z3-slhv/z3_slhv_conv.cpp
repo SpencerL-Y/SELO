@@ -561,7 +561,7 @@ z3_slhv_convt::convert_slhv_opts(
 
       smt_astt pt = mk_pt(l, v1);
       smt_astt load_success = mk_subh(pt, h);
-      smt_astt load_fail = mk_eq(h, mk_emp());
+      smt_astt load_fail = mk_disjh(pt, h); // v1 is free
       smt_astt load_res = mk_or(load_success, load_fail);
       assert_ast(load_res);
 

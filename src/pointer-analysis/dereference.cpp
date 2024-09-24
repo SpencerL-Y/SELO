@@ -1232,7 +1232,7 @@ void dereferencet::build_deref_slhv(
   {
     expr2tc &heap_region = value;
 
-    unsigned int field = to_constant_int2t(offset).value.to_uint64();
+    int field = to_constant_int2t(offset).value.to_uint64();
     intheap_type2t &_type = to_intheap_type(heap_region->type);
     unsigned int access_sz = type_byte_size(type, &ns).to_uint64();
 
@@ -1242,14 +1242,10 @@ void dereferencet::build_deref_slhv(
       abort();
     }
     
-    if (field >= _type.field_types.size() ||
+    if (field >= _type.field_types.size() || field < 0 ||
       access_sz != _type.total_bytes / _type.field_types.size())
     {
-      // Out of bound or unaligned - undefined behavior
-      // expr2tc sym = symbol2tc(
-      //   type, 
-      //   dereference_callback.get_nondet_id("undefined_behavior_var"));
-      // value = sym;
+      // Out of bound or unaligned
       value = expr2tc();
     }
     else
