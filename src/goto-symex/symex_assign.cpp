@@ -377,6 +377,8 @@ void goto_symext::symex_assign_symbol(
   if (!guard.is_true())
     rhs = if2tc(rhs->type, guard.as_expr(), rhs, lhs);
 
+  expr2tc org_rhs = rhs;
+
   cur_state->rename(rhs);
   do_simplify(rhs);
 
@@ -411,6 +413,31 @@ void goto_symext::symex_assign_symbol(
     cur_state->gen_stack_trace(),
     hidden,
     first_loop);
+
+  if (is_intheap_type(lhs) &&
+      is_intheap_type(org_rhs) &&
+      !is_heap_region2t(org_rhs) &&
+      !is_constant_intheap2t(org_rhs) &&
+      !is_heap_update2t(org_rhs))
+  {
+    // assign loc for each region
+    const intheap_type2t &lhs_ty = to_intheap_type(lhs->type);
+    if (lhs_ty.is_region)
+    {
+      if (is_nil_expr(lhs_ty.location))
+      {
+        // TODO: fix it
+        log_error("No location");
+        abort();
+      }
+      expr2tc lhs_loc = lhs_ty.location;
+      expr2tc rhs_loc = org_rhs;
+      create_rhs_location(rhs_loc);
+
+      log_status("Begin assign location");
+      symex_assign(code_assign2tc(lhs_loc, rhs_loc));
+    }
+  }
 }
 
 void goto_symext::symex_assign_structure(
@@ -1040,7 +1067,6 @@ void goto_symext::replace_tuple(expr2tc &expr)
 
   if (is_symbol2t(expr) && is_struct_type(expr->type))
   {
-    log_status("found struct?");
     unsigned int bytes = type_byte_size(expr->type, &ns).to_uint64();
     
     // use l1 name and suffix "loc" to create base loc
@@ -1070,7 +1096,6 @@ expr2tc goto_symext::create_heap_region_loc(const expr2tc &expr)
   new_context.add(loc_sym);
 
   expr2tc base_loc = symbol2tc(get_intloc_type(), loc_sym.id);
-  cur_state->rename(base_loc);
 
   return base_loc;
 }
@@ -1210,47 +1235,34 @@ void goto_symext::symex_nondet(const expr2tc &lhs, const expr2tc &effect)
   log_status(" ======== symex nondet ===== ");
 }
 
-bool goto_symext::has_cond_expr(const expr2tc &expr)
+void goto_symext::create_rhs_location(expr2tc &expr)
 {
-  if (is_nil_expr(expr)) return false;
-  if (is_field_of2t(expr) || is_heap_update2t(expr) ||
-      is_heap_delete2t(expr))
-      return true;
+  if (is_nil_expr(expr)) return;
   
-  bool has_cond = false;
-  expr->foreach_operand([this, &has_cond](const expr2tc &e) {
-      has_cond |= has_cond_expr(e);
-    });
-  
-  return has_cond;
-}
-
-expr2tc goto_symext::transfer_to_assume(
-  const expr2tc &expr, const expr2tc &cond, const expr2tc &lhs)
-{
-  if (is_if2t(expr))
+  if (is_symbol2t(expr) &&
+      !is_nil_expr(to_intheap_type(expr->type).location))
   {
-    const if2t &_if = to_if2t(expr);
-
-    expr2tc true_cond, false_cond;
-    if (!is_nil_expr(cond))
-    {
-      true_cond = and2tc(cond, _if.cond);
-      false_cond = and2tc(cond, not2tc(_if.cond));
-    }
-    else
-    {
-      true_cond = _if.cond;
-      false_cond = not2tc(_if.cond);
-    }
-
-    return or2tc(
-      transfer_to_assume(_if.true_value, true_cond, lhs),
-      transfer_to_assume(_if.false_value, false_cond, lhs)
-    );
+    const intheap_type2t &ty = to_intheap_type(expr->type);
+    expr = ty.location;
+    return;
   }
   
-  // find the terminal valuew
-  expr2tc eq = equality2tc(lhs, expr);
-  return is_nil_expr(cond) ? eq : and2tc(cond, eq);
+  if (is_if2t(expr))
+  {
+    expr->type = get_intloc_type();
+    create_rhs_location(to_if2t(expr).true_value);
+    create_rhs_location(to_if2t(expr).false_value);
+    return;
+  }
+
+  if (is_constant_intheap2t(expr))
+  {
+    expr = gen_nil();
+    // TODO
+    return;
+  }
+
+  log_error("Something wrong");
+  expr->dump();
+  abort();
 }

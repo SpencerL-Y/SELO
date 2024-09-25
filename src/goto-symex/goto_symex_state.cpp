@@ -247,6 +247,13 @@ void goto_symex_statet::rename_type(expr2tc &expr)
     });
   }
 
+  if (is_intheap_type(type))
+  {
+    intheap_type2t &ty = to_intheap_type(type);
+    if (!is_nil_expr(ty.location))
+      rename(ty.location);
+  }
+
   /* All subexpressions' types should also be renamed, this is in line with
    * how goto_convert_functionst::rename_types() is defined */
   expr->Foreach_operand([this](expr2tc &expr) { rename_type(expr); });
@@ -255,9 +262,7 @@ void goto_symex_statet::rename_type(expr2tc &expr)
 void goto_symex_statet::rename(expr2tc &expr)
 {
   // rename all the symbols with their last known value
-  if (is_nil_expr(expr) ||
-      is_heap_region2t(expr))
-    return;
+  if (is_nil_expr(expr)) return;
 
   rename_type(expr);
 
@@ -277,6 +282,7 @@ void goto_symex_statet::rename(expr2tc &expr)
   {
     location_of2t &locof = to_location_of2t(expr);
     rename_address(locof.source_heap);
+    rename_type(locof.source_heap);
   }
   else
   {

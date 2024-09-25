@@ -818,12 +818,13 @@ smt_convt::resultt bmct::multi_property_check(
       "--------------------------------- Result -----------------------------------");
     log_status("Location: {}", location);
     log_status("Comment: {}", comment);
-    log_status("Property: {}", property);
     log_status(
-      "Result: {} Time: {}s",
+      "Property: {} Result: {} Time: {}s",
+      property,
       result == smt_convt::P_SATISFIABLE ? "sat" :
         result == smt_convt::P_UNSATISFIABLE ? "unsat" :
-          "error", time2string(sat_stop - sat_start));
+          "error",
+      time2string(sat_stop - sat_start));
     log_status(
       "--------------------------------- Result -----------------------------------\n");
 
