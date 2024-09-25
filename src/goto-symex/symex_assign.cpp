@@ -422,6 +422,7 @@ void goto_symext::symex_assign_symbol(
   {
     // assign loc for each region
     const intheap_type2t &lhs_ty = to_intheap_type(lhs->type);
+    
     if (lhs_ty.is_region)
     {
       if (is_nil_expr(lhs_ty.location))
@@ -430,11 +431,15 @@ void goto_symext::symex_assign_symbol(
         log_error("No location");
         abort();
       }
+
       expr2tc lhs_loc = lhs_ty.location;
       expr2tc rhs_loc = org_rhs;
+
+      const std::string lhs_loc_name = to_symbol2t(lhs_loc).get_symbol_name();
+      if (!has_different_loc(lhs_loc_name, rhs_loc)) return;
+
       create_rhs_location(rhs_loc);
 
-      log_status("Begin assign location");
       symex_assign(code_assign2tc(lhs_loc, rhs_loc));
     }
   }
@@ -1235,11 +1240,31 @@ void goto_symext::symex_nondet(const expr2tc &lhs, const expr2tc &effect)
   log_status(" ======== symex nondet ===== ");
 }
 
+
+bool goto_symext::has_different_loc(
+  const std::string &lhs_loc, const expr2tc &expr)
+{
+  if (!is_intheap_type(expr)) return false;
+  if (is_nil_expr(to_intheap_type(expr->type).location)) return false;
+
+  bool res = false;
+  const expr2tc &loc = to_intheap_type(expr->type).location;
+  if (lhs_loc != to_symbol2t(loc).get_symbol_name())
+    res = true;
+
+  if (is_if2t(expr))
+    res |=
+      has_different_loc(lhs_loc, to_if2t(expr).true_value) |
+      has_different_loc(lhs_loc, to_if2t(expr).false_value);
+
+  return res;
+}
+
 void goto_symext::create_rhs_location(expr2tc &expr)
 {
   if (is_nil_expr(expr)) return;
   
-  if (is_symbol2t(expr) &&
+  if ((is_symbol2t(expr) || is_heap_update2t(expr)) &&
       !is_nil_expr(to_intheap_type(expr->type).location))
   {
     const intheap_type2t &ty = to_intheap_type(expr->type);
