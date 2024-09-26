@@ -876,23 +876,6 @@ protected:
   void symex_nondet(const expr2tc &lhs, const expr2tc &effect);
 
   /**
-   * @brief 
-   * 
-   * @param lhs_loc 
-   * @param rhs 
-   * @return true 
-   * @return false 
-   */
-  bool has_different_loc(const std::string &lhs_loc, const expr2tc &expr);
-
-  /**
-   * @brief Create a rhs location of object
-   * 
-   * @param expr 
-   */
-  void create_rhs_location(expr2tc &expr);
-
-  /**
    *  Fetch reference to global dynamic object counter.
    *  @return Reference to global dynamic object counter.
    */

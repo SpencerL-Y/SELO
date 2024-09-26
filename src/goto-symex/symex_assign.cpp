@@ -413,36 +413,6 @@ void goto_symext::symex_assign_symbol(
     cur_state->gen_stack_trace(),
     hidden,
     first_loop);
-
-  if (is_intheap_type(lhs) &&
-      is_intheap_type(org_rhs) &&
-      !is_heap_region2t(org_rhs) &&
-      !is_constant_intheap2t(org_rhs) &&
-      !is_heap_update2t(org_rhs))
-  {
-    // assign loc for each region
-    const intheap_type2t &lhs_ty = to_intheap_type(lhs->type);
-    
-    if (lhs_ty.is_region)
-    {
-      if (is_nil_expr(lhs_ty.location))
-      {
-        // TODO: fix it
-        log_error("No location");
-        abort();
-      }
-
-      expr2tc lhs_loc = lhs_ty.location;
-      expr2tc rhs_loc = org_rhs;
-
-      const std::string lhs_loc_name = to_symbol2t(lhs_loc).get_symbol_name();
-      if (!has_different_loc(lhs_loc_name, rhs_loc)) return;
-
-      create_rhs_location(rhs_loc);
-
-      symex_assign(code_assign2tc(lhs_loc, rhs_loc));
-    }
-  }
 }
 
 void goto_symext::symex_assign_structure(
@@ -1101,7 +1071,6 @@ expr2tc goto_symext::create_heap_region_loc(const expr2tc &expr)
   new_context.add(loc_sym);
 
   expr2tc base_loc = symbol2tc(get_intloc_type(), loc_sym.id);
-
   return base_loc;
 }
 
@@ -1238,56 +1207,4 @@ void goto_symext::symex_nondet(const expr2tc &lhs, const expr2tc &effect)
   }
 
   log_status(" ======== symex nondet ===== ");
-}
-
-
-bool goto_symext::has_different_loc(
-  const std::string &lhs_loc, const expr2tc &expr)
-{
-  if (!is_intheap_type(expr)) return false;
-  if (is_nil_expr(to_intheap_type(expr->type).location)) return false;
-
-  bool res = false;
-  const expr2tc &loc = to_intheap_type(expr->type).location;
-  if (lhs_loc != to_symbol2t(loc).get_symbol_name())
-    res = true;
-
-  if (is_if2t(expr))
-    res |=
-      has_different_loc(lhs_loc, to_if2t(expr).true_value) |
-      has_different_loc(lhs_loc, to_if2t(expr).false_value);
-
-  return res;
-}
-
-void goto_symext::create_rhs_location(expr2tc &expr)
-{
-  if (is_nil_expr(expr)) return;
-  
-  if ((is_symbol2t(expr) || is_heap_update2t(expr)) &&
-      !is_nil_expr(to_intheap_type(expr->type).location))
-  {
-    const intheap_type2t &ty = to_intheap_type(expr->type);
-    expr = ty.location;
-    return;
-  }
-  
-  if (is_if2t(expr))
-  {
-    expr->type = get_intloc_type();
-    create_rhs_location(to_if2t(expr).true_value);
-    create_rhs_location(to_if2t(expr).false_value);
-    return;
-  }
-
-  if (is_constant_intheap2t(expr))
-  {
-    expr = gen_nil();
-    // TODO
-    return;
-  }
-
-  log_error("Something wrong");
-  expr->dump();
-  abort();
 }
