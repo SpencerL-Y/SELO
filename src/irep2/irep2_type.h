@@ -211,10 +211,11 @@ public:
     const expr2tc &loc,
     unsigned int tb,
     bool ir,
-    bool ia)
+    bool ia,
+    bool ic)
     : type2t(id),
       location(loc), total_bytes(tb),
-      is_region(ir), is_aligned(ia)
+      is_region(ir), is_aligned(ia), is_alloced(ic)
   {
   }
   intheap_data(const intheap_data &ref) = default;
@@ -224,6 +225,7 @@ public:
   unsigned int total_bytes;
   bool is_region;
   bool is_aligned;
+  bool is_alloced;
   
   // Type mangling:
   typedef esbmct::field_traits<expr2tc, intheap_data, &intheap_data::location>
@@ -236,12 +238,15 @@ public:
     is_region_field;
   typedef esbmct::field_traits<bool, intheap_data, &intheap_data::is_aligned>
     is_aligned_field;
+  typedef esbmct::field_traits<bool, intheap_data, &intheap_data::is_alloced>
+    is_alloced_field;
   typedef esbmct::type2t_traits<
     location_field,
     field_types_field,
     total_bytes_field,
     is_region_field,
-    is_aligned_field> traits;
+    is_aligned_field,
+    is_alloced_field> traits;
 };
 
 class pointer_data : public type2t
@@ -402,11 +407,12 @@ public:
     const expr2tc &location,
     unsigned int total_bytes,
     bool is_region,
-    bool is_aligned)
+    bool is_aligned,
+    bool is_alloced)
     : intheap_type_methods(
       intheap_id,
       location, total_bytes,
-      is_region, is_aligned)
+      is_region, is_aligned, is_alloced)
   {
     if (is_region && this->field_types.empty())
       this->field_types.push_back(empty_type2tc());

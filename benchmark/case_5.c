@@ -1,9 +1,21 @@
+extern void abort(void);
+#include <assert.h>
+void reach_error() { assert(0); }
+
 #include <stdlib.h>
 
+typedef struct {
+    void *lo;
+    void *hi;
+} TData;
 
-int main(){
-    for(int i = 0; i < 5; i ++){
-        int *j = (int*)malloc(sizeof(int));
-        free(j);
-    }
+TData* create_node()
+{
+    TData data;
+    return &data;
+}
+
+int main() {
+    free(create_node());
+    return 0;
 }

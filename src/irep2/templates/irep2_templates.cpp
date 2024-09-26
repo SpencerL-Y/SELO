@@ -12,7 +12,7 @@ std::string empty_type2t::field_names[esbmct::num_type_fields] =
 std::string intloc_type2t::field_names[esbmct::num_type_fields] =
   {"", "", "", "", ""};
 std::string intheap_type2t::field_names[esbmct::num_type_fields] =
-  {"location", "field_types", "total_bytes", "is_region", "is_aligned", ""};
+  {"location", "field_types", "total_bytes", "is_region", "is_aligned", "is_alloced"};
 std::string symbol_type2t::field_names[esbmct::num_type_fields] =
   {"symbol_name", "", "", "", ""};
 std::string struct_type2t::field_names[esbmct::num_type_fields] =

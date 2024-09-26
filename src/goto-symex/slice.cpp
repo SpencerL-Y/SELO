@@ -13,9 +13,6 @@ bool symex_slicet::get_symbols(const expr2tc &expr)
   bool res = false;
   
   if (is_heap_region2t(expr)) return false;
-  if (is_intheap_type(expr) &&
-      !is_nil_expr(to_intheap_type(expr->type).location))
-    get_symbols<Add>(to_intheap_type(expr->type).location);
 
   // Recursively look if any of the operands has a inner symbol
   expr->foreach_operand([this, &res](const expr2tc &e) {

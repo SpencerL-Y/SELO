@@ -270,19 +270,7 @@ expr2tc goto_symext::symex_mem(
       get_intheap_type(),
       gen_ulong(to_intheap_type(rhs_region->type).total_bytes));
     
-    if (dynamic_memory.size() > 0)
-    {
-      expr2tc disj = disjh2tc(rhs_heap);
-      for (auto const &it : dynamic_memory)
-        to_disjh2t(disj).do_disjh(it.obj);
-      cur_state->rename(disj);
-      target->assumption(
-        cur_state->guard.as_expr(),
-        disj,
-        cur_state->source,
-        first_loop
-      );
-    }
+    symex_disj_heaps(rhs_heap);
     
     log_status("use dynamic memory to track malloc heap - {}",
       to_symbol2t(rhs_heap).get_symbol_name());
@@ -1811,4 +1799,177 @@ bool goto_symext::run_builtin(
   }
 
   return false;
+}
+
+// Builtin SLHV function
+expr2tc goto_symext::create_heap_region_loc(const expr2tc &expr)
+{
+  if (!is_symbol2t(expr))
+  {
+    log_error("Wrong symbol");
+    abort();
+  }
+  expr2tc l1_sym = expr;
+  cur_state->top().level1.get_ident_name(l1_sym);
+
+  symbolt loc_sym;
+  loc_sym.name =
+    id2string(to_symbol2t(l1_sym).get_symbol_name()) + std::string("_loc");
+  loc_sym.id = std::string("symex_location::") + id2string(loc_sym.name);
+  loc_sym.lvalue = true;
+  loc_sym.type = typet(typet::t_intloc);
+  loc_sym.mode = "C";
+  new_context.add(loc_sym);
+
+  expr2tc base_loc = symbol2tc(get_intloc_type(), loc_sym.id);
+  return base_loc;
+}
+
+type2tc goto_symext::create_heap_region_type(
+  const type2tc &type,
+  unsigned int bytes,
+  const expr2tc &loc)
+{
+  type2tc heap_type = get_intheap_type();
+  intheap_type2t &_heap_type = to_intheap_type(heap_type);
+  _heap_type.location = loc;
+  _heap_type.total_bytes = bytes;
+  _heap_type.is_region = true;
+
+  if (is_struct_type(type))
+  {
+    _heap_type.is_aligned = true;
+    _heap_type.total_bytes = bytes;
+    const struct_type2t &_type = to_struct_type(type);
+    _heap_type.field_types.clear();
+    const std::vector<type2tc> &inner_types = _type.get_structure_members();
+    const std::vector<irep_idt> &inner_field_names = _type.get_structure_member_names();
+    for (unsigned int i = 0; i < inner_field_names.size(); i++)
+    {
+      const std::string &field_name = inner_field_names[i].as_string();
+      if (field_name.find("anon_pad") != std::string::npos) continue;
+      _heap_type.field_types.push_back(
+        is_pointer_type(inner_types[i]) ? get_intloc_type() : get_int64_type()
+      );
+    }
+  }
+  else
+    _heap_type.field_types.push_back(empty_type2tc());
+
+  return heap_type;
+}
+
+expr2tc goto_symext::create_heap_region(const sideeffect2t &effect, expr2tc &flag)
+{
+  // log_status(" ======= create a heap region ========== ");
+
+  type2tc type;
+  if (effect.kind == sideeffect2t::nondet)
+  {
+    // alloc a heap region in stack
+    type = effect.type;
+  }
+  else
+  {
+    // malloc a heap region
+    type = effect.alloctype;
+    if (is_nil_type(type)) type = char_type2();
+  }
+
+  expr2tc base_loc = create_heap_region_loc(flag);
+
+  unsigned int bytes;
+  if (is_struct_type(type))
+  {
+    bytes = type_byte_size(type, &ns).to_uint64();
+  }
+  else
+  {
+    expr2tc op = effect.operand;
+    cur_state->rename(op);
+    do_simplify(op);
+    if (!is_constant_int2t(op))
+    {
+      log_error("Do not support dynamic size");
+      abort();
+    }
+    bytes = to_constant_int2t(op).value.to_uint64();
+  }
+
+  log_status("malloc size : {}", bytes);
+
+  type2tc heap_type = create_heap_region_type(type, bytes, base_loc);
+  if (effect.kind == sideeffect2t::nondet)
+    to_intheap_type(heap_type).is_alloced = true;
+  flag->type = heap_type;
+
+  // log_status(" ======= create a heap region ========== ");
+  return heap_region2tc(heap_type, base_loc);
+}
+
+void goto_symext::symex_disj_heaps(const expr2tc &heap)
+{
+  if (!is_symbol2t(heap) || !is_intheap_type(heap))
+  {
+    log_status("Wrong heap region");
+    abort();
+  }
+
+  expr2tc l0_heap = heap;
+  cur_state->get_original_name(l0_heap);
+  expr2tc disj = disjh2tc(l0_heap);
+
+  for (auto const &it : cur_state->top().local_heap_regions)
+    to_disjh2t(disj).do_disjh(it);
+
+  for (auto const &it : dynamic_memory)
+    to_disjh2t(disj).do_disjh(it.obj);
+  
+  if (to_disjh2t(disj).other_heaps.size() == 0)
+    return;
+
+  cur_state->rename(disj);
+  target->assumption(
+    cur_state->guard.as_expr(),
+    disj,
+    cur_state->source,
+    first_loop
+  );
+}
+
+void goto_symext::symex_nondet(const expr2tc &lhs, const expr2tc &effect)
+{
+  // log_status(" ======== symex nondet ===== ");
+  // lhs->dump();
+  // effect->dump();
+  
+  expr2tc new_lhs = lhs;
+  expr2tc new_rhs = effect;
+
+  const sideeffect2t &_effect = to_sideeffect2t(effect);
+
+  if (_effect.kind == sideeffect2t::nondet &&
+      !is_struct_type(_effect.type))
+    replace_nondet(new_rhs);
+  else
+    new_rhs = create_heap_region(to_sideeffect2t(effect), new_lhs);
+
+  symex_assign(code_assign2tc(new_lhs, new_rhs));
+
+  if (is_intheap_type(new_lhs->type))
+  {
+    const intheap_type2t &_type = to_intheap_type(new_lhs->type);
+
+    track_new_pointer(
+      _type.location,
+      get_intheap_type(),
+      gen_ulong(_type.total_bytes));
+      
+    symex_disj_heaps(new_lhs);
+
+    cur_state->get_original_name(new_lhs);
+    cur_state->top().local_heap_regions.push_back(new_lhs);
+  }
+
+  // log_status(" ======== symex nondet ===== ");
 }

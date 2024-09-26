@@ -534,7 +534,11 @@ z3_slhv_convt::convert_slhv_opts(
       const field_of2t &field_of = to_field_of2t(expr);
 
       if (is_constant_intheap2t(field_of.source_heap))
-        return mk_fresh(convert_sort(field_of.type), mk_fresh_name("invalid_fieldof_"));
+        return
+          mk_fresh(
+            convert_sort(field_of.type),
+            mk_fresh_name("invalid_fieldof_")
+          );
 
       if (!is_constant_int2t(field_of.operand))
       {
@@ -561,7 +565,7 @@ z3_slhv_convt::convert_slhv_opts(
 
       smt_astt pt = mk_pt(l, v1);
       smt_astt load_success = mk_subh(pt, h);
-      smt_astt load_fail = mk_disjh(pt, h); // v1 is free
+      smt_astt load_fail = mk_eq(h, mk_emp());
       smt_astt load_res = mk_or(load_success, load_fail);
       assert_ast(load_res);
 

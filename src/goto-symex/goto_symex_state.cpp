@@ -281,7 +281,10 @@ void goto_symex_statet::rename(expr2tc &expr)
   else if (is_location_of2t(expr))
   {
     location_of2t &locof = to_location_of2t(expr);
-    rename_address(locof.source_heap);
+    if (is_pointer_type(locof.source_heap))
+      rename_address(locof.source_heap);
+    else
+      rename(locof.source_heap);
     rename_type(locof.source_heap);
   }
   else

@@ -865,7 +865,7 @@ protected:
    * 
    * @param heap 
    */
-  expr2tc symex_disj_heaps(const expr2tc &heap);
+  void symex_disj_heaps(const expr2tc &heap);
 
   /**
    * @brief In SLHV, struct/array are heap variable

@@ -30,7 +30,6 @@ void goto_symext::default_replace_dynamic_allocation(expr2tc &expr)
       expr2tc index_expr = index2tc(get_bool_type(), alloc_arr_2, obj_expr);
       expr = index_expr;
     } else {
-      // Checking that the object is valid by heap_alloc_size
       const valid_object2t &obj = to_valid_object2t(expr);
       const expr2tc &heap_region = obj.value;
       if (!is_intheap_type(heap_region->type) ||
@@ -39,8 +38,51 @@ void goto_symext::default_replace_dynamic_allocation(expr2tc &expr)
         log_error("Wrong object");
         abort();
       }
+      const intheap_type2t &type = to_intheap_type(heap_region->type);
 
-      expr = not2tc(equality2tc(heap_region, gen_emp()));
+      if (type.is_alloced)
+      {
+        expr2tc loc = type.location;
+        cur_state->get_original_name(loc);
+
+        bool is_in_frame = false;
+        goto_symex_statet::framet &frame = cur_state->top();
+        for (auto const &it : frame.local_heap_regions)
+        {
+          expr2tc alloced_loc = to_intheap_type(it->type).location;
+          cur_state->get_original_name(alloced_loc);
+
+          if (to_symbol2t(loc).get_symbol_name() != 
+              to_symbol2t(alloced_loc).get_symbol_name())
+            continue;
+          
+          is_in_frame = true;
+        }
+
+        if (is_in_frame)
+          expr = not2tc(equality2tc(heap_region, gen_emp()));
+        else
+        {
+          // use alloc_size_heap
+          expr2tc alloc_size_heap;
+          migrate_expr(symbol_expr(*ns.lookup(alloc_size_heap_name)), alloc_size_heap);
+
+          unsigned int &nondet_counter = get_nondet_counter();
+          nondet_counter++;
+          expr2tc size_sym =
+            symbol2tc(
+              get_int64_type(),
+              std::string("SOME_SIZE_") + std::to_string(nondet_counter)
+            );
+
+          expr2tc pt = points_to2tc(loc, size_sym);
+          expr2tc disj = disjh2tc(alloc_size_heap);
+          to_disjh2t(disj).do_disjh(pt);
+          expr = not2tc(disj);
+        }
+      }
+      else
+        expr = not2tc(equality2tc(heap_region, gen_emp()));
     }
   }
   else if (is_invalid_pointer2t(expr))

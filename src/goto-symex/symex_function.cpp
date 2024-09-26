@@ -57,6 +57,8 @@ unsigned goto_symext::argument_assignments(
   // iterates over the operands
   std::vector<expr2tc>::const_iterator it1 = arguments.begin();
 
+  bool use_old_encoding = !options.get_bool_option("z3-slhv");
+
   // iterates over the types of the arguments
   for (unsigned int name_idx = 0; name_idx < function_type.arguments.size();
        ++name_idx)
@@ -113,7 +115,38 @@ unsigned goto_symext::argument_assignments(
 
       // Assign value to function argument
       // TODO: Should we hide it (true means hidden)?
-      symex_assign(code_assign2tc(lhs, rhs), true);
+      if (use_old_encoding)
+        symex_assign(code_assign2tc(lhs, rhs), true);
+      else
+      {
+        // If an argument is intheap type in SLHV, we create the
+        // heap_region for them and assign all field from rhs
+        if (is_struct_type(lhs))
+        {
+          const struct_type2t &_type = to_struct_type(lhs->type);
+          expr2tc sideeffect = 
+            sideeffect2tc(
+              lhs->type,
+              expr2tc(),
+              expr2tc(),
+              std::vector<expr2tc>(),
+              type2tc(),
+              sideeffect2t::nondet
+            );
+          // Create a heap region for lhs
+          symex_assign(code_assign2tc(lhs, sideeffect));
+
+          for (unsigned int i = 0; i < _type.members.size(); i++)
+          {
+            type2tc field_type = _type.members[i];
+            expr2tc lhs_field_i = field_of2tc(field_type, lhs, gen_ulong(i));
+            expr2tc rhs_field_i = field_of2tc(field_type, rhs, gen_ulong(i));
+            symex_assign(code_assign2tc(lhs_field_i, rhs_field_i));
+          }
+        }
+        else
+          symex_assign(code_assign2tc(lhs, rhs), true);
+      }
     }
 
     it1++;
@@ -505,6 +538,15 @@ void goto_symext::pop_frame()
 
   if (!cur_state->guard.is_false())
     cur_state->guard = frame.entry_guard;
+  
+  // free local heap regions
+  for (auto const &it : frame.local_heap_regions)
+  {
+    expr2tc l1_reg = it;
+    frame.level1.get_ident_name(l1_reg);
+    expr2tc l1_loc = location_of2tc(l1_reg);
+    symex_free(code_free2tc(l1_loc));
+  }
 
   // clear locals from L2 renaming
   for (auto const &it : frame.local_variables)
