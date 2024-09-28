@@ -214,7 +214,6 @@ void value_sett::get_value_set_rec(
 {
   if (is_unknown2t(expr) || is_invalid2t(expr))
   {
-    log_status("is unknown expr or invalid expr");
     // Unknown / invalid exprs mean we just point at something unknown (and
     // potentially invalid).
     insert(dest, unknown2tc(original_type), BigInt(0));
@@ -299,7 +298,6 @@ void value_sett::get_value_set_rec(
     // of things it refers to, rather than the value set (of things it points
     // to).
     const address_of2t &addrof = to_address_of2t(expr);
-    log_status("get address of reference set");
     get_reference_set(addrof.ptr_obj, dest);
     return;
   }
@@ -359,7 +357,6 @@ void value_sett::get_value_set_rec(
 
   if (is_typecast2t(expr))
   {
-    log_status("get typecast value set");
     // Push straight through typecasts.
     const typecast2t &cast = to_typecast2t(expr);
     get_value_set_rec(cast.from, dest, suffix, original_type);
@@ -517,7 +514,6 @@ void value_sett::get_value_set_rec(
 
   if (is_symbol2t(expr))
   {
-    log_status("get value for symbol");
     // This is a symbol, and if it's a pointer then this expression might
     // evalutate to what it points at. So, return this symbols value set.
     const symbol2t &sym = to_symbol2t(expr);
@@ -538,7 +534,7 @@ void value_sett::get_value_set_rec(
     // Look up this symbol, with the given suffix to distinguish any arrays or
     // members we've picked out of it at a higher level.
     valuest::const_iterator v_it = values.find(sym.get_symbol_name() + suffix);
-    log_status("ssssss symbol lookup name: {}", sym.get_symbol_name() + suffix);
+    log_debug("SLHV", "-------------> symbol lookup name: {}", sym.get_symbol_name() + suffix);
 
     if (sym.rlevel == symbol2t::renaming_level::level1_global)
       assert(sym.level1_num == 0);
@@ -555,17 +551,20 @@ void value_sett::get_value_set_rec(
     if (v_it != values.end())
     {
       make_union(dest, v_it->second.object_map);
-      log_status("points to somthing");
-      int i = 0;
-      for (auto obj : dest)
+      log_debug("SLHV", "points to somthing");
+      if (messaget::state.modules.count("SLHV") > 0)
       {
-        log_status("item - {} : ", i++);
-        object_numbering[obj.first]->dump();
+        int i = 0;
+        for (auto obj : dest)
+        {
+          log_debug("SLHV", "item - {} : ", i++);
+          object_numbering[obj.first]->dump();
+        }
       }
       return;
     }
     else
-      log_status("nothing");
+      log_debug("SLHV", "nothing");
   }
 
   // SLHV:
@@ -575,7 +574,7 @@ void value_sett::get_value_set_rec(
       is_heap_region2t(expr) || is_constant_intheap2t(expr) ||
       is_heap_append2t(expr) || is_heap_delete2t(expr))
   {
-    log_status("do not support get_value_set_rec");
+    log_error("Do not support get_value_set_rec");
     expr->dump();
     abort();
   }
@@ -904,7 +903,6 @@ void value_sett::get_reference_set_rec(const expr2tc &expr, object_mapt &dest)
     if (is_symbol2t(expr))
     {
       const symbolt *sym = ns.lookup(to_symbol2t(expr).thename);
-      log_status("get reference set rec is_symbol: {}", to_symbol2t(expr).thename);
       assert(sym);
       const irept &a = sym->type.find("alignment");
       if (a.is_not_nil())
@@ -933,7 +931,6 @@ void value_sett::get_reference_set_rec(const expr2tc &expr, object_mapt &dest)
 
   if (is_index2t(expr))
   {
-    log_status("get reference set is_index");
     // This index may be dereferencing a pointer. So, get the reference set of
     // the source value, and store a reference to all those things.
     const index2t &index = to_index2t(expr);
@@ -969,8 +966,6 @@ void value_sett::get_reference_set_rec(const expr2tc &expr, object_mapt &dest)
     for (const auto &a_it : array_references)
     {
       expr2tc object = object_numbering[a_it.first];
-      log_status("print object");
-      object->dump();
 
       if (is_unknown2t(object))
       {

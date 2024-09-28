@@ -462,12 +462,15 @@ expr2tc dereferencet::dereference(
   modet mode,
   const expr2tc &lexical_offset)
 {
-  log_status("--------------- dereferencing pointer ---------");
-  orig_src->dump();
-  if (!is_nil_expr(lexical_offset))
+  log_debug("SLHV", "------------ dereferencing pointer ------------");
+  if (messaget::state.modules.count("SLHV") > 0)
   {
-    log_status("with lexical offset : ");
-    lexical_offset->dump();
+    orig_src->dump();
+    if (!is_nil_expr(lexical_offset))
+    {
+      log_debug("SLHV", "with lexical offset : ");
+      lexical_offset->dump();
+    }
   }
   internal_items.clear();
 
@@ -485,10 +488,11 @@ expr2tc dereferencet::dereference(
   // collect objects dest may point to
   value_setst::valuest points_to_set;
 
-  log_status("---- value set for ");
-  src->dump();
+  log_debug("SLHV", "------- value set for : ");
+  if (messaget::state.modules.count("SLHV") > 0)
+    src->dump();
   dereference_callback.get_value_set(src, points_to_set);
-  log_status("get value set done --------------------");
+  log_debug("SLHV", "get value set done ---------------");
 
   /* If the value-set contains unknown or invalid, we cannot be sure it contains
    * all possible values and we have to add a fallback symbol in case all guards
@@ -641,11 +645,15 @@ expr2tc dereferencet::build_reference_to(
   const expr2tc &lexical_offset,
   expr2tc &pointer_guard)
 {
-  log_status(" =================== build reference to =================== ");
-  deref_expr->dump();
-  log_status("|------------ points to -------------> ");
-  what->dump();
-  log_status("--------------------");
+  log_debug("SLHV", " =================== build reference to");
+  if (messaget::state.modules.count("SLHV") > 0)
+  {
+    log_debug("SLHV", "|------------------------------------|");
+    deref_expr->dump();
+    log_debug("SLHV", "|------------ points to ------------->");
+    what->dump();
+    log_debug("SLHV", "|------------------------------------|");
+  }
 
   expr2tc value;
   pointer_guard = gen_false_expr();
@@ -702,8 +710,6 @@ expr2tc dereferencet::build_reference_to(
     type2tc ptr_type = pointer_type2tc(object->type);
     expr2tc obj_ptr = address_of2tc(ptr_type, object);
     pointer_guard = same_object2tc(deref_expr, obj_ptr);
-    log_status("generated pointer guard:");
-    pointer_guard->dump();
     guardt tmp_guard(guard);
     tmp_guard.add(pointer_guard);
 
@@ -802,7 +808,8 @@ expr2tc dereferencet::build_reference_to(
   } else {
     value = object;
 
-    if (!is_nil_expr(lexical_offset))
+    if (messaget::state.modules.count("SLHV") > 0 &&
+        !is_nil_expr(lexical_offset))
       lexical_offset->dump();
 
     guardt tmp_guard(guard);
@@ -1027,9 +1034,6 @@ void dereferencet::build_reference_rec(
   modet mode,
   unsigned long alignment)
 {
-  log_status("build reference rec: ");
-  log_status("to type: ");
-  type->dump();
   int flags = 0;
   if (is_constant_int2t(offset))
     flags |= flag_is_const_offs;
@@ -1210,11 +1214,9 @@ void dereferencet::build_deref_slhv(
   modet mode,
   unsigned long alignment)
 {
-  log_status(" ----------------- build deref slhv ----------------- ");
-  value->dump();
-  // guard.dump();
-  // offset->dump();
-  // type->dump();
+  log_debug("SLHV", " ----------------- build deref slhv -----------------");
+  if (messaget::state.modules.count("SLHV") > 0)
+    value->dump();
 
   if (!is_scalar_type(type))
   {
@@ -1261,10 +1263,11 @@ void dereferencet::build_deref_slhv(
     // pointer - return itself
   }
 
-  log_status("return dereference ---> {}", !is_nil_expr(value));
-  if (!is_nil_expr(value)) value->dump();
-
-  log_status(" ----------------- build deref slhv ----------------- ");
+  log_debug("SLHV", "return dereference ---> {}", !is_nil_expr(value));
+  if (messaget::state.modules.count("SLHV") > 0 &&
+      !is_nil_expr(value))
+    value->dump();
+  log_debug("SLHV", " ----------------- build deref slhv ----------------- ");
 }
 
 void dereferencet::construct_from_array(
@@ -2480,7 +2483,6 @@ void dereferencet::check_data_obj_access(
   const guardt &guard,
   modet mode)
 {
-  log_status("check data obj access");
   assert(!is_array_type(value));
   assert(offset->type == bitsize_type2());
 
@@ -2510,7 +2512,6 @@ void dereferencet::check_data_obj_access(
    * check that the access being made is aligned. */
   if (is_scalar_type(type) && !mode.unaligned)
     check_alignment(access_sz, std::move(offset), guard);
-  log_status("check data obj access over");
 }
 
 void dereferencet::check_heap_region_access(

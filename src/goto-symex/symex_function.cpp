@@ -202,6 +202,18 @@ void goto_symext::symex_function_call(const expr2tc &code)
 {
   const code_function_call2t &call = to_code_function_call2t(code);
 
+  if (options.get_bool_option("z3-slhv"))
+  {
+    const symbol2t &func = to_symbol2t(call.function);
+    if (has_prefix(func.get_symbol_name(), "c:@F@atexit") ||
+        has_prefix(func.get_symbol_name(), "c:@F@memcpy") ||
+        has_prefix(func.get_symbol_name(), "c:@F@memset"))
+    {
+      log_error("Do not support");
+      abort();
+    }
+  }
+
   if (is_symbol2t(call.function))
     symex_function_call_code(code);
   else
@@ -527,7 +539,6 @@ bool goto_symext::run_next_function_ptr_target(bool first)
 
 void goto_symext::pop_frame()
 {
-  log_status("    pop frame");
   assert(!cur_state->call_stack.empty());
 
   statet::framet &frame = cur_state->top();
@@ -554,8 +565,6 @@ void goto_symext::pop_frame()
     type2tc ptr = pointer_type2tc(pointer_type2());
     expr2tc l1_sym = symbol2tc(ptr, it.base_name);
     frame.level1.get_ident_name(l1_sym);
-    log_status("    clear local L1 variable:");
-    l1_sym.get()->dump();
     // Call free on alloca'd objects
     if (
       it.base_name.as_string().find("return_value$_alloca") !=

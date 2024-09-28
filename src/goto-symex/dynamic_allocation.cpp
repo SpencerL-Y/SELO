@@ -126,9 +126,6 @@ void goto_symext::default_replace_dynamic_allocation(expr2tc &expr)
     }
     else
     {
-      log_status("replace invalid pointer");      
-      obj_expr->dump();
-
       expr2tc alloc_size_heap;
       migrate_expr(symbol_expr(*ns.lookup(alloc_size_heap_name)), alloc_size_heap);
 

@@ -494,7 +494,7 @@ void disjh2t::do_disjh(const expr2tc &heap_term)
 {
   if (!is_intheap_type(heap_term))
   {
-    log_status("Wrong object");
+    log_error("Wrong object");
     heap_term->dump();
     abort();
   }

@@ -496,22 +496,14 @@ std::vector<stack_framet> goto_symex_statet::gen_stack_trace() const
 
 void 
 goto_symex_statet::dump() const {
-  log_status("    [XXXXXX state dump XXXXXX");
-  log_status("    ------ thread num: ");
   std::cout << this->source.thread_nr << std::endl;
-  log_status("    ------ source pc: ");
   (*this->source.pc).dump();
-  log_status("    ------ current state guard: ");
   // this->guard.dump();
   this->guard.as_expr().get()->dump();
-  log_status("    ------ level2: ");
   this->level2.dump();
-  log_status("    ------ value set: ");
   this->value_set.dump();
-  log_status("    ------ call stack");
   for(auto item : call_stack) {
     std::string call_num = item.function_identifier.as_string();
     std::cout << call_num << std::endl;
   }
-  log_status("    XXXXXXXXXXXXXXXXXXXXXXXX]");
 }

@@ -248,7 +248,6 @@ void execution_statet::symex_step(reachability_treet &art)
   switch (instruction.type)
   {
   case END_FUNCTION:
-    log_status("type: END_FUNCTION");
     if (instruction.function == "__ESBMC_main")
     {
       end_thread();
@@ -275,17 +274,14 @@ void execution_statet::symex_step(reachability_treet &art)
     }
     break;
   case ATOMIC_BEGIN:
-    log_status("type: ATOMIC_BEGIN");
     state.source.pc++;
     increment_active_atomic_number();
     break;
   case ATOMIC_END:
-    log_status("type: ATOMIC_END");
     decrement_active_atomic_number();
     state.source.pc++;
     break;
   case RETURN:
-    log_status("type: RETURN");
     if (
       !state.guard.is_false() ||
       !is_cur_state_guard_false(state.guard.as_expr()))

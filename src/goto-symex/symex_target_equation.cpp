@@ -161,8 +161,8 @@ void symex_target_equationt::convert_internal_step(
     return;
   }
 
-  // log_status(" ============================== step ======================== ");
-  // step.dump();
+  log_debug("SLHV", " ============================== step ======================== ");
+  if (messaget::state.modules.count("SLHV") > 0) step.dump();
 
   // guard_ast is used for generating witness
   // step.guard_ast = smt_conv.convert_ast(step.guard);
@@ -231,7 +231,7 @@ void symex_target_equationt::convert_internal_step(
     // step.cond_ast->dump();
   }
 
-  // log_status(" ============================== step ======================== ");
+  log_debug("SLHV", " ============================== step ======================== ");
 }
 
 void symex_target_equationt::output(std::ostream &out) const

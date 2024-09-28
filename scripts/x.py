@@ -23,7 +23,7 @@ def help():
   os.system(f"{esbmc_slhv} -h")
 
 def collect_one_assert(info):
-  assert(len(info) == 4)
+  assert(len(info) == 3)
   res = {}
   
   # Location
@@ -34,14 +34,11 @@ def collect_one_assert(info):
     res["Line"] = location[4]
     res["Column"] = location[6]
 
-  # Property
-  property = info[2].split(" ")
-  res["Property"] = property[1]
-
-  # Result & Time
-  rt = info[3].split(' ')
-  res["Result"] = rt[1]
-  res["Time"] = rt[3]
+  # Property & Result & Time
+  prt = info[2].split(" ")
+  res["Property"] = prt[1]
+  res["Result"] = prt[3]
+  res["Time"] = prt[5]
 
   return res
 
@@ -86,22 +83,25 @@ def run_on(cprog, extra_args):
     "--output",
     vcc_log,
     "--multi-property",
-    "--z3-slhv"
+    "--z3-slhv",
   ]
 
-  redirect_arg = [">", t_log, "2>&1"]
+  if "--debug" in extra_args:
+    args.append("--verbosity SLHV:8")
+
+  redirect_arg = [">", t_log]
   if "--std-out" not in extra_args:
     args += redirect_arg
 
   cmd = " ".join(args)
   print(f"Command: {cmd}")
   os.system(cmd)
-
+  
   result = analysis_result(t_log)
   for d in result:
     res = [k + ": " + v for k, v in list(d.items())]
     print("{:<10} {:<12} {:<25} {:<15} {:<10}".format(*res))
-  
+
   return result
 
 def collect_results(cprog):
@@ -161,7 +161,7 @@ if __name__ == '__main__':
   if sys.argv[1] == "--compile":
     compile()
   elif sys.argv[1] == "--run":
-    run_on(sys.argv[2], sys.argv[3:-1])
+    run_on(sys.argv[2], sys.argv[3:])
   elif sys.argv[1] == "--expriment":
     run_expriment_on(sys.argv[2])
   elif sys.argv[1] == "--help":

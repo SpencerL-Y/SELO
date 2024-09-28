@@ -136,8 +136,9 @@ void goto_symext::symex_assign(
   const bool hidden,
   const guardt &guard)
 {
-  log_status("xxxxxxxxxxxx symex assign: ");
-  code_assign->dump();
+  log_debug("SLHV", "xxxxxxxxxxxxxxxxxxxxxx symex assign xxxxxxxxxxxxxxxxxxxxxx");
+  if (messaget::state.modules.count("SLHV") > 0)
+    code_assign->dump();
 
   const code_assign2t &code = to_code_assign2t(code_assign);
   expr2tc assign_target = code.target;
@@ -213,19 +214,22 @@ void goto_symext::symex_assign(
   replace_nondet(rhs);
 
   intrinsic_races_check_dereference(lhs);
-  log_status("dereference lhs write");
+  log_debug("SLHV", "dereference lhs write");
   dereference(lhs, dereferencet::WRITE);
-  log_status("dereference rhs read");
+  log_debug("SLHV", "dereference rhs read");
   dereference(rhs, dereferencet::READ);
-  log_status("replace lhs");
+  log_debug("SLHV", "replace lhs");
   replace_dynamic_allocation(lhs);
-  log_status("replace rhs");
+  log_debug("SLHV", "replace rhs");
   replace_dynamic_allocation(rhs);
-  log_status("replace done");
+  log_debug("SLHV", "replace done");
 
-  log_status("after deref and replace -------------");
-  lhs->dump();
-  rhs->dump();
+  log_debug("SLHV", "after deref and replace : lhs = rhs");
+  if (messaget::state.modules.count("SLHV") > 0)
+  {
+    lhs->dump();
+    rhs->dump();
+  }
 
   // printf expression that has lhs
   if (is_code_printf2t(rhs))
@@ -236,16 +240,20 @@ void goto_symext::symex_assign(
   if (is_sideeffect2t(rhs))
   {
     // check what symex_mem represent
-
-    log_status("is side effect rhs::::::::::::::::: ");
     const sideeffect2t &effect = to_sideeffect2t(rhs);
-    effect.dump();
+    
+    if (options.get_bool_option("z3-slhv") &&
+        effect.kind != sideeffect2t::malloc)
+    {
+      log_error("Dot not support this type of sedeffect");
+      abort();
+    }
+    
     switch (effect.kind)
     {
     case sideeffect2t::cpp_new:
     case sideeffect2t::cpp_new_arr:
-      log_error("does not support va_arg cpp new");
-      // symex_cpp_new(lhs, effect);
+      symex_cpp_new(lhs, effect);
       break;
     case sideeffect2t::realloc:
       symex_realloc(lhs, effect);
@@ -257,13 +265,11 @@ void goto_symext::symex_assign(
       symex_alloca(lhs, effect);
       break;
     case sideeffect2t::va_arg:
-      log_error("does not support va_arg sideeffect");
-      // symex_va_arg(lhs, effect);
+      symex_va_arg(lhs, effect);
       break;
     case sideeffect2t::printf2:
       // do nothing here
       break;
-    // No nondet side effect?
     default:
       assert(0 && "unexpected side effect");
     }
@@ -285,7 +291,8 @@ void goto_symext::symex_assign(
 
   guardt g(guard); // NOT the state guard!
   symex_assign_rec(lhs, original_lhs, rhs, expr2tc(), g, hidden_ssa);
-  log_status("xxxxxxxxxxxx symex assign: done for this step");
+
+  log_debug("SLHV", "xxxxxxxxxxxxxxxxxxxxxx symex assign xxxxxxxxxxxxxxxxxxxxxx");
 }
 
 void goto_symext::symex_assign_rec(
@@ -298,65 +305,53 @@ void goto_symext::symex_assign_rec(
 {
   if (is_symbol2t(lhs))
   {
-    log_status("symex_assign_symbol");
+    log_debug("SLHV", " xxxxxxxxx symex assign symbol xxxxxxxxx ");
     symex_assign_symbol(lhs, full_lhs, rhs, full_rhs, guard, hidden);
-    log_status("symex_assign_symbol done!!!");
-  } 
+    log_debug("SLHV", " xxxxxxxxx symex assign symbol xxxxxxxxx ");
+  }
   else if (is_index2t(lhs))
   {
-    log_status("symex_assign_array");
     symex_assign_array(lhs, full_lhs, rhs, full_rhs, guard, hidden);
   }
   else if (is_member2t(lhs))
   {
-    log_status("symex_assign_member");
     symex_assign_member(lhs, full_lhs, rhs, full_rhs, guard, hidden);
   }
   else if (is_if2t(lhs))
   {
-    log_status("symex_assign_if");
     symex_assign_if(lhs, full_lhs, rhs, full_rhs, guard, hidden);
   }
   else if (is_typecast2t(lhs) || is_bitcast2t(lhs))
   {
-    log_status("symex_assign_typecast");
     symex_assign_typecast(lhs, full_lhs, rhs, full_rhs, guard, hidden);
   }
   else if (is_constant_string2t(lhs) || is_null_object2t(lhs))
   {
-    log_status("is_constant_string2t(lhs) || is_null_object2t(lhs)");
     // ignore
   }
   else if (is_byte_extract2t(lhs))
   {
-    log_status("symex_assign_byte_extract");
     symex_assign_byte_extract(lhs, full_lhs, rhs, full_rhs, guard, hidden);
   }
   else if (is_concat2t(lhs))
   {
-    log_status("symex_assign_concat");
     symex_assign_concat(lhs, full_lhs, rhs, full_rhs, guard, hidden);
   }
   else if (is_constant_struct2t(lhs))
   {
-    log_status("symex_assign_structure");
     symex_assign_structure(lhs, full_lhs, rhs, full_rhs, guard, hidden);
   }
   else if (is_extract2t(lhs))
   {
-    log_status("symex_assign_extract");
     symex_assign_extract(lhs, full_lhs, rhs, full_rhs, guard, hidden);
   }
   else if (is_bitand2t(lhs))
   {
-    log_status("symex_assign_bitfield");
     symex_assign_bitfield(lhs, full_lhs, rhs, full_rhs, guard, hidden);
   }
   else if (is_field_of2t(lhs))
   {
-    log_status("symex_assign_fieldof");
     symex_assign_fieldof(lhs, full_lhs, rhs, full_rhs, guard, hidden);
-    log_status("symex_assign_fieldof done!!!");
   }
   else
   {
@@ -382,8 +377,8 @@ void goto_symext::symex_assign_symbol(
   cur_state->rename(rhs);
   do_simplify(rhs);
 
-  log_status("after rename rhs");
-  rhs->dump();
+  log_debug("SLHV", "after rename rhs");
+  if(messaget::state.modules.count("SLHV") > 0) rhs->dump();
 
   if (!is_nil_expr(full_rhs))
   {
@@ -1017,15 +1012,10 @@ void goto_symext::replace_typecast(expr2tc &expr)
   {
     const typecast2t &typecast = to_typecast2t(expr);
 
-    // Oly replace bool typecast
+    // Only replace bool typecast
     if ((is_pointer_type(typecast.from) || is_intloc_type(typecast.from))
         && is_bool_type(typecast.type))
-    {
-      log_status("replace typecast to bool");
-      expr->dump();
-
       expr = notequal2tc(typecast.from, gen_nil());
-    }
   }
 }
 

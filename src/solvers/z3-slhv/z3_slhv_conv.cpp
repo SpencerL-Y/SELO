@@ -199,7 +199,7 @@ smt_sortt z3_slhv_convt::convert_slhv_sorts(const type2tc &type)
 
 smt_astt z3_slhv_convt::convert_ast(const expr2tc &expr)
 {
-  // log_status("------------------------------- convert ast -----------------------------");
+  // log_debug("SLHV", "------------------------------- convert ast -----------------------------");
   // expr->dump();
 
   smt_cachet::const_iterator cache_result = smt_cache.find(expr);
@@ -375,9 +375,9 @@ smt_astt z3_slhv_convt::convert_ast(const expr2tc &expr)
   struct smt_cache_entryt entry = {expr, a, ctx_level};
   smt_cache.insert(entry);
 
-  // log_status("====================== converted reuslt: ");
+  // log_debug("SLHV", "====================== converted reuslt: ");
   // a->dump();
-  // log_status("-------------------------------------------------------------------------");
+  // log_debug("SLHV", "-------------------------------------------------------------------------");
   return a;
 }
 
@@ -467,7 +467,7 @@ z3_slhv_convt::convert_slhv_opts(
            !to_intheap_type(fieldof.source_heap->type).is_region ||
            is_nil_expr(to_intheap_type(fieldof.source_heap->type).location))
         {
-          log_status("Incomplete intheap type for field of");
+          log_error("Incomplete intheap type for field of");
           fieldof.dump();
           abort();
         }
@@ -627,7 +627,7 @@ z3_slhv_convt::convert_slhv_opts(
     }
     default:
     {
-      log_status("Invalid SLHV operations!!!");
+      log_error("Invalid SLHV operations!!!");
       abort();
     }
   }
@@ -650,6 +650,7 @@ smt_astt z3_slhv_convt::project(const expr2tc &expr)
 
     log_error("Wrong symbol for projection");
     expr->dump();
+    abort();
   }
   else if (is_location_of2t(expr))
     return this->project(to_location_of2t(expr).source_heap);

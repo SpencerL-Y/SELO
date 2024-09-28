@@ -502,8 +502,8 @@ int esbmc_parseoptionst::doit()
   // Create and preprocess a GOTO program
   if (get_goto_program(options, goto_functions))
     return 6;
-  log_status("preprocessed goto program: ");
-  goto_functions.dump();
+  if (messaget::state.modules.count("SLHV") > 0)
+    goto_functions.dump();
   // Output claims about this program
   // (Fedor: should be moved to the output method perhaps)
   if (cmdline.isset("show-claims"))
@@ -527,8 +527,6 @@ int esbmc_parseoptionst::doit()
     cmdline.isset("termination") || cmdline.isset("incremental-bmc") ||
     cmdline.isset("falsification") || cmdline.isset("k-induction"))
     return do_bmc_strategy(options, goto_functions);
-  
-  log_status("before starting BMC");
 
   // If no strategy is chosen, just rely on the simplifier
   // and the flags set through CMD

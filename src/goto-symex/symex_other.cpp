@@ -14,8 +14,6 @@ void goto_symext::symex_other(const expr2tc code)
     replace_typecast(code2);
   }
 
-  code2->dump();
-
   if (is_code_expression2t(code2))
   {
     // Represents an expression that gets evaluated, but does not have any
@@ -55,9 +53,7 @@ void goto_symext::symex_other(const expr2tc code)
 
 void goto_symext::symex_decl(const expr2tc code)
 {
-  log_status("symex decl");
   assert(is_code_decl2t(code));
-  code->dump();
   expr2tc code2 = code;
   if (options.get_bool_option("z3-slhv"))
     replace_null(code2);
