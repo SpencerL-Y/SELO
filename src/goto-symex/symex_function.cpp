@@ -571,6 +571,11 @@ void goto_symext::pop_frame()
       std::string::npos)
       symex_free(code_free2tc(l1_sym));
 
+    if (options.get_bool_option("z3-slhv") &&
+        it.base_name.as_string().find("return_value$___builtin_alloca") !=
+        std::string::npos)
+      symex_free(code_free2tc(l1_sym));
+
     // Erase from level 1 propagation
     cur_state->value_set.erase(to_symbol2t(l1_sym).get_symbol_name());
 

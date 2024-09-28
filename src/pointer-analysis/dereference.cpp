@@ -840,8 +840,8 @@ expr2tc dereferencet::build_reference_to(
     tmp_guard.add(pointer_guard);
 
     // Check that the object we're accessing is actually alive and valid for this
-    // mode.
-    valid_check(value, tmp_guard, mode);
+    // mode. No need to check if it is internal mode.
+    if (!is_internal(mode)) valid_check(value, tmp_guard, mode);
 
     // Don't do anything further if we're freeing things
     if (is_free(mode))

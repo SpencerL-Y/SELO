@@ -243,7 +243,8 @@ void goto_symext::symex_assign(
     const sideeffect2t &effect = to_sideeffect2t(rhs);
     
     if (options.get_bool_option("z3-slhv") &&
-        effect.kind != sideeffect2t::malloc)
+        effect.kind != sideeffect2t::malloc &&
+        effect.kind != sideeffect2t::alloca)
     {
       log_error("Dot not support this type of sedeffect");
       abort();

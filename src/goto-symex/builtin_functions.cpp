@@ -240,7 +240,8 @@ expr2tc goto_symext::symex_mem(
     // create a intheap symbol for heap region
     symbolt symbol;
     symbol.name = "dynamic_heap_"+ i2string(dynamic_counter);
-    symbol.id = std::string("symex_dynamic::") + id2string(symbol.name);
+    symbol.id = std::string("symex_dynamic::") + (!is_malloc ?    "alloca::" : "") +
+                id2string(symbol.name);
     symbol.lvalue = true;
     symbol.type = typet(typet::t_intheap);
     symbol.type.dynamic(true);
@@ -326,8 +327,7 @@ void goto_symext::symex_free(const expr2tc &expr)
   // dereference failure callbacks.
   expr2tc tmp = code.operand;
   log_debug("SLHV", "tmp before dereference FREE mode: ");
-  if (messaget::state.modules.count("SLHV") > 0)
-    tmp->dump();
+  if (messaget::state.modules.count("SLHV") > 0) tmp->dump();
   dereference(tmp, dereferencet::FREE);
   // Don't rely on the output of dereference in free mode; instead fetch all
   // the internal dereference state for pointed at objects, and creates claims
@@ -338,6 +338,8 @@ void goto_symext::symex_free(const expr2tc &expr)
   // Create temporary, dummy, dereference
   tmp = dereference2tc(get_uint8_type(), tmp);
   dereference(tmp, dereferencet::INTERNAL);
+
+  bool use_old_encoding = !options.get_bool_option("z3-slhv");
 
   // Only add assertions to check pointer offset if pointer check is enabled
   if (!options.get_bool_option("no-pointer-check"))
@@ -359,6 +361,8 @@ void goto_symext::symex_free(const expr2tc &expr)
       g.guard_expr(eq);
       claim(eq, "Operand of free must have zero pointer offset");
 
+      if (!use_old_encoding) break;
+      
       // Check if we are not freeing an dynamic object allocated using alloca
       for (auto const &a : allocad)
       {
@@ -385,7 +389,6 @@ void goto_symext::symex_free(const expr2tc &expr)
     }
   }
 
-  bool use_old_encoding = !options.get_bool_option("z3-slhv");
   if(use_old_encoding){  
     // Clear the alloc bit.
     type2tc sym_type = array_type2tc(get_bool_type(), expr2tc(), true);

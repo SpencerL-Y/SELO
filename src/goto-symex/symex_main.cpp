@@ -1200,7 +1200,7 @@ void goto_symext::add_memory_leak_checks()
   {
     for (auto const &it : dynamic_memory)
     {
-      // Don't check memory leak if the object is automatically   deallocated
+      // Don't check memory leak if the object is automatically deallocated
       if (it.auto_deallocd)
       {
         log_debug(
@@ -1241,8 +1241,14 @@ void goto_symext::add_memory_leak_checks()
       cond,
       "dereference failure: forgotten memory: " + get_pretty_name(it.name));
     } 
-  } else {
-    for (auto const &it : dynamic_memory){
+  }
+  else
+  {
+    for (auto const &it : dynamic_memory)
+    {
+      // Don't check memory leak if the object is automatically deallocated
+      if (it.auto_deallocd) continue;
+
       expr2tc deallocated = equality2tc(it.obj, gen_emp());
       expr2tc when = it.alloc_guard.as_expr();
       expr2tc cond = implies2tc(when, deallocated);

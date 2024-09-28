@@ -805,7 +805,7 @@ smt_convt::resultt bmct::multi_property_check(
 
     std::string property;
     if (comment.find("invalid free") != std::string::npos ||
-        comment.find("Invalid pointer freed") != std::string::npos ||
+        comment.find("invalid pointer freed") != std::string::npos ||
         comment.find("Operand of free must have zero pointer offset") !=
           std::string::npos)
       property = "INVALID_FREE";
