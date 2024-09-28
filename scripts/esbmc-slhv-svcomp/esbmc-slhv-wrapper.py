@@ -105,26 +105,26 @@ if __name__ == '__main__':
   property_file = args.propertyfile
   benchmark = args.benchmark
 
-  # if property_file is None:
-  #   print("Please, specify a property file")
-  #   exit(1)
+  if property_file is None:
+    print("Please, specify a property file")
+    exit(1)
 
   if benchmark is None:
     print("Please, specify a benchmark to verify")
     exit(1)
 
   # Parse property files
-  # f = open(property_file, 'r')
-  # property_file_content = f.read()
+  f = open(property_file, 'r')
+  property_file_content = f.read()
 
   property = Property.memory
-  # if "CHECK( init(main()), LTL(G valid-free) )" in property_file_content:
-  #   property = Property.memory
-  # elif "CHECK( init(main()), LTL(G valid-memcleanup) )" in property_file_content:
-  #   property = Property.memcleanup
-  # else:
-  #   print("Unsupported Property")
-  #   exit(1)
+  if "CHECK( init(main()), LTL(G valid-free) )" in property_file_content:
+    property = Property.memory
+  elif "CHECK( init(main()), LTL(G valid-memcleanup) )" in property_file_content:
+    property = Property.memcleanup
+  else:
+    print("Unsupported Property")
+    exit(1)
   
   result = verify(benchmark, property)
   print(get_result_string(result))
