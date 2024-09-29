@@ -206,10 +206,14 @@ void goto_symext::symex_function_call(const expr2tc &code)
   {
     const symbol2t &func = to_symbol2t(call.function);
     if (has_prefix(func.get_symbol_name(), "c:@F@atexit") ||
+        has_prefix(func.get_symbol_name(), "c:@F@pthread") ||
         has_prefix(func.get_symbol_name(), "c:@F@memcpy") ||
         has_prefix(func.get_symbol_name(), "c:@F@memset"))
     {
-      log_error("Do not support");
+      log_error(
+        "Do not support function - {}",
+        func.get_symbol_name()
+      );
       abort();
     }
   }
@@ -269,13 +273,6 @@ void goto_symext::symex_function_call_code(const expr2tc &expr)
 
   if (!goto_function.body_available)
   {
-    const std::string func = get_pretty_name(identifier.as_string());
-    if (func.find("pthread") != std::string::npos)
-    {
-      log_error("Do not support thread program");
-      abort();
-    }
-
     log_warning(
       "no body for function {}", get_pretty_name(identifier.as_string()));
 
