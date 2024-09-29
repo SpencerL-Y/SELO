@@ -269,6 +269,13 @@ void goto_symext::symex_function_call_code(const expr2tc &expr)
 
   if (!goto_function.body_available)
   {
+    const std::string func = get_pretty_name(identifier.as_string());
+    if (func.find("pthread") != std::string::npos)
+    {
+      log_error("Do not support thread program");
+      abort();
+    }
+
     log_warning(
       "no body for function {}", get_pretty_name(identifier.as_string()));
 
