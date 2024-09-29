@@ -213,6 +213,13 @@ void goto_symext::symex_assign(
   replace_nondet(lhs);
   replace_nondet(rhs);
 
+  log_debug("SLHV", "after replace : lhs = rhs");
+  if (messaget::state.modules.count("SLHV") > 0)
+  {
+    lhs->dump();
+    rhs->dump();
+  }
+
   intrinsic_races_check_dereference(lhs);
   log_debug("SLHV", "dereference lhs write");
   dereference(lhs, dereferencet::WRITE);
@@ -224,7 +231,7 @@ void goto_symext::symex_assign(
   replace_dynamic_allocation(rhs);
   log_debug("SLHV", "replace done");
 
-  log_debug("SLHV", "after deref and replace : lhs = rhs");
+  log_debug("SLHV", "after deref : lhs = rhs");
   if (messaget::state.modules.count("SLHV") > 0)
   {
     lhs->dump();

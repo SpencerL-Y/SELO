@@ -282,7 +282,8 @@ public:
     const type2tc &type,
     const guardt &guard,
     modet mode,
-    const expr2tc &extra_offset);
+    const expr2tc &extra_offset,
+    const type2tc &deref_type = type2tc());
 
   /** Does the given expression have a dereference in it somewhere?
    *  @param expr The expression to check for existance of a dereference.
@@ -565,6 +566,9 @@ private:
     const guardt &guard,
     modet mode,
     unsigned long alignment = 0);
+
+  // SLHV - set intheap type
+  void set_intheap_type(expr2tc &heap_region, const type2tc &ty);
 
 public:
   void set_block_assertions(void)

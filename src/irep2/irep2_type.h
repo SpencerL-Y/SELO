@@ -420,8 +420,7 @@ public:
   intheap_type2t(const intheap_type2t &ref) = default;
   unsigned int get_width() const override;
 
-  bool do_alignment(unsigned int access_sz);
-  bool set_field_type(unsigned int field, const type2tc &type);
+  bool do_alignment(const type2tc &type);
 
   static std::string field_names[esbmct::num_type_fields];
 };

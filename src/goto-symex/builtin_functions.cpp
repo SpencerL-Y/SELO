@@ -362,7 +362,7 @@ void goto_symext::symex_free(const expr2tc &expr)
       claim(eq, "Operand of free must have zero pointer offset");
 
       if (!use_old_encoding) break;
-      
+
       // Check if we are not freeing an dynamic object allocated using alloca
       for (auto const &a : allocad)
       {
@@ -1831,16 +1831,8 @@ type2tc goto_symext::create_heap_region_type(
     _heap_type.total_bytes = bytes;
     const struct_type2t &_type = to_struct_type(type);
     _heap_type.field_types.clear();
-    const std::vector<type2tc> &inner_types = _type.get_structure_members();
-    const std::vector<irep_idt> &inner_field_names = _type.get_structure_member_names();
-    for (unsigned int i = 0; i < inner_field_names.size(); i++)
-    {
-      const std::string &field_name = inner_field_names[i].as_string();
-      if (field_name.find("anon_pad") != std::string::npos) continue;
-      _heap_type.field_types.push_back(
-        is_pointer_type(inner_types[i]) ? get_intloc_type() : get_int64_type()
-      );
-    }
+    for (auto const &it : _type.members)
+      _heap_type.field_types.push_back(it);
   }
   else
     _heap_type.field_types.push_back(empty_type2tc());

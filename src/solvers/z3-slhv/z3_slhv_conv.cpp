@@ -418,11 +418,11 @@ z3_slhv_convt::convert_slhv_opts(
         {
           smt_astt loc = i == 0 ? base_loc : mk_locadd(base_loc, mk_smt_int(BigInt(i)));
           smt_sortt sort =
-            is_intloc_type(_type.field_types[i]) ?
+            is_pointer_type(_type.field_types[i]) ?
               mk_intloc_sort() : mk_int_sort();
           std::string name =
             mk_fresh_name(
-              is_intloc_type(_type.field_types[i]) ?
+              is_pointer_type(_type.field_types[i]) ?
                 "tmp_loc::" : "tmp_val::");
           smt_astt v = mk_fresh(sort, name);
           pt_vec.push_back(mk_pt(loc, v));
@@ -557,7 +557,7 @@ z3_slhv_convt::convert_slhv_opts(
         source_loc : mk_locadd(source_loc, convert_ast(field));
 
       smt_sortt s1;
-      if (is_intloc_type(_type.field_types[_field]))
+      if (is_pointer_type(_type.field_types[_field]))
         s1 = mk_intloc_sort();
       else
         s1 = mk_int_sort();

@@ -165,7 +165,8 @@ void dereferencet::dereference_expr(expr2tc &expr, guardt &guard, modet mode)
     dereference_expr(deref.value, guard, dereferencet::READ);
 
     expr2tc tmp_obj = deref.value;
-    expr2tc result = dereference(tmp_obj, deref.type, guard, mode, expr2tc());
+    expr2tc result =
+      dereference(tmp_obj, deref.type, guard, mode, expr2tc(), deref.type);
     expr = result;
     break;
   }
@@ -389,7 +390,13 @@ expr2tc dereferencet::dereference_expr_nonscalar(
     // first make sure there are no dereferences in there
     dereference_expr(deref.value, guard, dereferencet::READ);
 
-    return dereference(deref.value, base->type, guard, mode, offset_to_scalar);
+    return
+      dereference(
+        deref.value, base->type,
+        guard, mode,
+        offset_to_scalar,
+        deref.type
+      );
   }
 
   if (is_typecast2t(expr))
@@ -460,7 +467,8 @@ expr2tc dereferencet::dereference(
   const type2tc &to_type,
   const guardt &guard,
   modet mode,
-  const expr2tc &lexical_offset)
+  const expr2tc &lexical_offset,
+  const type2tc &deref_type)
 {
   log_debug("SLHV", "------------ dereferencing pointer ------------");
   if (messaget::state.modules.count("SLHV") > 0)
@@ -471,6 +479,10 @@ expr2tc dereferencet::dereference(
       log_debug("SLHV", "with lexical offset : ");
       lexical_offset->dump();
     }
+    log_debug("SLHV", "to type : ");
+    to_type->dump();
+    log_debug("SLHV", "deref type : {}", !is_nil_type(deref_type));
+    if (!is_nil_type(deref_type)) deref_type->dump();
   }
   internal_items.clear();
 
@@ -513,8 +525,24 @@ expr2tc dereferencet::dereference(
   {
     expr2tc new_value, pointer_guard;
 
+    expr2tc new_target = target;
+    if (options.get_bool_option("z3-slhv") && !is_nil_type(deref_type))
+    {
+      // set intheap type
+      if (!is_free(mode) && !is_internal(mode) &&
+          !is_unknown2t(new_target) &&
+          !is_invalid2t(new_target) &&
+          is_object_descriptor2t(new_target))
+      {
+        object_descriptor2t &o = to_object_descriptor2t(new_target);
+        expr2tc &object = o.object;
+        if (is_intheap_type(object))
+          set_intheap_type(object, deref_type);
+      }
+    }
+
     new_value = build_reference_to(
-      target, mode, src, type, guard, lexical_offset, pointer_guard);
+      new_target, mode, src, type, guard, lexical_offset, pointer_guard);
 
     if (is_nil_expr(new_value))
       continue;
@@ -652,6 +680,8 @@ expr2tc dereferencet::build_reference_to(
     deref_expr->dump();
     log_debug("SLHV", "|------------ points to ------------->");
     what->dump();
+    log_debug("SLHV", "with type : ");
+    type->dump();
     log_debug("SLHV", "|------------------------------------|");
   }
 
@@ -820,20 +850,6 @@ expr2tc dereferencet::build_reference_to(
       log_error("Do not support this tpye");
       value->dump();
       abort();
-    }
-
-    if (is_intheap_type(value))
-    {
-      intheap_type2t &_type = to_intheap_type(value->type);
-
-      if (!is_free(mode) && !is_internal(mode))
-      {
-        int access_sz = type->get_width() / 8;
-        // Do alignment
-        bool has_changed = _type.do_alignment(access_sz);
-        if (has_changed)
-          dereference_callback.update_heap_type(_type);
-      }
     }
 
     pointer_guard = same_object2tc(deref_expr, location_of2tc(value));
@@ -1236,27 +1252,23 @@ void dereferencet::build_deref_slhv(
 
     int field = to_constant_int2t(offset).value.to_uint64();
     intheap_type2t &_type = to_intheap_type(heap_region->type);
-    unsigned int access_sz = type_byte_size(type, &ns).to_uint64();
+    // unsigned int access_sz = type_byte_size(type, &ns).to_uint64();
 
     if (!_type.is_aligned)
     {
-      log_error("heap region must be aligned");
+      log_error("Do not support unaligned access yet!");
       abort();
     }
     
-    if (field >= _type.field_types.size() || field < 0 ||
-      access_sz != _type.total_bytes / _type.field_types.size())
+    if (field >= _type.field_types.size() || field < 0)
     {
-      // Out of bound or unaligned
+      // Out of bound
       value = expr2tc();
     }
     else
     {
       value = field_of2tc(type, value, gen_ulong(field));
-      // update field type
-      if (_type.set_field_type(field, type))
-        dereference_callback.update_heap_type(_type);
-      }
+    }
   }
   else
   {
@@ -2537,12 +2549,28 @@ void dereferencet::check_heap_region_access(
       abort();
     }
 
-    expr2tc size = gen_ulong(_type.field_types.size());
-    offset_cond =
-      and2tc(
-        greaterthanequal2tc(offset, gen_ulong(0)),
-        lessthanequal2tc(offset, size)
-      );
+    if (!is_constant_int2t(offset))
+    {
+      log_error("offset must be constant");
+      abort();
+    }
+
+    int _field = to_constant_int2t(offset).value.to_int64();
+    
+    if (_field < 0 || _field >= _type.field_types.size())
+      offset_cond = constant_bool2tc(false);
+    else
+    {
+      unsigned int _offset_bits = 0;
+      // Get the highest bit
+      for (unsigned int i = 0; i <= _field; i++)
+        _offset_bits += _type.field_types[i]->get_width();
+      
+      expr2tc total_bits = gen_ulong(_type.total_bytes * 8);
+      expr2tc offset_bits = gen_ulong(_offset_bits);
+
+      offset_cond = lessthanequal2tc(offset_bits, total_bits);
+    }
   }
   else
   {
@@ -2682,4 +2710,34 @@ expr2tc dereferencet::extract_bits_from_byte_array(
   result = bitand2tc(rtype, result, mask_expr);
   simplify(result);
   return result;
+}
+
+void dereferencet::set_intheap_type(expr2tc &heap_region, const type2tc &ty)
+{
+  if (!is_intheap_type(heap_region)) return;
+
+  intheap_type2t &_type = to_intheap_type(heap_region->type);
+
+  if (_type.is_aligned) return;
+
+  if (is_struct_type(ty))
+  {
+    const struct_type2t &_ty = to_struct_type(ty);
+
+    _type.field_types.clear();
+    for (auto const &it : _ty.members)
+      _type.field_types.push_back(it);
+    _type.is_aligned = true;
+    dereference_callback.update_heap_type(_type);
+    return;
+  }
+
+  if (is_scalar_type(ty))
+  {
+    if (_type.do_alignment(ty))
+      dereference_callback.update_heap_type(_type);
+    return;
+  }
+
+  // Do more analysis
 }
