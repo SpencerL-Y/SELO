@@ -162,7 +162,7 @@ if __name__ == '__main__':
     compile()
   elif sys.argv[1] == "--run":
     run_on(sys.argv[2], sys.argv[3:])
-  elif sys.argv[1] == "--expriment":
+  elif sys.argv[1] == "--experiment":
     run_expriment_on(sys.argv[2])
   elif sys.argv[1] == "--help":
     help()
