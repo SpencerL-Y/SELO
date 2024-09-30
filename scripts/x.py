@@ -174,7 +174,9 @@ def run_expriment_on(benchmark_root):
 if __name__ == '__main__':
   if not os.path.exists(output_root):
     os.mkdir(output_root)
+  if not os.path.exists(log_root):
     os.mkdir(log_root)
+  if not os.path.exists(vcc_log):  
     os.mkdir(vcc_root)
 
   if sys.argv[1] == "--compile":
