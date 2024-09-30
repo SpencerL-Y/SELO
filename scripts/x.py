@@ -38,7 +38,7 @@ def collect_one_assert(info):
   prt = info[2].split(" ")
   res["Property"] = prt[1]
   res["Result"] = prt[3]
-  res["Time"] = prt[5]
+  res["Time"] = prt[5].replace('s', '')
 
   return res
 
@@ -48,6 +48,7 @@ def analysis_result(log):
   flag = "--- Result ---"
   
   assert_results = []
+  total_time = 0
   is_collecting = False
   with open(log) as log_file:
     info_buf = []
@@ -58,12 +59,17 @@ def analysis_result(log):
           continue
         else:
           is_collecting = False
-          assert_results.append(collect_one_assert(info_buf))
+          one_res = collect_one_assert(info_buf)
+          assert_results.append(one_res)
           info_buf.clear()
+
+          # collect time for each assertion
+          total_time += float(one_res["Time"])
+          
       if not is_collecting: continue
       info_buf.append(line.strip())
   
-  return assert_results
+  return (assert_results, total_time)
 
 def run_on(cprog, extra_args):
   assert(os.path.exists(cprog))
@@ -83,7 +89,7 @@ def run_on(cprog, extra_args):
     "--output",
     vcc_log,
     "--multi-property",
-    "--z3-slhv",
+    "--z3-slhv"
   ]
 
   if "--debug" in extra_args:
@@ -97,10 +103,12 @@ def run_on(cprog, extra_args):
   print(f"Command: {cmd}")
   os.system(cmd)
   
-  result = analysis_result(t_log)
+  (result, total_time) = analysis_result(t_log)
   for d in result:
     res = [k + ": " + v for k, v in list(d.items())]
     print("{:<10} {:<12} {:<25} {:<15} {:<10}".format(*res))
+
+  print(f"Total time: {round(total_time, 3)}")
 
   return result
 
