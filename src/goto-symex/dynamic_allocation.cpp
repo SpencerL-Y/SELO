@@ -74,7 +74,7 @@ void goto_symext::default_replace_dynamic_allocation(expr2tc &expr)
               get_int64_type(),
               std::string("SOME_SIZE_") + std::to_string(nondet_counter)
             );
-
+ 
           expr2tc pt = points_to2tc(loc, size_sym);
           expr2tc disj = disjh2tc(alloc_size_heap);
           to_disjh2t(disj).do_disjh(pt);
@@ -126,6 +126,8 @@ void goto_symext::default_replace_dynamic_allocation(expr2tc &expr)
     }
     else
     {
+      expr2tc ptr_obj = ptr.ptr_obj;
+
       expr2tc alloc_size_heap;
       migrate_expr(symbol_expr(*ns.lookup(alloc_size_heap_name)), alloc_size_heap);
 
@@ -139,16 +141,16 @@ void goto_symext::default_replace_dynamic_allocation(expr2tc &expr)
 
       expr2tc loc;
       expr2tc extra_eq;
-      if (!is_if2t(obj_expr))
-        loc = obj_expr;
+      if (!is_if2t(ptr_obj))
+        loc = ptr_obj;
       else
       {
         loc =
           symbol2tc(
-            get_int64_type(),
+            get_intloc_type(),
             std::string("assigned_loc_") + std::to_string(nondet_counter)
           );
-        extra_eq = equality2tc(loc, obj_expr);
+        extra_eq = equality2tc(loc, ptr_obj);
       }
 
       expr2tc pt = points_to2tc(loc, size_sym);
