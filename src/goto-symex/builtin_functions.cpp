@@ -1819,6 +1819,9 @@ type2tc goto_symext::create_heap_region_type(
   unsigned int bytes,
   const expr2tc &loc)
 {
+  log_debug("SLHV", "Create heap region with type : ");
+  if (messaget::state.modules.count("SLHV") > 0) type->dump();
+
   type2tc heap_type = get_intheap_type();
   intheap_type2t &_heap_type = to_intheap_type(heap_type);
   _heap_type.location = loc;
@@ -1831,8 +1834,22 @@ type2tc goto_symext::create_heap_region_type(
     _heap_type.total_bytes = bytes;
     const struct_type2t &_type = to_struct_type(type);
     _heap_type.field_types.clear();
-    for (auto const &it : _type.members)
-      _heap_type.field_types.push_back(it);
+    const std::vector<type2tc> &inner_types = _type.get_structure_members();
+    const std::vector<irep_idt> &inner_field_names = _type.get_structure_member_names();
+    _heap_type.field_types.push_back(inner_types[0]);
+    for (unsigned int i = 1; i < inner_field_names.size(); i++)
+    {
+      const std::string &field_name = inner_field_names[i].as_string();
+      if (has_prefix(inner_field_names[i], "anon"))
+        _heap_type.pads.push_back(inner_types[i]->get_width());
+      else
+      {  
+        _heap_type.field_types.push_back(inner_types[i]);
+        _heap_type.pads.push_back(0);
+      }
+    }
+    if (!has_prefix(inner_field_names.back(), "anon"))
+      _heap_type.pads.push_back(0);
   }
   else
     _heap_type.field_types.push_back(empty_type2tc());

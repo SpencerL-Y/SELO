@@ -31,8 +31,9 @@ public:
     smt_astt mk_uplus(smt_astt ht1, smt_astt ht2);
     smt_astt mk_uplus(std::vector<smt_astt> hts);
     smt_astt mk_subh(smt_astt ht1, smt_astt ht2);
-    smt_astt mk_disjh(smt_astt ht1, smt_astt );
+    smt_astt mk_disjh(smt_astt ht1, smt_astt ht2);
     smt_astt mk_locadd(smt_astt l, smt_astt o);
+    smt_astt mk_loc2int(smt_astt l);
 
     // value obtaining from solver, not supported here
     BigInt get_bv(smt_astt a, bool is_signed) override;
@@ -55,6 +56,8 @@ private:
     void print_smt_formulae(std::ostream& dest);
 
     std::vector<smt_astt> assertions;
+
+    smt_astt convert_slhv_typecast(const expr2tc &expr);
 };
 
 #endif

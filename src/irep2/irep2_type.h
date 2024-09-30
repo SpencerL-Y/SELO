@@ -226,6 +226,9 @@ public:
   bool is_region;
   bool is_aligned;
   bool is_alloced;
+
+  // Hide
+  std::vector<unsigned int> pads;
   
   // Type mangling:
   typedef esbmct::field_traits<expr2tc, intheap_data, &intheap_data::location>

@@ -163,6 +163,15 @@ smt_astt z3_slhv_convt::mk_locadd(smt_astt l, smt_astt o)
   );
 }
 
+smt_astt z3_slhv_convt::mk_loc2int(smt_astt l)
+{
+  assert(l->sort->id == SMT_SORT_INTLOC);
+//   return new_ast(
+//     z3::loc2int(to_solver_smt_ast<z3_smt_ast>(l)->a),
+//     this->mk_intloc_sort()
+//   );
+}
+
 BigInt z3_slhv_convt::get_bv(smt_astt a, bool is_signed)
 {
   log_error("SLHV does not support bv");
@@ -287,7 +296,7 @@ smt_astt z3_slhv_convt::convert_ast(const expr2tc &expr)
     }
     case expr2t::typecast_id:
     {
-      a = convert_typecast(expr);
+      a = convert_slhv_typecast(expr);
       break;
     }
     case expr2t::if_id:
@@ -631,6 +640,29 @@ z3_slhv_convt::convert_slhv_opts(
       abort();
     }
   }
+}
+
+smt_astt z3_slhv_convt::convert_slhv_typecast(const expr2tc &expr)
+{
+  if (!is_typecast2t(expr))
+  {
+    log_error("Wrong typecast expr");
+    expr->dump();
+    abort();
+  }
+
+  const typecast2t &cast = to_typecast2t(expr);
+
+  return convert_ast(cast.from);
+
+  smt_astt a = convert_ast(cast.from);
+
+  // TODO: add support loc2int
+  if ((is_pointer_type(cast.from->type) || is_intloc_type(cast.from->type)) &&
+      (is_signedbv_type(cast.type) || is_unsignedbv_type(cast.type)))
+    return mk_loc2int(a);
+  
+  return a;
 }
 
 smt_astt z3_slhv_convt::project(const expr2tc &expr)

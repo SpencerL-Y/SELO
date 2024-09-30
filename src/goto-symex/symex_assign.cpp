@@ -994,8 +994,13 @@ void goto_symext::replace_pointer_airth(expr2tc &expr)
 
     const struct_type2t &struct_type = to_struct_type(member.source_value->type);
 
-    expr2tc field = gen_ulong(struct_type.get_component_number(member.member));
-    
+    unsigned int idx = struct_type.get_component_number(member.member);
+    unsigned int count_pad = 0;
+    for (unsigned int i = 0; i < idx; i++)
+      count_pad += has_prefix(struct_type.member_names[i], "anon");
+    idx -= count_pad;
+
+    expr2tc field = gen_ulong(idx);
     expr = field_of2tc(member.type, member.source_value, field);
   }
 }

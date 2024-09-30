@@ -682,6 +682,8 @@ expr2tc dereferencet::build_reference_to(
     what->dump();
     log_debug("SLHV", "with type : ");
     type->dump();
+    log_debug("SLHV", "offset - {}", !is_nil_expr(lexical_offset));
+    if (!is_nil_expr(lexical_offset)) lexical_offset->dump();
     log_debug("SLHV", "|------------------------------------|");
   }
 
@@ -837,10 +839,6 @@ expr2tc dereferencet::build_reference_to(
     return value;
   } else {
     value = object;
-
-    if (messaget::state.modules.count("SLHV") > 0 &&
-        !is_nil_expr(lexical_offset))
-      lexical_offset->dump();
 
     guardt tmp_guard(guard);
     if (!is_intheap_type(value) &&
@@ -2564,7 +2562,7 @@ void dereferencet::check_heap_region_access(
       unsigned int _offset_bits = 0;
       // Get the highest bit
       for (unsigned int i = 0; i <= _field; i++)
-        _offset_bits += _type.field_types[i]->get_width();
+        _offset_bits += _type.field_types[i]->get_width() + _type.pads[i];
       
       expr2tc total_bits = gen_ulong(_type.total_bytes * 8);
       expr2tc offset_bits = gen_ulong(_offset_bits);
@@ -2725,8 +2723,24 @@ void dereferencet::set_intheap_type(expr2tc &heap_region, const type2tc &ty)
     const struct_type2t &_ty = to_struct_type(ty);
 
     _type.field_types.clear();
-    for (auto const &it : _ty.members)
-      _type.field_types.push_back(it);
+    const std::vector<type2tc> &inner_types = 
+      _ty.get_structure_members();
+    const std::vector<irep_idt> &inner_field_names =
+      _ty.get_structure_member_names();
+    _type.field_types.push_back(inner_types[0]);
+    for (unsigned int i = 1; i < inner_field_names.size(); i++)
+    {
+      const std::string &field_name = inner_field_names[i].as_string();
+      if (has_prefix(inner_field_names[i], "anon"))
+        _type.pads.push_back(inner_types[i]->get_width());
+      else
+      {  
+        _type.field_types.push_back(inner_types[i]);
+        _type.pads.push_back(0);
+      }
+    }
+    if (!has_prefix(inner_field_names.back(), "anon"))
+      _type.pads.push_back(0);
     _type.is_aligned = true;
     dereference_callback.update_heap_type(_type);
     return;

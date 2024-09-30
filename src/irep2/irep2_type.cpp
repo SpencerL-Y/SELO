@@ -192,7 +192,7 @@ unsigned int intheap_type2t::get_width() const
 bool intheap_type2t::do_alignment(const type2tc &type)
 {
   if (is_aligned) return false;
-  unsigned int access_sz = type->get_width();
+  int access_sz = type->get_width();
   if (access_sz % 8 != 0) access_sz = -1;
   else access_sz /= 8;
   if (access_sz == -1 || total_bytes % access_sz != 0)
@@ -203,7 +203,10 @@ bool intheap_type2t::do_alignment(const type2tc &type)
   unsigned int num_of_fields = total_bytes / access_sz;
   if (!field_types.empty()) field_types.clear();
   for (unsigned int i = 0; i < num_of_fields; i++)
+  {
     field_types.push_back(type);
+    pads.push_back(0);
+  }
   is_aligned = true;
   return true;
 }
