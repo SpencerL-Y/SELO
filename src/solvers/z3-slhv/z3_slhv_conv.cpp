@@ -166,10 +166,10 @@ smt_astt z3_slhv_convt::mk_locadd(smt_astt l, smt_astt o)
 smt_astt z3_slhv_convt::mk_loc2int(smt_astt l)
 {
   assert(l->sort->id == SMT_SORT_INTLOC);
-//   return new_ast(
-//     z3::loc2int(to_solver_smt_ast<z3_smt_ast>(l)->a),
-//     this->mk_intloc_sort()
-//   );
+  return new_ast(
+    z3::loc2int(to_solver_smt_ast<z3_smt_ast>(l)->a),
+    this->mk_int_sort()
+  );
 }
 
 BigInt z3_slhv_convt::get_bv(smt_astt a, bool is_signed)
@@ -660,11 +660,8 @@ smt_astt z3_slhv_convt::convert_slhv_typecast(const expr2tc &expr)
 
   const typecast2t &cast = to_typecast2t(expr);
 
-  return convert_ast(cast.from);
-
   smt_astt a = convert_ast(cast.from);
 
-  // TODO: add support loc2int
   if ((is_pointer_type(cast.from->type) || is_intloc_type(cast.from->type)) &&
       (is_signedbv_type(cast.type) || is_unsignedbv_type(cast.type)))
     return mk_loc2int(a);
