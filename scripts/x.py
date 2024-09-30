@@ -135,11 +135,22 @@ def generate_csv(results):
     w.writeheader()
     for cprog, assert_results in results.items():
       is_head = True
+      total_time = 0
       for assert_result in assert_results:
         new_row = {'File': cprog if is_head else ''}
         is_head = False
+        total_time += float(assert_result["Time"])
         new_row.update(assert_result)
         w.writerow(new_row)
+      new_row = {
+        "File": '',
+        "Line": '',
+        "Column": '',
+        "Property": '',
+        "Result": 'Totaltime',
+        "Time": total_time
+      }
+      w.writerow(new_row)
     
 
 def run_expriment_on(benchmark_root):
