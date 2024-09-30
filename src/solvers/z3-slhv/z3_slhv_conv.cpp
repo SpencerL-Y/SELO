@@ -620,7 +620,14 @@ z3_slhv_convt::convert_slhv_opts(
       smt_astt h1 = mk_fresh(h->sort, mk_fresh_name(std::string("_tmp_heap_")));
       smt_astt v1 = mk_fresh(mk_int_sort(), mk_fresh_name(std::string("_tmp_val_")));
 
-      smt_astt heap_state = mk_eq(h, mk_uplus(h1, mk_pt(l, v1)));
+      smt_astt nl =
+        mk_fresh(
+          mk_intloc_sort(),
+          mk_fresh_name(std::string("_assigned_loc_"))
+        );
+      smt_astt heap_state = 
+        mk_and(mk_eq(nl, l), mk_eq(h, mk_uplus(h1, mk_pt(nl, v1))));
+
       assert_ast(heap_state);
 
       return h1;

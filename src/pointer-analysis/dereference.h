@@ -222,7 +222,8 @@ public:
       WRITE,    /// The result of the expression will be written to.
       FREE,     /// The referred to object will be freed.
       INTERNAL, /// Calling code only wants the internal value-set data.
-    } op : 2;
+      RAW_READ, /// The dereference will not generate assertions.
+    } op : 3;
 
     /**
      * Whether the access is performed in a non-standard, known-unaligned way
@@ -255,12 +256,18 @@ public:
     {
       return m.op == INTERNAL;
     }
+
+    friend bool is_raw_read(const modet &m)
+    {
+      return m.op == RAW_READ;
+    }
   };
 
   static const constexpr modet READ = {modet::READ, false};
   static const constexpr modet WRITE = {modet::WRITE, false};
   static const constexpr modet FREE = {modet::FREE, false};
   static const constexpr modet INTERNAL = {modet::INTERNAL, false};
+  static const constexpr modet RAW_READ = {modet::RAW_READ, false};
 
   /** Take an expression and dereference it.
    *  This will descend through the whole of the expression given, and

@@ -162,7 +162,9 @@ void dereferencet::dereference_expr(expr2tc &expr, guardt &guard, modet mode)
     assert(is_dereference2t(expr));
     dereference2t &deref = to_dereference2t(expr);
     // first make sure there are no dereferences in there
-    dereference_expr(deref.value, guard, dereferencet::READ);
+    modet read_mod =
+      is_raw_read(mode) ? dereferencet::RAW_READ : dereferencet::READ;
+    dereference_expr(deref.value, guard, read_mod);
 
     expr2tc tmp_obj = deref.value;
     expr2tc result =
@@ -388,7 +390,9 @@ expr2tc dereferencet::dereference_expr_nonscalar(
 
     dereference2t &deref = to_dereference2t(expr);
     // first make sure there are no dereferences in there
-    dereference_expr(deref.value, guard, dereferencet::READ);
+    modet read_mod =
+      is_raw_read(mode) ? dereferencet::RAW_READ : dereferencet::READ;
+    dereference_expr(deref.value, guard, read_mod);
 
     return
       dereference(
@@ -483,6 +487,13 @@ expr2tc dereferencet::dereference(
     to_type->dump();
     log_debug("SLHV", "deref type : {}", !is_nil_type(deref_type));
     if (!is_nil_type(deref_type)) deref_type->dump();
+
+    log_debug(
+      "SLHV",
+      "mode - {}",
+      is_internal(mode) ? "internal" :
+        is_free(mode) ? "free" :
+          is_raw_read(mode) ? "raw_read" : "deref");
   }
   internal_items.clear();
 
@@ -855,7 +866,8 @@ expr2tc dereferencet::build_reference_to(
 
     // Check that the object we're accessing is actually alive and valid for this
     // mode. No need to check if it is internal mode.
-    if (!is_internal(mode)) valid_check(value, tmp_guard, mode);
+    if (!is_internal(mode) && !is_raw_read(mode))
+      valid_check(value, tmp_guard, mode);
 
     // Don't do anything further if we're freeing things
     if (is_free(mode))
@@ -911,7 +923,8 @@ expr2tc dereferencet::build_reference_to(
     }
 
     // other checks may be added later
-    check_heap_region_access(value, final_offset, type, tmp_guard, mode);
+    if (!is_raw_read(mode))
+      check_heap_region_access(value, final_offset, type, tmp_guard, mode);
 
     build_deref_slhv(value, final_offset, type, tmp_guard, mode, alignment);
 
@@ -2296,6 +2309,7 @@ void dereferencet::valid_check(
                                       : "invalid dereference pointer";
     // deref failure will replace heap region with heap contains
     // that indicates the reigon is avaliable.
+    log_debug("SLHV", "add valid check : {}", foo);
     dereference_failure("pointer dereference", foo, tmp_guard);
     return;
   }

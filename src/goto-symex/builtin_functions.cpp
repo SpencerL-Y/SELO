@@ -401,7 +401,7 @@ void goto_symext::symex_free(const expr2tc &expr)
     symex_assign(code_assign2tc(valid_index_expr, falsity), true);
   } else {
     expr2tc free_ptr = code.operand;
-    dereference(free_ptr, dereferencet::READ);
+    dereference(free_ptr, dereferencet::RAW_READ);
 
     expr2tc when = gen_false_expr();
     for(auto const& item : internal_deref_items)

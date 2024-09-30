@@ -148,7 +148,7 @@ void goto_symext::default_replace_dynamic_allocation(expr2tc &expr)
         loc =
           symbol2tc(
             get_intloc_type(),
-            std::string("assigned_loc_") + std::to_string(nondet_counter)
+            std::string("_assigned_loc_") + std::to_string(nondet_counter)
           );
         extra_eq = equality2tc(loc, ptr_obj);
       }
