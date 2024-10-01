@@ -478,8 +478,8 @@ z3_slhv_convt::convert_slhv_opts(
         loc = convert_ast(_type.location);
       }
       else if (is_symbol2t(locof.source_heap) && 
-          (is_pointer_type(locof.source_heap) ||
-           is_intloc_type(locof.source_heap)))
+          (is_intloc_type(locof.source_heap) ||
+          is_scalar_type(locof.source_heap)))
       {
         std::string loc_name =
           to_symbol2t(locof.source_heap).get_symbol_name() + std::string("_LOC_");
@@ -710,7 +710,7 @@ smt_astt z3_slhv_convt::project(const expr2tc &expr)
     abort();
   }
   else if (is_location_of2t(expr))
-    return this->project(to_location_of2t(expr).source_heap);
+    return convert_ast(expr);
   else if (is_field_of2t(expr))
     return convert_ast(expr);
   else if (is_typecast2t(expr))

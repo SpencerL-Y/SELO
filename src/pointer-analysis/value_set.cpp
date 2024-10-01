@@ -1278,8 +1278,7 @@ void value_sett::assign(
         assign(lhs_field, rhs_field, false);
       }
     }
-
-    if ((is_heap_update2t(rhs) || is_symbol2t(rhs))
+    else if ((is_heap_update2t(rhs) || is_symbol2t(rhs))
         && to_intheap_type(rhs->type).is_region)
     {
       unsigned int _field = -1;

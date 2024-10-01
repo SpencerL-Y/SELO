@@ -852,9 +852,8 @@ expr2tc dereferencet::build_reference_to(
     value = object;
 
     guardt tmp_guard(guard);
-    if (!is_intheap_type(value) &&
-        !is_pointer_type(value) &&
-        !is_intloc_type(value))
+    if (!is_intheap_type(value) && !is_intloc_type(value) &&
+        !is_scalar_type(value))
     {
       log_error("Do not support this tpye");
       value->dump();
