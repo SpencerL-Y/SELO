@@ -785,9 +785,8 @@ smt_convt::resultt bmct::multi_property_check(
     fine_timet sat_stop = current_time();
 
     log_status(
-      "Solving claim '{}' with solver {}",
-      claim.claim_msg,
-      runtime_solver->solver_text());
+      "Solving claim {} with solver {}",
+        i, runtime_solver->solver_text());
     log_status(
       "Runtime decision procedure: {}s", time2string(sat_stop - sat_start));
     
@@ -831,7 +830,8 @@ smt_convt::resultt bmct::multi_property_check(
     // If an assertion instance is verified to be violated
     if (result == smt_convt::P_SATISFIABLE)
     {
-      if (runtime_solver->solver_text() == "Z3-slhv") {
+      if (options.get_bool_option("z3-slhv") ||
+          options.get_bool_option("result-only")) {
         final_result = result;
         fail_fast_cnt++;
         return;

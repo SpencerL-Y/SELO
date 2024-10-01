@@ -54,7 +54,7 @@ z3_slhv_convt::~z3_slhv_convt() { delete_all_asts(); }
 smt_convt::resultt z3_slhv_convt::dec_solve()
 {
   const std::string &path = options.get_option("output");
-  if (path != "-")
+  if (options.get_bool_option("show-vcc") && path != "-")
   {
     std::ofstream out(path, std::ios_base::app);
     out << "SMT formulas for VCCs:\n";

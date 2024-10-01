@@ -84,6 +84,17 @@ void z3_convt::pop_ctx()
 
 smt_convt::resultt z3_convt::dec_solve()
 {
+  const std::string &path = options.get_option("output");
+  if (options.get_bool_option("show-vcc") && path != "-")
+  {
+    std::ofstream out(path, std::ios_base::app);
+    out << "SMT formulas for VCCs:\n";
+    for(z3::expr expr : solver.assertions()) {
+      out << expr.to_string() << '\n';
+    }
+    out.close();
+  }
+
   pre_solve();
 
   z3::check_result result = solver.check();
