@@ -907,7 +907,7 @@ void goto_symext::symex_assign_fieldof(
 
   symex_assign_rec(heap_region, full_lhs, update_heap, full_rhs, guard, hidden);
 
-  symex_disj_heaps(heap_region);
+  // symex_disj_heaps(heap_region);
 }
 
 void goto_symext::replace_nondet(expr2tc &expr)

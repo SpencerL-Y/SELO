@@ -10,10 +10,21 @@ static bool no_slice(const symbol2t &sym)
 template <bool Add>
 bool symex_slicet::get_symbols(const expr2tc &expr)
 {
-  bool res = false;
   
   if (is_heap_region2t(expr)) return false;
 
+  if (is_location_of2t(expr))
+  {
+    const location_of2t &locof = to_location_of2t(expr);
+    if (is_intheap_type(locof.source_heap))
+      return
+        get_symbols<Add>(
+          to_intheap_type(locof.source_heap->type).location);
+    else
+      return false;
+  }
+
+  bool res = false;
   // Recursively look if any of the operands has a inner symbol
   expr->foreach_operand([this, &res](const expr2tc &e) {
     if (!is_nil_expr(e))
@@ -43,7 +54,31 @@ void symex_slicet::run_on_assume(symex_target_equationt::SSA_stept &SSA_step)
   if (is_disjh2t(SSA_step.cond))
   {
     disjh2t &disj = to_disjh2t(SSA_step.cond);
-    if (!get_symbols<false>(disj.source_heap))
+
+    bool is_sliced = false;
+    if (!get_symbols<false>(disj.source_heap) &&
+        !get_symbols<false>(
+          to_intheap_type(disj.source_heap->type).location))
+      is_sliced = true;
+    else
+    {
+      get_symbols<true>(disj.source_heap);
+      int cnt = 0;
+      for (unsigned int i = 0; i < disj.other_heaps.size(); i++)
+      {
+        const expr2tc &reg = disj.other_heaps[i];
+        if (get_symbols<false>(reg) ||
+            get_symbols<false>(to_intheap_type(reg->type).location))
+        {
+          cnt++;
+          get_symbols<true>(reg);
+          disj.is_sliced[i] = false;
+        }
+      }
+      is_sliced |= (cnt == 0);
+    }
+
+    if (is_sliced)
     {
       SSA_step.ignore = true;
       ++sliced;
@@ -251,18 +286,5 @@ expr2tc symex_slicet::get_nondet_symbol(const expr2tc &expr)
   }
   default:
     return expr2tc();
-  }
-}
-
-void symex_slicet::run_on_disjhs(symex_target_equationt::SSA_stepst &eq)
-{
-  for (auto &step : eq)
-  {
-    if (step.ignore) continue;
-    if (!step.is_assume()) continue;
-    if (!is_disjh2t(step.cond)) continue;
-    disjh2t &disj = to_disjh2t(step.cond);
-    for (unsigned int i = 0; i < disj.other_heaps.size(); i++)
-      disj.is_sliced[i] = !get_symbols<false>(disj.other_heaps[i]);
   }
 }

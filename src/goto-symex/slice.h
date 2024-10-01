@@ -104,9 +104,6 @@ public:
       run_on_step(step);
     }
 
-    // added needed heap vars for their disjointness
-    run_on_disjhs(eq);
-
     fine_timet algorithm_stop = current_time();
     log_status(
       "Slicing time: {}s (removed {} assignments)",
@@ -226,15 +223,6 @@ protected:
    * @param SSA_step an renumber step
    */
   void run_on_renumber(symex_target_equationt::SSA_stept &SSA_step) override;
-
-private:
-  
-  /**
-   * @brief Add disjointness of connected heap variables
-   * 
-   * @param eq 
-   */
-  void run_on_disjhs(symex_target_equationt::SSA_stepst &eq);
 };
 
 #endif
