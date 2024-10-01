@@ -41,7 +41,8 @@
 #define ESBMC_LIST_OF_EXPRS                                                    \
   BOOST_PP_LIST_CONS(constant_int,                                             \
   BOOST_PP_LIST_CONS(constant_intloc,                                          \
-  BOOST_PP_LIST_CONS(constant_intheap,                                          \
+  BOOST_PP_LIST_CONS(constant_intheap,                                         \
+  BOOST_PP_LIST_CONS(constant_heap_region,                                     \
   BOOST_PP_LIST_CONS(constant_fixedbv,                                         \
   BOOST_PP_LIST_CONS(constant_floatbv,                                         \
   BOOST_PP_LIST_CONS(constant_bool,                                            \
@@ -154,7 +155,7 @@
   BOOST_PP_LIST_CONS(signbit,                                                  \
   BOOST_PP_LIST_CONS(concat,                                                   \
   BOOST_PP_LIST_CONS(extract,                                                  \
-  BOOST_PP_LIST_NIL)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
+  BOOST_PP_LIST_NIL))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
 
 #define ESBMC_LIST_OF_TYPES                                                    \
   BOOST_PP_LIST_CONS(bool,                                                     \

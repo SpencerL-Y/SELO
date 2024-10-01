@@ -13,6 +13,7 @@ static const char *expr_names[] = {
   "constant_int",
   "constant_intloc",
   "constant_intheap",
+  "constant_heap_region",
   "constant_fixedbv",
   "constant_floatbv",
   "constant_bool",

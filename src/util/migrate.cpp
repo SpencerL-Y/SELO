@@ -2047,6 +2047,15 @@ exprt migrate_expr_back(const expr2tc &ref)
     constant_exprt theexpr(thetype);
     return theexpr;
   }
+  case expr2t::constant_heap_region_id:
+  {
+    const constant_heap_region2t &ref2 = to_constant_heap_region2t(ref);
+    typet thetype = migrate_type_back(ref->type);
+    exprt theregion("constant_heap_region", thetype);
+    for (auto const &it : ref2.datatype_members)
+      theregion.operands().push_back(migrate_expr_back(it));
+    return theregion;
+  }
   case expr2t::constant_fixedbv_id:
   {
     return to_constant_fixedbv2t(ref).value.to_expr();

@@ -832,6 +832,13 @@ protected:
   void replace_tuple(expr2tc &expr);
 
   /**
+   * @brief Replace expr and type for SLHV
+   * 
+   * @param expr 
+   */
+  void adapt_to_slhv(expr2tc &expr);
+
+  /**
    * @brief Create a heap region intloc
    * 
    * @param expr 
@@ -861,6 +868,18 @@ protected:
   expr2tc create_heap_region(const sideeffect2t &effect, expr2tc &flag);
 
   /**
+   * @brief Create a constant heap region object
+   * 
+   * @param effect 
+   * @param flag 
+   * @return expr2tc 
+   */
+  expr2tc create_constant_heap_region(
+    const constant_struct2t &effect,
+    expr2tc &flag
+  );
+
+  /**
    * @brief Encode disjointness among all heap regions
    * 
    * @param heap 
@@ -873,7 +892,7 @@ protected:
    * @param lhs 
    * @param effect 
    */
-  void symex_nondet(const expr2tc &lhs, const expr2tc &effect);
+  void symex_stack_sideeffect(const expr2tc &lhs, const expr2tc &effect);
 
   /**
    *  Fetch reference to global dynamic object counter.

@@ -187,25 +187,14 @@ void goto_symext::symex_assign(
   expr2tc rhs = code.source;
   if (options.get_bool_option("z3-slhv"))
   {
-    replace_null(lhs);
-    replace_null(rhs);
-
-    replace_pointer_airth(lhs);
-    replace_pointer_airth(rhs);
-
-    replace_address_of(lhs);
-    replace_address_of(rhs);
-
-    replace_tuple(lhs);
-    replace_tuple(rhs);
-
-    replace_typecast(lhs);
-    replace_typecast(rhs);
+    adapt_to_slhv(lhs);
+    adapt_to_slhv(rhs);
 
     if (is_sideeffect2t(rhs) &&
-        to_sideeffect2t(rhs).kind == sideeffect2t::nondet)
+        to_sideeffect2t(rhs).kind == sideeffect2t::nondet ||
+        is_constant_struct2t(rhs))
     {
-      symex_nondet(lhs, rhs);
+      symex_stack_sideeffect(lhs, rhs);
       return;
     }
   }
@@ -1048,4 +1037,14 @@ void goto_symext::replace_tuple(expr2tc &expr)
     expr->type = create_heap_region_type(expr->type, bytes, base_loc);
     to_intheap_type(expr->type).is_alloced = true;
   }
+}
+
+
+void goto_symext::adapt_to_slhv(expr2tc &expr)
+{
+  replace_null(expr);
+  replace_pointer_airth(expr);
+  replace_address_of(expr);
+  replace_tuple(expr);
+  replace_typecast(expr);
 }

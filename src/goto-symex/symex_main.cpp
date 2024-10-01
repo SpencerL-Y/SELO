@@ -188,11 +188,7 @@ void goto_symext::symex_step(reachability_treet &art)
     log_debug("SLHV", "    >>>>>>>> goto symex: GOTO");
     expr2tc tmp(instruction.guard);
     if (options.get_bool_option("z3-slhv"))
-    {
-      replace_null(tmp);
-      replace_pointer_airth(tmp);
-      replace_typecast(tmp);
-    }
+      adapt_to_slhv(tmp);
     replace_nondet(tmp);
 
     if (messaget::state.modules.count("SLHV") > 0) tmp->dump();
@@ -227,10 +223,8 @@ void goto_symext::symex_step(reachability_treet &art)
       }
 
       if (options.get_bool_option("z3-slhv"))
-      {
-        replace_null(thecode);
-        replace_typecast(thecode);
-      }
+        adapt_to_slhv(thecode);
+
       symex_return(thecode);
     }
 
@@ -274,9 +268,15 @@ void goto_symext::symex_step(reachability_treet &art)
   {
     log_debug("SLHV", "    >>>>>>>> goto symex: FUNCTION_CALL");
     expr2tc deref_code = instruction.code;
+
+    if (options.get_bool_option("z3-slhv"))
+      adapt_to_slhv(deref_code);
+
     replace_nondet(deref_code);
 
     code_function_call2t &call = to_code_function_call2t(deref_code);
+    
+    if (messaget::state.modules.count("SLHV") > 0) call.dump();
 
     if (!is_nil_expr(call.ret))
     {
@@ -410,11 +410,8 @@ void goto_symext::symex_assume()
   expr2tc cond = cur_state->source.pc->guard;
   
   if (options.get_bool_option("z3-slhv"))
-  {
-    replace_null(cond);
-    replace_pointer_airth(cond);
-    replace_typecast(cond);
-  }
+    adapt_to_slhv(cond);
+
   replace_nondet(cond);
   dereference(cond, dereferencet::READ);
   replace_dynamic_allocation(cond);
@@ -440,10 +437,8 @@ void goto_symext::symex_assert()
 
   expr2tc tmp = instruction.guard;
   if (options.get_bool_option("z3-slhv"))
-  {
-    replace_null(tmp);
-    replace_typecast(tmp);
-  }
+    adapt_to_slhv(tmp);
+
   replace_nondet(tmp);
 
   intrinsic_races_check_dereference(tmp);

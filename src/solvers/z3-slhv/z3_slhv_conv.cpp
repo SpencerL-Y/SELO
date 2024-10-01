@@ -240,8 +240,9 @@ smt_astt z3_slhv_convt::convert_ast(const expr2tc &expr)
   smt_astt a;
   switch (expr->expr_id)
   {
-    case expr2t::constant_intheap_id:
     case expr2t::constant_intloc_id:
+    case expr2t::constant_intheap_id:
+    case expr2t::constant_heap_region_id:
     case expr2t::disjh_id:
     case expr2t::heap_region_id:
     case expr2t::location_of_id:
@@ -396,10 +397,25 @@ z3_slhv_convt::convert_slhv_opts(
 {
   switch (expr->expr_id)
   {
-    case expr2t::constant_intheap_id:
-      return mk_emp();
     case expr2t::constant_intloc_id:
       return mk_nil();
+    case expr2t::constant_intheap_id:
+      return mk_emp();
+    case expr2t::constant_heap_region_id:
+    {
+      const constant_heap_region2t &const_reg = to_constant_heap_region2t(expr);
+      const intheap_type2t &_type = to_intheap_type(expr->type);
+      smt_astt base_loc = convert_ast(_type.location);
+
+      std::vector<smt_astt> pt_vec;
+      for (unsigned int i = 0; i < const_reg.datatype_members.size(); i++)
+      {
+        smt_astt loc =
+          i == 0 ? base_loc : mk_locadd(base_loc, mk_smt_int(BigInt(i)));
+        pt_vec.push_back(mk_pt(loc, args[i]));
+      }
+      return pt_vec.size() == 1 ? pt_vec[0] : mk_uplus(pt_vec);
+    }
     case expr2t::disjh_id:
     {
       const disjh2t &disj = to_disjh2t(expr);
@@ -423,7 +439,7 @@ z3_slhv_convt::convert_slhv_opts(
       std::vector<smt_astt> pt_vec;
       if (_type.is_aligned)
       {
-        for (unsigned i = 0; i < _type.field_types.size(); i++)
+        for (unsigned int i = 0; i < _type.field_types.size(); i++)
         {
           smt_astt loc = i == 0 ? base_loc : mk_locadd(base_loc, mk_smt_int(BigInt(i)));
           smt_sortt sort =
@@ -660,11 +676,16 @@ smt_astt z3_slhv_convt::convert_slhv_typecast(const expr2tc &expr)
 
   const typecast2t &cast = to_typecast2t(expr);
 
-  smt_astt a = convert_ast(cast.from);
-
-  if ((is_pointer_type(cast.from->type) || is_intloc_type(cast.from->type)) &&
+  smt_astt a;
+  if ((is_pointer_type(cast.from->type) && is_intloc_type(cast.type)) ||
+      (is_pointer_type(cast.type) && is_intloc_type(cast.from->type)))
+    a = convert_ast(cast.from);
+  else if (
+      (is_pointer_type(cast.from->type) || is_intloc_type(cast.from->type)) &&
       (is_signedbv_type(cast.type) || is_unsignedbv_type(cast.type)))
-    return mk_loc2int(a);
+    return a = mk_loc2int(convert_ast(cast.from));
+  else
+    a = convert_typecast(expr);
   
   return a;
 }

@@ -1266,6 +1266,19 @@ void value_sett::assign(
     // Heap varialbes perform as array variable.
     // We only update its fields that are pointers
 
+    if (is_constant_heap_region2t(rhs))
+    {
+      const constant_heap_region2t &const_reg = to_constant_heap_region2t(rhs);
+      for (unsigned int i = 0; i < const_reg.datatype_members.size(); i++)
+      {
+        expr2tc rhs_field = const_reg.datatype_members[i];
+        expr2tc lhs_field =
+          field_of2tc(rhs_field->type, lhs, gen_ulong(i));
+
+        assign(lhs_field, rhs_field, false);
+      }
+    }
+
     if ((is_heap_update2t(rhs) || is_symbol2t(rhs))
         && to_intheap_type(rhs->type).is_region)
     {

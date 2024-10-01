@@ -1834,12 +1834,13 @@ type2tc goto_symext::create_heap_region_type(
     _heap_type.total_bytes = bytes;
     const struct_type2t &_type = to_struct_type(type);
     _heap_type.field_types.clear();
-    const std::vector<type2tc> &inner_types = _type.get_structure_members();
-    const std::vector<irep_idt> &inner_field_names = _type.get_structure_member_names();
+    const std::vector<type2tc> &inner_types =
+      _type.get_structure_members();
+    const std::vector<irep_idt> &inner_field_names =
+      _type.get_structure_member_names();
     _heap_type.field_types.push_back(inner_types[0]);
     for (unsigned int i = 1; i < inner_field_names.size(); i++)
     {
-      const std::string &field_name = inner_field_names[i].as_string();
       if (has_prefix(inner_field_names[i], "anon"))
         _heap_type.pads.push_back(inner_types[i]->get_width());
       else
@@ -1857,7 +1858,8 @@ type2tc goto_symext::create_heap_region_type(
   return heap_type;
 }
 
-expr2tc goto_symext::create_heap_region(const sideeffect2t &effect, expr2tc &flag)
+expr2tc goto_symext::create_heap_region(
+  const sideeffect2t &effect, expr2tc &flag)
 {
   type2tc type;
   if (effect.kind == sideeffect2t::nondet)
@@ -1871,9 +1873,7 @@ expr2tc goto_symext::create_heap_region(const sideeffect2t &effect, expr2tc &fla
     type = effect.alloctype;
     if (is_nil_type(type)) type = char_type2();
   }
-
-  expr2tc base_loc = create_heap_region_loc(flag);
-
+  
   unsigned int bytes;
   if (is_struct_type(type))
   {
@@ -1892,12 +1892,39 @@ expr2tc goto_symext::create_heap_region(const sideeffect2t &effect, expr2tc &fla
     bytes = to_constant_int2t(op).value.to_uint64();
   }
 
+  expr2tc base_loc = create_heap_region_loc(flag);
   type2tc heap_type = create_heap_region_type(type, bytes, base_loc);
+
   if (effect.kind == sideeffect2t::nondet)
     to_intheap_type(heap_type).is_alloced = true;
   flag->type = heap_type;
 
   return heap_region2tc(heap_type, base_loc);
+}
+
+expr2tc goto_symext::create_constant_heap_region(
+  const constant_struct2t &effect,
+  expr2tc &flag)
+{
+  type2tc type = effect.type;
+  unsigned int bytes = type_byte_size(type, &ns).to_uint64();
+
+  expr2tc base_loc = create_heap_region_loc(flag);
+  type2tc heap_type = create_heap_region_type(type, bytes, base_loc);
+  to_intheap_type(heap_type).is_alloced = true;
+  flag->type = heap_type;
+
+  std::vector<expr2tc> members;
+  const struct_type2t &_type = to_struct_type(type);
+  const std::vector<irep_idt> &inner_field_names =
+    _type.get_structure_member_names();
+  for (unsigned int i = 0; i < inner_field_names.size(); i++)
+  {
+    if (!has_prefix(inner_field_names[i], "anon"))
+      members.push_back(effect.datatype_members[i]);
+  }
+
+  return constant_heap_region2tc(heap_type, members);
 }
 
 void goto_symext::symex_disj_heaps(const expr2tc &heap)
@@ -1930,18 +1957,27 @@ void goto_symext::symex_disj_heaps(const expr2tc &heap)
   );
 }
 
-void goto_symext::symex_nondet(const expr2tc &lhs, const expr2tc &effect)
+void goto_symext::symex_stack_sideeffect(const expr2tc &lhs, const expr2tc &effect)
 {  
   expr2tc new_lhs = lhs;
   expr2tc new_rhs = effect;
 
-  const sideeffect2t &_effect = to_sideeffect2t(effect);
+  if (is_sideeffect2t(effect))
+  {
+    const sideeffect2t &_effect = to_sideeffect2t(effect);
 
-  if (_effect.kind == sideeffect2t::nondet &&
-      !is_struct_type(_effect.type))
-    replace_nondet(new_rhs);
+    if (_effect.kind == sideeffect2t::nondet &&
+        !is_struct_type(_effect.type))
+      replace_nondet(new_rhs);
+    else
+      new_rhs = create_heap_region(to_sideeffect2t(effect), new_lhs);
+  }
   else
-    new_rhs = create_heap_region(to_sideeffect2t(effect), new_lhs);
+  {
+    // constan struct
+    const constant_struct2t &_struct = to_constant_struct2t(effect);
+    new_rhs = create_constant_heap_region(_struct, new_lhs);
+  }
 
   symex_assign(code_assign2tc(new_lhs, new_rhs));
 

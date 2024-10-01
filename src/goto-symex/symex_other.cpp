@@ -7,12 +7,9 @@
 void goto_symext::symex_other(const expr2tc code)
 {
   expr2tc code2 = code;
+
   if (options.get_bool_option("z3-slhv"))
-  {
-    replace_null(code2);
-    replace_pointer_airth(code2);
-    replace_typecast(code2);
-  }
+    adapt_to_slhv(code2);
 
   if (is_code_expression2t(code2))
   {
@@ -55,8 +52,10 @@ void goto_symext::symex_decl(const expr2tc code)
 {
   assert(is_code_decl2t(code));
   expr2tc code2 = code;
+
   if (options.get_bool_option("z3-slhv"))
     replace_null(code2);
+    
   replace_dynamic_allocation(code2);
   replace_nondet(code2);
   dereference(code2, dereferencet::READ);

@@ -1659,6 +1659,7 @@ public:
 irep_typedefs(constant_int, constant_int_data);
 irep_typedefs(constant_intloc, constant_intloc_data);
 irep_typedefs(constant_intheap, constant_intheap_data);
+irep_typedefs(constant_heap_region, constant_datatype_data);
 irep_typedefs(constant_fixedbv, constant_fixedbv_data);
 irep_typedefs(constant_floatbv, constant_floatbv_data);
 irep_typedefs(constant_struct, constant_datatype_data);
@@ -1799,6 +1800,8 @@ public:
   static std::string field_names[esbmct::num_type_fields];
 };
 
+/* ================================ SLHV ================================ */
+
 class constant_intloc2t : public constant_intloc_expr_methods
 {
 public:
@@ -1826,6 +1829,23 @@ public:
 
   static std::string field_names[esbmct::num_type_fields];
 };
+
+class constant_heap_region2t : public constant_heap_region_expr_methods
+{
+public:
+  constant_heap_region2t(
+    const type2tc &type,
+    const std::vector<expr2tc> &members)
+    : constant_heap_region_expr_methods(
+      type, constant_heap_region_id, members)
+  {
+  }
+  constant_heap_region2t(const constant_heap_region2t &ref) = default;
+
+  static std::string field_names[esbmct::num_type_fields];
+};
+
+/* ================================ SLHV ================================ */
 
 /** Constant fixedbv class. Records a fixed-width number in what I assume
  *  to be mantissa/exponent form, but which is described throughout CBMC code
