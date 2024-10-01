@@ -22,6 +22,27 @@ def compile():
 def help():
   os.system(f"{esbmc_slhv} -h")
 
+  cmds = {
+    "--compile" : ('',"Compile esbmc"),
+    "--run" : ("file extra_args","Only test a single file 'file'"),
+    "--experiment": ("path extra_args", "Run on a benchmark 'path'"),
+    "--help": ('', "Show help information"),
+  }
+
+  args = {
+    "--esbmc" : "Disable SLHV and use default esbmc with solver Z3",
+    "--debug" : "Output debug info of SLHV",
+    "--std-out" : "Output info in std::out"
+  }
+
+  print("Commands for x.py:")
+  for cmd in cmds.items():
+    cmdline = [cmd[0] + ' ' + cmd[1][0], cmd[1][1]]
+    print(" {:<35} {:<50}".format(*cmdline))
+  print("Extra args:")
+  for arg in args.items():
+    print(" {:<35} {:<50}".format(*arg))
+
 def collect_one_assert(info):
   assert(len(info) == 3)
   res = {}
@@ -81,23 +102,25 @@ def run_on(cprog, extra_args):
     esbmc_slhv,
     cprog,
     "--no-library",
-    "--ir",
     "--force-malloc-success",
     "--memory-leak-check",
     "--result-only",
     "--show-vcc",
     "--output",
     vcc_log,
-    "--multi-property",
-    "--z3-slhv"
+    "--multi-property"
   ]
+
+  if "--esbmc" in extra_args:
+    args.append("--z3")
+  else:
+    args.append("--z3-slhv")
 
   if "--debug" in extra_args:
     args.append("--verbosity SLHV:8")
 
-  redirect_arg = [">", t_log]
   if "--std-out" not in extra_args:
-    args += redirect_arg
+    args += [">", t_log]
 
   cmd = " ".join(args)
   print(f"Command: {cmd}")
@@ -153,7 +176,7 @@ def generate_csv(results):
       w.writerow(new_row)
     
 
-def run_expriment_on(benchmark_root):
+def run_expriment_on(benchmark_root, extra_args):
   assert(os.path.exists(benchmark_root))
   
   cprogs = []
@@ -166,7 +189,7 @@ def run_expriment_on(benchmark_root):
   results = {}
   for cprog in cprogs:
     cprog_path = os.path.join(benchmark_root, cprog)
-    results[cprog] = run_on(cprog_path, [])
+    results[cprog] = run_on(cprog_path, extra_args)
     collect_results(cprog)
 
   generate_csv(results)    
@@ -178,13 +201,16 @@ if __name__ == '__main__':
     os.mkdir(log_root)
   if not os.path.exists(vcc_log):  
     os.mkdir(vcc_root)
+  
+  if "--esbmc" in sys.argv:
+    csv_file = os.path.join(output_root, "results_esbmc.csv")
 
   if sys.argv[1] == "--compile":
     compile()
   elif sys.argv[1] == "--run":
     run_on(sys.argv[2], sys.argv[3:])
   elif sys.argv[1] == "--experiment":
-    run_expriment_on(sys.argv[2])
+    run_expriment_on(sys.argv[2], sys.argv[3:])
   elif sys.argv[1] == "--help":
     help()
   else:
