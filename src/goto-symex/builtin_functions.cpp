@@ -1938,9 +1938,10 @@ void goto_symext::symex_disj_heaps(const expr2tc &heap)
   expr2tc l0_heap = heap;
   cur_state->get_original_name(l0_heap);
   expr2tc disj = disjh2tc(l0_heap);
-
-  for (auto const &it : cur_state->top().local_heap_regions)
-    to_disjh2t(disj).do_disjh(it);
+  
+  for (auto const& frame : cur_state->call_stack)
+    for (auto const &it : frame.local_heap_regions)
+      to_disjh2t(disj).do_disjh(it);
 
   for (auto const &it : dynamic_memory)
     to_disjh2t(disj).do_disjh(it.obj);

@@ -16,7 +16,12 @@ bool symex_slicet::get_symbols(const expr2tc &expr)
   if (is_location_of2t(expr))
   {
     const location_of2t &locof = to_location_of2t(expr);
-    if (is_intheap_type(locof.source_heap))
+    if (is_field_of2t(locof.source_heap))
+      return
+        get_symbols<Add>(location_of2tc(
+          to_field_of2t(locof.source_heap).source_heap
+        ));
+    else if (is_intheap_type(locof.source_heap))
       return
         get_symbols<Add>(
           to_intheap_type(locof.source_heap->type).location);
@@ -119,6 +124,29 @@ void symex_slicet::run_on_assignment(symex_target_equationt::SSA_stept &SSA_step
   assert(is_symbol2t(SSA_step.lhs));
   // TODO: create an option to ignore nondet symbols (test case generation)
 
+  if (is_intheap_type(SSA_step.lhs) &&
+      !is_nil_expr(to_intheap_type(SSA_step.lhs->type).location))
+  {
+    const symbol2t &sym = to_symbol2t(SSA_step.lhs);
+    const intheap_type2t &ty = to_intheap_type(SSA_step.lhs->type);
+
+    // If we access the location of a heap region, we add the
+    // first variable with ;l2_num = 1' to build the disjointness.
+    if (sym.level2_num == 1 && get_symbols<false>(ty.location) ||
+        get_symbols<false>(SSA_step.lhs))
+    {
+      get_symbols<true>(SSA_step.guard);
+      get_symbols<true>(SSA_step.cond);
+    }
+    else
+    {
+      SSA_step.ignore = true;
+      ++sliced;
+    }
+    return;
+  }
+  
+  
   if (!get_symbols<false>(SSA_step.lhs))
   {
     // Should we add nondet to the dependency list (mostly for test cases)?
