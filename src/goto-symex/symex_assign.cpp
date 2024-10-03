@@ -302,6 +302,44 @@ void goto_symext::symex_assign_rec(
 {
   if (is_symbol2t(lhs))
   {
+    if (is_intheap_type(lhs) && is_intheap_type(rhs) && is_symbol2t(rhs))
+    {
+      const intheap_type2t &lhs_ty = to_intheap_type(lhs->type);
+      const intheap_type2t &rhs_ty = to_intheap_type(rhs->type);
+      if (lhs_ty.is_alloced)
+      {
+        if (!rhs_ty.is_alloced ||
+            lhs_ty.field_types.size() != rhs_ty.field_types.size())
+        {
+          log_error("Wrong assignment for heap varaible");
+          rhs->dump();
+          abort();
+        }
+
+        std::string lhs_loc = to_symbol2t(lhs_ty.location).get_symbol_name();
+        std::string rhs_loc = to_symbol2t(rhs_ty.location).get_symbol_name();
+
+        // Copy fields of struct/...
+        if (lhs_loc != rhs_loc)
+        {
+          for (unsigned int i = 0; i < lhs_ty.field_types.size(); i++)
+          {
+            if (lhs_ty.field_types[i] != rhs_ty.field_types[i])
+            {
+              log_status("Dismatch type info");
+              abort();
+            }
+
+            expr2tc lhs_field = field_of2tc(lhs_ty.field_types[i], lhs, gen_ulong(i));
+            expr2tc rhs_field = field_of2tc(lhs_ty.field_types[i], rhs, gen_ulong(i));
+
+            symex_assign_rec(lhs_field, lhs, rhs_field, rhs, guard, false);
+          }
+          return;
+        }
+      }
+    }
+
     log_debug("SLHV", " xxxxxxxxx symex assign symbol xxxxxxxxx ");
     symex_assign_symbol(lhs, full_lhs, rhs, full_rhs, guard, hidden);
     log_debug("SLHV", " xxxxxxxxx symex assign symbol xxxxxxxxx ");
