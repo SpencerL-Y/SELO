@@ -69,7 +69,10 @@ def analysis_result(log):
   flag = "--- Result ---"
   
   assert_results = []
+  formulas = 0
   total_time = 0
+  mi_time = float(901)
+  mx_time = float(0)
   is_collecting = False
   with open(log) as log_file:
     info_buf = []
@@ -85,12 +88,16 @@ def analysis_result(log):
           info_buf.clear()
 
           # collect time for each assertion
-          total_time += float(one_res["Time"])
+          time = float(one_res["Time"])
+          total_time += time
+          mi_time = min(mi_time, time)
+          mx_time = max(mx_time, time)
+          formulas += 1
           
       if not is_collecting: continue
       info_buf.append(line.strip())
   
-  return (assert_results, total_time)
+  return (assert_results, formulas, total_time, mi_time, mx_time)
 
 def run_on(cprog, extra_args):
   assert(os.path.exists(cprog))
@@ -108,7 +115,8 @@ def run_on(cprog, extra_args):
     "--show-vcc",
     "--output",
     vcc_log,
-    "--multi-property"
+    "--multi-property",
+    # "--no-slice"
   ]
 
   if "--esbmc" in extra_args:
@@ -120,18 +128,22 @@ def run_on(cprog, extra_args):
     args.append("--verbosity SLHV:8")
 
   if "--std-out" not in extra_args:
-    args += [">", t_log]
+    args += [">", t_log, "2>&1"]
 
   cmd = " ".join(args)
   print(f"Command: {cmd}")
   os.system(cmd)
   
-  (result, total_time) = analysis_result(t_log)
+  (result, formulas, total_time, mi_time, mx_time) = analysis_result(t_log)
   for d in result:
     res = [k + ": " + v for k, v in list(d.items())]
     print("{:<10} {:<12} {:<25} {:<15} {:<10}".format(*res))
 
-  print(f"Total time: {round(total_time, 3)}")
+  print(f"Formulas: {formulas}, \
+        Total time: {round(total_time, 3)}, \
+        Average time: {round(total_time / formulas, 3)} \
+        Min time: {round(mi_time, 3)}, \
+        Max time: {round(mx_time, 3)}")
 
   return result
 
@@ -156,25 +168,101 @@ def generate_csv(results):
     header = ["File", "Line", "Column", "Property", "Result", "Time"]
     w = csv.DictWriter(f, header)
     w.writeheader()
+    formulas = [0, 0]
+    total_time = [0.0, 0.0]
+    mi_time = [-1.0, -1.0]
+    mx_time = [-1.0, -1.0]
     for cprog, assert_results in results.items():
       is_head = True
-      total_time = 0
+      i_formulas = [0, 0]
+      i_total_time = [0.0, 0.0]
+      i_mi_time = [-1.0, -1.0]
+      i_mx_time = [-1.0, -1.0]
       for assert_result in assert_results:
         new_row = {'File': cprog if is_head else ''}
         is_head = False
-        total_time += float(assert_result["Time"])
+        
+        time = float(assert_result["Time"])
+        r = 0 if assert_result["Result"] == "sat" else 1
+        i_formulas[r] += 1
+        i_total_time[r] += time
+
+        if i_mi_time[r] == -1.0:
+          i_mi_time[r] = time
+        else:
+          i_mi_time[r] = min(i_mi_time[r], time)
+        
+        if i_mx_time[r] == -1.0:
+          i_mx_time[r] = time
+        else:
+          i_mx_time[r] = max(i_mx_time[r], time)
+
+        formulas[r] += 1
+        total_time[r] += time
+
+        if mi_time[r] == -1.0:
+          mi_time[r] = time
+        else:
+          mi_time[r] = min(mi_time[r], time)
+        
+        if mx_time[r] == -1.0:
+          mx_time[r] = time
+        else:
+          mx_time[r] = max(mx_time[r], time)
+
         new_row.update(assert_result)
         w.writerow(new_row)
+      
+      i_sat_ave = round(i_total_time[0] / i_formulas[0], 3) if i_formulas[0] != 0 else '-'
+      i_unsat_ave = round(i_total_time[1] / i_formulas[1], 3)
+
+      mit = ['-', '-']
+      mxt = ['-', '-']
+
+      if i_mi_time[0] != -1.0: mit[0] = round(i_mi_time[0], 3)
+      if i_mi_time[1] != -1.0: mit[1] = round(i_mi_time[1], 3)
+      if i_mx_time[0] != -1.0: mxt[0] = round(i_mx_time[0], 3)
+      if i_mx_time[1] != -1.0: mxt[1] = round(i_mx_time[1], 3)
+
       new_row = {
+        "File": f'Formulas(sat/unsat): {i_formulas[0]}/{i_formulas[1]}',
+        "Line": f'Average(sat/unsat): {i_sat_ave}/{i_unsat_ave}',
+        "Column": f'Min_time(sat/unsat): {mit[0]}/{mit[1]}',
+        "Property": f'Max_time(sat/unsat): {mxt[0]}/{mxt[1]}',
+        "Result": '',
+        "Time": '',
+      }
+      w.writerow(new_row)
+
+    new_row = {
         "File": '',
         "Line": '',
         "Column": '',
         "Property": '',
-        "Result": 'Totaltime',
-        "Time": total_time
-      }
-      w.writerow(new_row)
+        "Result": '',
+        "Time": '',   
+    }
+    w.writerow(new_row)
     
+    sat_ave = round(total_time[0] / formulas[0], 3)
+    unsat_ave = round(total_time[1] / formulas[1], 3)
+
+    mit = ['-', '-']
+    mxt = ['-', '-']
+
+    if mi_time[0] != -1.0: mit[0] = round(mi_time[0], 3)
+    if mi_time[1] != -1.0: mit[1] = round(mi_time[1], 3)
+    if mx_time[0] != -1.0: mxt[0] = round(mx_time[0], 3)
+    if mx_time[1] != -1.0: mxt[1] = round(mx_time[1], 3)
+    new_row = {
+        "File": f'Formulas(sat/unsat): {formulas[0]}/{formulas[1]}',
+        "Line": f'Average(sat/unsat): {sat_ave}/{unsat_ave}',
+        "Column": f'Min_time(sat/unsat): {mit[0]}/{mit[1]}',
+        "Property": f'Max_time(sat/unsat): {mxt[0]}/{mxt[1]}',
+        "Result": '',
+        "Time": '',
+    }
+    w.writerow(new_row)
 
 def run_expriment_on(benchmark_root, extra_args):
   assert(os.path.exists(benchmark_root))
