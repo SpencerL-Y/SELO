@@ -3,6 +3,7 @@
 import os
 import sys
 import csv
+import matplotlib.pyplot as plt
 
 esbmc_slhv_root = "./esbmc"
 esbmc_slhv_build = os.path.join(esbmc_slhv_root, "build")
@@ -15,6 +16,8 @@ t_log = os.path.join(output_root, "t.log")
 vcc_log = os.path.join(output_root, "vcc.log")
 
 csv_file = os.path.join(output_root, "results.csv")
+aht_plt_file = os.path.join(output_root, "aht_fig.svg")
+
 
 def compile():
   os.system(f"cd {esbmc_slhv_build } && cmake --build .")
@@ -43,7 +46,7 @@ def help():
   for arg in args.items():
     print(" {:<35} {:<50}".format(*arg))
 
-def collect_one_assert(info):
+def collect_one_assert(info, aht):
   assert(len(info) == 3)
   res = {}
   
@@ -55,9 +58,16 @@ def collect_one_assert(info):
     res["Line"] = location[4]
     res["Column"] = location[6]
 
-  # Property & Result & Time
+
+
+  # Property
   prt = info[2].split(" ")
   res["Property"] = prt[1]
+
+  # Atomic heap term
+  res["Aht"] = aht
+
+  # Result & Time
   res["Result"] = prt[3]
   res["Time"] = prt[5].replace('s', '')
 
@@ -67,37 +77,34 @@ def analysis_result(log):
   assert(os.path.exists(log))
 
   flag = "--- Result ---"
-  
+
   assert_results = []
-  formulas = 0
-  total_time = 0
-  mi_time = float(901)
-  mx_time = float(0)
+  total_time = 0.0
   is_collecting = False
   with open(log) as log_file:
     info_buf = []
+    aht = '-'
     for line in log_file:
+      
+      if "Number of aht:" in line:
+        aht = int(line.strip().split(' ')[3])
+
       if line.find(flag) != -1:
         if not is_collecting:
           is_collecting = True
           continue
         else:
           is_collecting = False
-          one_res = collect_one_assert(info_buf)
+          one_res = collect_one_assert(info_buf, aht)
           assert_results.append(one_res)
+          aht = '-'
           info_buf.clear()
-
-          # collect time for each assertion
-          time = float(one_res["Time"])
-          total_time += time
-          mi_time = min(mi_time, time)
-          mx_time = max(mx_time, time)
-          formulas += 1
+          total_time += float(one_res["Time"])
           
       if not is_collecting: continue
       info_buf.append(line.strip())
   
-  return (assert_results, formulas, total_time, mi_time, mx_time)
+  return (assert_results, total_time)
 
 def run_on(cprog, extra_args):
   assert(os.path.exists(cprog))
@@ -134,16 +141,12 @@ def run_on(cprog, extra_args):
   print(f"Command: {cmd}")
   os.system(cmd)
   
-  (result, formulas, total_time, mi_time, mx_time) = analysis_result(t_log)
+  (result, total_time) = analysis_result(t_log)
   for d in result:
-    res = [k + ": " + v for k, v in list(d.items())]
-    print("{:<10} {:<12} {:<25} {:<15} {:<10}".format(*res))
+    res = [k + ": " + str(v) for k, v in list(d.items())]
+    print("{:<10} {:<12} {:<25} {:<10} {:<15} {:<10}".format(*res))
 
-  print(f"Formulas: {formulas}, \
-        Total time: {round(total_time, 3)}, \
-        Average time: {round(total_time / formulas, 3)} \
-        Min time: {round(mi_time, 3)}, \
-        Max time: {round(mx_time, 3)}")
+  print(f"Total time: {round(total_time, 3)}")
 
   return result
 
@@ -160,77 +163,69 @@ def collect_results(cprog):
   os.system(f"cp {vcc_log} {vcc_path}")
 
   print(f"Result for {cprog}: {log_path} {vcc_path}")
-  
 
 def generate_csv(results):
   print(f"Write to {csv_file}")
   with open(csv_file, "w") as f:
-    header = ["File", "Line", "Column", "Property", "Result", "Time"]
+    header = ["File", "Line", "Column", "Property", "Aht", "Result", "Time"]
     w = csv.DictWriter(f, header)
     w.writeheader()
     formulas = [0, 0]
     total_time = [0.0, 0.0]
-    mi_time = [-1.0, -1.0]
-    mx_time = [-1.0, -1.0]
+    mi_time = ['-', '-']
+    mx_time = ['-', '-']
+    
+    formulas_with_aht = 0
+    total_ahts = 0
+    mi_aht = '-'
+    mx_aht = '-'
     for cprog, assert_results in results.items():
       is_head = True
-      i_formulas = [0, 0]
-      i_total_time = [0.0, 0.0]
-      i_mi_time = [-1.0, -1.0]
-      i_mx_time = [-1.0, -1.0]
+      i_total_time = 0.0
       for assert_result in assert_results:
         new_row = {'File': cprog if is_head else ''}
         is_head = False
+        new_row.update(assert_result)
+        w.writerow(new_row)
         
         time = float(assert_result["Time"])
+        i_total_time += time
         r = 0 if assert_result["Result"] == "sat" else 1
-        i_formulas[r] += 1
-        i_total_time[r] += time
-
-        if i_mi_time[r] == -1.0:
-          i_mi_time[r] = time
-        else:
-          i_mi_time[r] = min(i_mi_time[r], time)
-        
-        if i_mx_time[r] == -1.0:
-          i_mx_time[r] = time
-        else:
-          i_mx_time[r] = max(i_mx_time[r], time)
 
         formulas[r] += 1
         total_time[r] += time
 
-        if mi_time[r] == -1.0:
+        time = round(time, 3)
+        if mi_time[r] == '-':
           mi_time[r] = time
         else:
           mi_time[r] = min(mi_time[r], time)
         
-        if mx_time[r] == -1.0:
+        if mx_time[r] == '-':
           mx_time[r] = time
         else:
           mx_time[r] = max(mx_time[r], time)
 
-        new_row.update(assert_result)
-        w.writerow(new_row)
-      
-      i_sat_ave = round(i_total_time[0] / i_formulas[0], 3) if i_formulas[0] != 0 else '-'
-      i_unsat_ave = round(i_total_time[1] / i_formulas[1], 3)
+        # Aht
+        if str(assert_result["Aht"]) != '-':
+          aht = assert_result["Aht"]
+          formulas_with_aht += 1
+          total_ahts += aht
+          
+          if mi_aht == '-': mi_aht = aht
+          else: mi_aht = min(mi_aht, aht)
 
-      mit = ['-', '-']
-      mxt = ['-', '-']
-
-      if i_mi_time[0] != -1.0: mit[0] = round(i_mi_time[0], 3)
-      if i_mi_time[1] != -1.0: mit[1] = round(i_mi_time[1], 3)
-      if i_mx_time[0] != -1.0: mxt[0] = round(i_mx_time[0], 3)
-      if i_mx_time[1] != -1.0: mxt[1] = round(i_mx_time[1], 3)
+          if mx_aht == '-': mx_aht = aht
+          else: mx_aht = max(mx_aht, aht)
 
       new_row = {
-        "File": f'Formulas(sat/unsat): {i_formulas[0]}/{i_formulas[1]}',
-        "Line": f'Average(sat/unsat): {i_sat_ave}/{i_unsat_ave}',
-        "Column": f'Min_time(sat/unsat): {mit[0]}/{mit[1]}',
-        "Property": f'Max_time(sat/unsat): {mxt[0]}/{mxt[1]}',
-        "Result": '',
-        "Time": '',
+        "File": '',
+        "Line": '',
+        "Column": '',
+        "Property": '',
+        "Aht": '',
+        "Result": 'Totaltime:',
+        "Time": f'{round(i_total_time, 3)}',
       }
       w.writerow(new_row)
 
@@ -239,6 +234,7 @@ def generate_csv(results):
         "Line": '',
         "Column": '',
         "Property": '',
+        "Aht": '',
         "Result": '',
         "Time": '',   
     }
@@ -247,22 +243,38 @@ def generate_csv(results):
     sat_ave = round(total_time[0] / formulas[0], 3)
     unsat_ave = round(total_time[1] / formulas[1], 3)
 
-    mit = ['-', '-']
-    mxt = ['-', '-']
-
-    if mi_time[0] != -1.0: mit[0] = round(mi_time[0], 3)
-    if mi_time[1] != -1.0: mit[1] = round(mi_time[1], 3)
-    if mx_time[0] != -1.0: mxt[0] = round(mx_time[0], 3)
-    if mx_time[1] != -1.0: mxt[1] = round(mx_time[1], 3)
     new_row = {
         "File": f'Formulas(sat/unsat): {formulas[0]}/{formulas[1]}',
         "Line": f'Average(sat/unsat): {sat_ave}/{unsat_ave}',
-        "Column": f'Min_time(sat/unsat): {mit[0]}/{mit[1]}',
-        "Property": f'Max_time(sat/unsat): {mxt[0]}/{mxt[1]}',
-        "Result": '',
-        "Time": '',
+        "Column": f'Min_time(sat/unsat): {mi_time[0]}/{mi_time[1]}',
+        "Property": f'Max_time(sat/unsat): {mx_time[0]}/{mx_time[1]}',
+        "Aht": f'Formulas_with_aht: {formulas_with_aht}',
+        "Result": f'Average_aht: {total_ahts // formulas_with_aht}',
+        "Time": f'Min/Max(aht): {mi_aht}/{mx_aht}',
     }
     w.writerow(new_row)
+
+def generate_aht_plt(results):
+  x = []
+  y = []
+  for _, assert_results in results.items():
+    for assert_result in assert_results:
+      if str(assert_result["Aht"]) == '-': continue
+      
+      x.append(int(assert_result["Aht"]))
+      y.append(float(assert_result["Time"]))
+  
+  plt.scatter(x, y, color="blue")
+  xticks = [10, 20, 30, 40, 50, 60]
+  plt.xticks(xticks)
+  yticks = [5, 10, 15, 20 ,25]
+  plt.yticks=(yticks)
+  plt.xlabel("number of atomic heap terms")
+  plt.ylabel("solving time(s)")
+  
+  plt.show()
+  plt.savefig(aht_plt_file)
+  plt.clf()
 
 def run_expriment_on(benchmark_root, extra_args):
   assert(os.path.exists(benchmark_root))
@@ -280,7 +292,9 @@ def run_expriment_on(benchmark_root, extra_args):
     results[cprog] = run_on(cprog_path, extra_args)
     collect_results(cprog)
 
-  generate_csv(results)    
+  generate_csv(results)
+  generate_aht_plt(results)
+
 
 if __name__ == '__main__':
   if not os.path.exists(output_root):
