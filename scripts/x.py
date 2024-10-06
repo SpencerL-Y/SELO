@@ -271,10 +271,8 @@ def generate_aht_plt(results):
   plt.yticks=(yticks)
   plt.xlabel("number of atomic heap terms")
   plt.ylabel("solving time(s)")
-  
-  plt.show()
   plt.savefig(aht_plt_file)
-  plt.clf()
+  plt.show()
 
 def run_expriment_on(benchmark_root, extra_args):
   assert(os.path.exists(benchmark_root))
