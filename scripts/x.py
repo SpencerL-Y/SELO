@@ -174,6 +174,11 @@ def generate_csv(results):
     total_time = [0.0, 0.0]
     mi_time = ['-', '-']
     mx_time = ['-', '-']
+
+    theory_solving_formulas = [0, 0]
+    theory_solving_total_time = [0.0, 0.0]
+    theory_solving_mi_time = ['-', '-']
+    theory_solving_mx_time = ['-', '-']
     
     formulas_with_aht = 0
     total_ahts = 0
@@ -206,8 +211,25 @@ def generate_csv(results):
         else:
           mx_time[r] = max(mx_time[r], time)
 
-        # Aht
+        # Entering theory solving
         if str(assert_result["Aht"]) != '-':
+          time = float(assert_result["Time"])
+
+          theory_solving_formulas[r] += 1
+          theory_solving_total_time[r] += time
+          
+          time = round(time, 3)
+          if theory_solving_mi_time[r] == '-':
+            theory_solving_mi_time[r] = time
+          else:
+            theory_solving_mi_time[r] = min(theory_solving_mi_time[r], time)
+          
+          if theory_solving_mx_time[r] == '-':
+            theory_solving_mx_time[r] = time
+          else:
+            theory_solving_mx_time[r] = max(theory_solving_mx_time[r], time)
+
+          # Atomic heap terms statistics
           aht = assert_result["Aht"]
           formulas_with_aht += 1
           total_ahts += aht
@@ -229,17 +251,11 @@ def generate_csv(results):
       }
       w.writerow(new_row)
 
-    new_row = {
-        "File": '',
-        "Line": '',
-        "Column": '',
-        "Property": '',
-        "Aht": '',
-        "Result": '',
-        "Time": '',   
-    }
+    # Solving time statistics
+    new_row = {}
     w.writerow(new_row)
     
+    # Total time statistics
     sat_ave = round(total_time[0] / formulas[0], 3)
     unsat_ave = round(total_time[1] / formulas[1], 3)
 
@@ -248,10 +264,27 @@ def generate_csv(results):
         "Line": f'Average(sat/unsat): {sat_ave}/{unsat_ave}',
         "Column": f'Min_time(sat/unsat): {mi_time[0]}/{mi_time[1]}',
         "Property": f'Max_time(sat/unsat): {mx_time[0]}/{mx_time[1]}',
+    }
+    w.writerow(new_row)
+
+    new_row = {}
+    w.writerow(new_row)
+    new_row = { 'File' : 'Theory_solving'}
+    w.writerow(new_row)
+
+    # Only formulas entering theory solving
+    theory_solving_sat_ave = round(theory_solving_total_time[0] / theory_solving_formulas[0], 3)
+    theory_solving_unsat_ave = round(theory_solving_total_time[1] / theory_solving_formulas[1], 3)
+
+    new_row = {
+        "File": f'Formulas(sat/unsat): {theory_solving_formulas[0]}/{theory_solving_formulas[1]}',
+        "Line": f'Average(sat/unsat): {theory_solving_sat_ave}/{theory_solving_unsat_ave}',
+        "Column": f'Min_time(sat/unsat): {theory_solving_mi_time[0]}/{theory_solving_mi_time[1]}',
+        "Property": f'Max_time(sat/unsat): {theory_solving_mx_time[0]}/{theory_solving_mx_time[1]}',
         "Aht": f'Formulas_with_aht: {formulas_with_aht}',
         "Result": f'Average_aht: {total_ahts // formulas_with_aht}',
         "Time": f'Min/Max(aht): {mi_aht}/{mx_aht}',
-    }
+      }
     w.writerow(new_row)
 
 def generate_aht_plt(results):
