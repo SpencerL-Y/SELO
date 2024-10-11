@@ -142,7 +142,10 @@ void smt_convt::smt_post_init()
 {
   boolean_sort = mk_bool_sort();
 
-  if (options.get_bool_option("z3-slhv")) { return; }
+  if (options.get_bool_option("z3-slhv"))
+  {
+    return;
+  }
 
   init_addr_space_array();
 
@@ -3374,13 +3377,16 @@ smt_astt smt_convt::mk_isint(smt_astt a)
 
 /** Heap sorts and operators */
 
-smt_sortt smt_convt::convert_slhv_sorts(const type2tc &type) {
+smt_sortt smt_convt::convert_slhv_sorts(const type2tc &type)
+{
   log_error("Chosen solver doesn't support inltoc sorts");
   abort();
 }
 
 smt_astt smt_convt::convert_slhv_opts(
-  const expr2tc &expr, const std::vector<smt_astt>& args) {
+  const expr2tc &expr,
+  const std::vector<smt_astt> &args)
+{
   log_error("Chosen solver doesn't support inltoc sorts");
   abort();
 }

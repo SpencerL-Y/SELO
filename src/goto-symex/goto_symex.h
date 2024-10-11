@@ -747,7 +747,7 @@ protected:
     expr2tc &full_rhs,
     guardt &guard,
     const bool hidden);
-  
+
   /**
    *  This method is used when we need to assign a value
    *  to a field of a heap region
@@ -874,10 +874,8 @@ protected:
    * @param flag 
    * @return expr2tc 
    */
-  expr2tc create_constant_heap_region(
-    const constant_struct2t &effect,
-    expr2tc &flag
-  );
+  expr2tc
+  create_constant_heap_region(const constant_struct2t &effect, expr2tc &flag);
 
   /**
    * @brief Encode disjointness among all heap regions

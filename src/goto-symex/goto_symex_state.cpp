@@ -74,7 +74,7 @@ bool goto_symex_statet::constant_propagation(const expr2tc &expr) const
   {
     locadd2t locadd = to_locadd2t(expr);
     return constant_propagation(locadd.location) &&
-      constant_propagation(locadd.offset);
+           constant_propagation(locadd.offset);
   }
 
   if (is_location_of2t(expr))
@@ -82,7 +82,7 @@ bool goto_symex_statet::constant_propagation(const expr2tc &expr) const
     // Similar to address_of
     if (is_symbol2t(to_location_of2t(expr).source_heap))
       return true; // always return true
-    
+
     // TODO
   }
 
@@ -262,7 +262,8 @@ void goto_symex_statet::rename_type(expr2tc &expr)
 void goto_symex_statet::rename(expr2tc &expr)
 {
   // rename all the symbols with their last known value
-  if (is_nil_expr(expr)) return;
+  if (is_nil_expr(expr))
+    return;
 
   rename_type(expr);
 
@@ -339,7 +340,8 @@ void goto_symex_statet::fixup_renamed_type(
   }
   if (is_pointer_type(orig_type))
   {
-    if (is_intloc_type(expr)) return;
+    if (is_intloc_type(expr))
+      return;
 
     assert(is_pointer_type(expr));
 
@@ -491,15 +493,16 @@ std::vector<stack_framet> goto_symex_statet::gen_stack_trace() const
   return trace;
 }
 
-void 
-goto_symex_statet::dump() const {
+void goto_symex_statet::dump() const
+{
   std::cout << this->source.thread_nr << std::endl;
   (*this->source.pc).dump();
   // this->guard.dump();
   this->guard.as_expr().get()->dump();
   this->level2.dump();
   this->value_set.dump();
-  for(auto item : call_stack) {
+  for (auto item : call_stack)
+  {
     std::string call_num = item.function_identifier.as_string();
     std::cout << call_num << std::endl;
   }

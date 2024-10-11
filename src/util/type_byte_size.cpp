@@ -453,7 +453,7 @@ const expr2tc &get_base_object(const expr2tc &expr)
 
   if (is_dereference2t(expr))
     return get_base_object(to_dereference2t(expr).value);
-  
+
   if (is_location_of2t(expr))
     return get_base_object(to_location_of2t(expr).source_heap);
 

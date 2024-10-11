@@ -24,7 +24,7 @@ goto_symext::goto_symext(
     remaining_claims(0),
     max_unwind(options.get_option("unwind").c_str()),
     constant_propagation(!options.get_bool_option("no-propagation")),
-    ns(_ns),   
+    ns(_ns),
     new_context(_new_context),
     goto_functions(_goto_functions),
     target(std::move(_target)),
@@ -136,7 +136,8 @@ void goto_symext::symex_assign(
   const bool hidden,
   const guardt &guard)
 {
-  log_debug("SLHV", "xxxxxxxxxxxxxxxxxxxxxx symex assign xxxxxxxxxxxxxxxxxxxxxx");
+  log_debug(
+    "SLHV", "xxxxxxxxxxxxxxxxxxxxxx symex assign xxxxxxxxxxxxxxxxxxxxxx");
   if (messaget::state.modules.count("SLHV") > 0)
     code_assign->dump();
 
@@ -145,28 +146,39 @@ void goto_symext::symex_assign(
   expr2tc assign_source = code.source;
 
   bool use_old_encoding = !options.get_bool_option("z3-slhv");
-  if(!use_old_encoding) {
-    if(is_symbol2t(assign_target) &&
-       is_array_type(assign_target->type) && 
-       (to_symbol2t(assign_target).get_symbol_name().compare(valid_ptr_arr_name.as_string()) == 0 ||
-        to_symbol2t(assign_target).get_symbol_name().compare(dyn_info_arr_name.as_string()) == 0 ||
-        to_symbol2t(assign_target).get_symbol_name().compare(alloc_size_arr_name.as_string()) == 0)) {
-          if(
-              (to_symbol2t(assign_target).get_symbol_name().compare(alloc_size_arr_name.as_string()) == 0) && 
-              is_constant_array_of2t(assign_source)) {
-            // used to track valid pointer            
-            symbolt allocsize_heap;
-            allocsize_heap.name = alloc_size_heap_name;
-            allocsize_heap.id = alloc_size_heap_name;
-            allocsize_heap.lvalue = true;
-            allocsize_heap.type = typet(typet::t_intheap);
-            new_context.add(allocsize_heap);
-            expr2tc new_lhs = symbol2tc(get_intheap_type(),  allocsize_heap.id);
-            expr2tc new_rhs = gen_emp();
-            symex_assign(code_assign2tc(new_lhs, new_rhs));
-          } 
-          return;
-        }
+  if (!use_old_encoding)
+  {
+    if (
+      is_symbol2t(assign_target) && is_array_type(assign_target->type) &&
+      (to_symbol2t(assign_target)
+           .get_symbol_name()
+           .compare(valid_ptr_arr_name.as_string()) == 0 ||
+       to_symbol2t(assign_target)
+           .get_symbol_name()
+           .compare(dyn_info_arr_name.as_string()) == 0 ||
+       to_symbol2t(assign_target)
+           .get_symbol_name()
+           .compare(alloc_size_arr_name.as_string()) == 0))
+    {
+      if (
+        (to_symbol2t(assign_target)
+           .get_symbol_name()
+           .compare(alloc_size_arr_name.as_string()) == 0) &&
+        is_constant_array_of2t(assign_source))
+      {
+        // used to track valid pointer
+        symbolt allocsize_heap;
+        allocsize_heap.name = alloc_size_heap_name;
+        allocsize_heap.id = alloc_size_heap_name;
+        allocsize_heap.lvalue = true;
+        allocsize_heap.type = typet(typet::t_intheap);
+        new_context.add(allocsize_heap);
+        expr2tc new_lhs = symbol2tc(get_intheap_type(), allocsize_heap.id);
+        expr2tc new_rhs = gen_emp();
+        symex_assign(code_assign2tc(new_lhs, new_rhs));
+      }
+      return;
+    }
   }
   // Sanity check: if the target has zero size, then we've ended up assigning
   // to/from either a C++ POD class with no fields or an empty C struct or
@@ -190,9 +202,10 @@ void goto_symext::symex_assign(
     adapt_to_slhv(lhs);
     adapt_to_slhv(rhs);
 
-    if (is_sideeffect2t(rhs) &&
+    if (
+      is_sideeffect2t(rhs) &&
         to_sideeffect2t(rhs).kind == sideeffect2t::nondet ||
-        is_constant_struct2t(rhs))
+      is_constant_struct2t(rhs))
     {
       symex_stack_sideeffect(lhs, rhs);
       return;
@@ -237,15 +250,16 @@ void goto_symext::symex_assign(
   {
     // check what symex_mem represent
     const sideeffect2t &effect = to_sideeffect2t(rhs);
-    
-    if (options.get_bool_option("z3-slhv") &&
-        effect.kind != sideeffect2t::malloc &&
-        effect.kind != sideeffect2t::alloca)
+
+    if (
+      options.get_bool_option("z3-slhv") &&
+      effect.kind != sideeffect2t::malloc &&
+      effect.kind != sideeffect2t::alloca)
     {
       log_error("Dot not support this type of sedeffect");
       abort();
     }
-    
+
     switch (effect.kind)
     {
     case sideeffect2t::cpp_new:
@@ -289,7 +303,8 @@ void goto_symext::symex_assign(
   guardt g(guard); // NOT the state guard!
   symex_assign_rec(lhs, original_lhs, rhs, expr2tc(), g, hidden_ssa);
 
-  log_debug("SLHV", "xxxxxxxxxxxxxxxxxxxxxx symex assign xxxxxxxxxxxxxxxxxxxxxx");
+  log_debug(
+    "SLHV", "xxxxxxxxxxxxxxxxxxxxxx symex assign xxxxxxxxxxxxxxxxxxxxxx");
 }
 
 void goto_symext::symex_assign_rec(
@@ -308,8 +323,9 @@ void goto_symext::symex_assign_rec(
       const intheap_type2t &rhs_ty = to_intheap_type(rhs->type);
       if (lhs_ty.is_alloced)
       {
-        if (!rhs_ty.is_alloced ||
-            lhs_ty.field_types.size() != rhs_ty.field_types.size())
+        if (
+          !rhs_ty.is_alloced ||
+          lhs_ty.field_types.size() != rhs_ty.field_types.size())
         {
           log_error("Wrong assignment for heap varaible");
           rhs->dump();
@@ -330,8 +346,10 @@ void goto_symext::symex_assign_rec(
               abort();
             }
 
-            expr2tc lhs_field = field_of2tc(lhs_ty.field_types[i], lhs, gen_ulong(i));
-            expr2tc rhs_field = field_of2tc(lhs_ty.field_types[i], rhs, gen_ulong(i));
+            expr2tc lhs_field =
+              field_of2tc(lhs_ty.field_types[i], lhs, gen_ulong(i));
+            expr2tc rhs_field =
+              field_of2tc(lhs_ty.field_types[i], rhs, gen_ulong(i));
 
             symex_assign_rec(lhs_field, lhs, rhs_field, rhs, guard, false);
           }
@@ -413,7 +431,8 @@ void goto_symext::symex_assign_symbol(
   do_simplify(rhs);
 
   log_debug("SLHV", "after rename rhs");
-  if(messaget::state.modules.count("SLHV") > 0) rhs->dump();
+  if (messaget::state.modules.count("SLHV") > 0)
+    rhs->dump();
 
   if (!is_nil_expr(full_rhs))
   {
@@ -934,7 +953,7 @@ void goto_symext::symex_assign_fieldof(
 {
   assert(is_scalar_type(rhs));
 
-  const field_of2t& field_of = to_field_of2t(lhs);
+  const field_of2t &field_of = to_field_of2t(lhs);
   expr2tc heap_region = field_of.source_heap;
   // make sure it is l1 name
   cur_state->level2.get_original_name(heap_region);
@@ -953,7 +972,6 @@ void goto_symext::replace_nondet(expr2tc &expr)
   if (
     is_sideeffect2t(expr) && to_sideeffect2t(expr).kind == sideeffect2t::nondet)
   {
-
     unsigned int &nondet_count = get_dynamic_counter();
     expr =
       symbol2tc(expr->type, "nondet$symex::nondet" + i2string(nondet_count++));
@@ -969,10 +987,12 @@ void goto_symext::replace_nondet(expr2tc &expr)
 
 void goto_symext::replace_null(expr2tc &expr)
 {
-  if (is_nil_expr(expr)) return;
+  if (is_nil_expr(expr))
+    return;
   if (is_symbol2t(expr))
   {
-    if (to_symbol2t(expr).get_symbol_name() != "NULL") return;
+    if (to_symbol2t(expr).get_symbol_name() != "NULL")
+      return;
     expr = is_intheap_type(expr) ? gen_emp() : gen_nil();
   }
   else
@@ -986,27 +1006,32 @@ void goto_symext::replace_null(expr2tc &expr)
 
 void goto_symext::replace_pointer_airth(expr2tc &expr)
 {
-  if (is_nil_expr(expr)) return;
+  if (is_nil_expr(expr))
+    return;
 
   expr->Foreach_operand([this](expr2tc &e) { replace_pointer_airth(e); });
 
   if (is_add2t(expr) || is_sub2t(expr))
   {
-    if (!is_pointer_type(expr) && !is_intloc_type(expr)) return;
+    if (!is_pointer_type(expr) && !is_intloc_type(expr))
+      return;
 
-    expr2tc side_1 = is_add2t(expr) ? to_add2t(expr).side_1 : to_sub2t(expr).side_1;
-    expr2tc side_2 = is_add2t(expr) ? to_add2t(expr).side_2 : to_sub2t(expr).side_2;
-    
+    expr2tc side_1 =
+      is_add2t(expr) ? to_add2t(expr).side_1 : to_sub2t(expr).side_1;
+    expr2tc side_2 =
+      is_add2t(expr) ? to_add2t(expr).side_2 : to_sub2t(expr).side_2;
+
     if (is_pointer_type(side_2) || is_intloc_type(side_2))
       std::swap(side_1, side_2);
-    
+
     if (is_pointer_type(side_2) || is_intloc_type(side_2))
     {
       log_error("Wrong pointer arithmetic");
       abort();
     }
 
-    if (is_sub2t(expr)) side_2 = neg2tc(side_2->type, side_2);
+    if (is_sub2t(expr))
+      side_2 = neg2tc(side_2->type, side_2);
 
     expr2tc locadd = locadd2tc(side_1, side_2);
     do_simplify(locadd);
@@ -1019,7 +1044,8 @@ void goto_symext::replace_pointer_airth(expr2tc &expr)
     // replaced by field_of
     const member2t &member = to_member2t(expr);
 
-    const struct_type2t &struct_type = to_struct_type(member.source_value->type);
+    const struct_type2t &struct_type =
+      to_struct_type(member.source_value->type);
 
     unsigned int idx = struct_type.get_component_number(member.member);
     unsigned int count_pad = 0;
@@ -1034,7 +1060,8 @@ void goto_symext::replace_pointer_airth(expr2tc &expr)
 
 void goto_symext::replace_address_of(expr2tc &expr)
 {
-  if (is_nil_expr(expr)) return;
+  if (is_nil_expr(expr))
+    return;
 
   expr->Foreach_operand([this](expr2tc &e) { replace_address_of(e); });
 
@@ -1044,7 +1071,8 @@ void goto_symext::replace_address_of(expr2tc &expr)
 
 void goto_symext::replace_typecast(expr2tc &expr)
 {
-  if (is_nil_expr(expr)) return;
+  if (is_nil_expr(expr))
+    return;
 
   expr->Foreach_operand([this](expr2tc &e) { replace_typecast(e); });
 
@@ -1053,22 +1081,24 @@ void goto_symext::replace_typecast(expr2tc &expr)
     const typecast2t &typecast = to_typecast2t(expr);
 
     // Only replace bool typecast
-    if ((is_pointer_type(typecast.from) || is_intloc_type(typecast.from))
-        && is_bool_type(typecast.type))
+    if (
+      (is_pointer_type(typecast.from) || is_intloc_type(typecast.from)) &&
+      is_bool_type(typecast.type))
       expr = notequal2tc(typecast.from, gen_nil());
   }
 }
 
 void goto_symext::replace_tuple(expr2tc &expr)
 {
-  if (is_nil_expr(expr)) return;
+  if (is_nil_expr(expr))
+    return;
 
   expr->Foreach_operand([this](expr2tc &e) { replace_tuple(e); });
 
   if (is_symbol2t(expr) && is_struct_type(expr->type))
   {
     unsigned int bytes = type_byte_size(expr->type, &ns).to_uint64();
-    
+
     // use l1 name and suffix "loc" to create base loc
     expr2tc base_loc = create_heap_region_loc(expr);
 
@@ -1076,7 +1106,6 @@ void goto_symext::replace_tuple(expr2tc &expr)
     to_intheap_type(expr->type).is_alloced = true;
   }
 }
-
 
 void goto_symext::adapt_to_slhv(expr2tc &expr)
 {

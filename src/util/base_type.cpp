@@ -93,14 +93,15 @@ bool base_type_eqt::base_type_eq_rec(const type2tc &type1, const type2tc &type2)
 {
   if (type1 == type2)
     return true;
-  
+
   if (is_struct_type(type1) && is_intheap_type(type2))
     return true;
-  
-  if (is_pointer_type(type1) && is_intloc_type(type2) ||
-      is_intloc_type(type1) && is_pointer_type(type2))
+
+  if (
+    is_pointer_type(type1) && is_intloc_type(type2) ||
+    is_intloc_type(type1) && is_pointer_type(type2))
     return true;
-  
+
   // loop avoidance
   if (is_symbol_type(type1) && is_symbol_type(type2))
   {

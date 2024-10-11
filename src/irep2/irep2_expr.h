@@ -48,9 +48,7 @@ public:
   typedef esbmct::expr2t_traits<value_field> traits;
 };
 
-
-
-class constant_intloc_data : public constant2t 
+class constant_intloc_data : public constant2t
 {
 public:
   constant_intloc_data(
@@ -75,11 +73,11 @@ public:
       constant_intloc_data_is_nil_loc_field;
   typedef esbmct::expr2t_traits<
     constant_intloc_data_value_field,
-    constant_intloc_data_is_nil_loc_field> traits;
+    constant_intloc_data_is_nil_loc_field>
+    traits;
 };
 
-
-class constant_intheap_data : public constant2t 
+class constant_intheap_data : public constant2t
 {
 public:
   constant_intheap_data(
@@ -99,7 +97,6 @@ public:
       constant_intheap_value_field;
   typedef esbmct::expr2t_traits<constant_intheap_value_field> traits;
 };
-
 
 class constant_fixedbv_data : public constant2t
 {
@@ -910,20 +907,16 @@ public:
   typedef esbmct::expr2t_traits<source_value_field, index_field> traits;
 };
 
-
 /* ================================ SLHV ================================ */
 
 class heap_ops : public expr2t
 {
 public:
-  heap_ops(
-    const type2tc &t,
-    expr2t::expr_ids id,
-    const expr2tc &h)
+  heap_ops(const type2tc &t, expr2t::expr_ids id, const expr2tc &h)
     : expr2t(t, id), source_heap(h)
   {
   }
-  heap_ops(const heap_ops& ref) = default;
+  heap_ops(const heap_ops &ref) = default;
 
   expr2tc source_heap;
 
@@ -976,8 +969,9 @@ public:
     operand_1_field;
   typedef esbmct::field_traits<expr2tc, heap_2ops, &heap_2ops::operand_2>
     operand_2_field;
-  typedef esbmct::expr2t_traits<
-    source_heap_field, operand_1_field, operand_2_field> traits;
+  typedef esbmct::
+    expr2t_traits<source_heap_field, operand_1_field, operand_2_field>
+      traits;
 };
 
 class disjh_data : public heap_ops
@@ -987,41 +981,42 @@ public:
     : heap_ops(t, id, h)
   {
   }
-  disjh_data(const disjh_data& ref) = default;
+  disjh_data(const disjh_data &ref) = default;
 
   std::vector<expr2tc> other_heaps;
   std::vector<bool> is_sliced;
 
   // Type mangling:
-  typedef esbmct::field_traits<
-    std::vector<expr2tc>, disjh_data, &disjh_data::other_heaps>
-    other_heaps_field;
-  typedef esbmct::expr2t_traits<
-    heap_ops::source_heap_field,
-    other_heaps_field> traits;
+  typedef esbmct::
+    field_traits<std::vector<expr2tc>, disjh_data, &disjh_data::other_heaps>
+      other_heaps_field;
+  typedef esbmct::expr2t_traits<heap_ops::source_heap_field, other_heaps_field>
+    traits;
 };
 
-class points_to_data : public expr2t 
+class points_to_data : public expr2t
 {
 public:
   points_to_data(
     const type2tc &t,
     datatype_ops::expr_ids id,
     const expr2tc &l,
-    const expr2tc &c) 
+    const expr2tc &c)
     : expr2t(t, id), location(l), content(c)
   {
   }
-  points_to_data(const points_to_data& ref) = default;
+  points_to_data(const points_to_data &ref) = default;
 
   expr2tc location;
   expr2tc content;
 
   // Type mangling:
-  typedef esbmct::field_traits<expr2tc, points_to_data, &points_to_data::location>
-    location_field;
-  typedef esbmct::field_traits<expr2tc, points_to_data, &points_to_data::content>
-    content_field;
+  typedef esbmct::
+    field_traits<expr2tc, points_to_data, &points_to_data::location>
+      location_field;
+  typedef esbmct::
+    field_traits<expr2tc, points_to_data, &points_to_data::content>
+      content_field;
   typedef esbmct::expr2t_traits<location_field, content_field> traits;
 };
 
@@ -1031,21 +1026,22 @@ public:
   uplus_data(
     const type2tc &t,
     datatype_ops::expr_ids id,
-    const std::vector<expr2tc> &ht) 
+    const std::vector<expr2tc> &ht)
     : expr2t(t, id), heap_terms(ht)
   {
   }
-  uplus_data(const uplus_data& ref) = default;
+  uplus_data(const uplus_data &ref) = default;
 
   std::vector<expr2tc> heap_terms;
 
   // Type mangling:
-  typedef esbmct::field_traits<std::vector<expr2tc>, uplus_data, &uplus_data::heap_terms>
-    heap_terms_field;
+  typedef esbmct::
+    field_traits<std::vector<expr2tc>, uplus_data, &uplus_data::heap_terms>
+      heap_terms_field;
   typedef esbmct::expr2t_traits<heap_terms_field> traits;
 };
 
-class locadd_data : public expr2t 
+class locadd_data : public expr2t
 {
 public:
   locadd_data(
@@ -1056,7 +1052,7 @@ public:
     : expr2t(t, id), location(l), offset(o)
   {
   }
-  locadd_data(const locadd_data& ref) = default;
+  locadd_data(const locadd_data &ref) = default;
 
   expr2tc location;
   expr2tc offset;
@@ -1079,13 +1075,14 @@ public:
     : expr2t(t, id), source_location(l)
   {
   }
-  heap_region_data(const heap_region_data& ref) = default;
+  heap_region_data(const heap_region_data &ref) = default;
 
   expr2tc source_location;
 
   // Type mangling:
-  typedef esbmct::field_traits<expr2tc, heap_region_data, &heap_region_data::source_location>
-    source_location_field;
+  typedef esbmct::
+    field_traits<expr2tc, heap_region_data, &heap_region_data::source_location>
+      source_location_field;
   typedef esbmct::expr2t_traits<source_location_field> traits;
 };
 
@@ -1806,10 +1803,14 @@ class constant_intloc2t : public constant_intloc_expr_methods
 {
 public:
   constant_intloc2t(const BigInt &value, bool is_nil_loc)
-    : constant_intloc_expr_methods(get_intloc_type(), constant_intloc_id, value, is_nil_loc)
+    : constant_intloc_expr_methods(
+        get_intloc_type(),
+        constant_intloc_id,
+        value,
+        is_nil_loc)
   {
   }
-  
+
   unsigned long as_ulong() const;
   bool is_nil() const;
 
@@ -1821,7 +1822,9 @@ class constant_intheap2t : public constant_intheap_expr_methods
 public:
   constant_intheap2t(const expr2tc &value)
     : constant_intheap_expr_methods(
-      get_intheap_type(), constant_intheap_id, value)
+        get_intheap_type(),
+        constant_intheap_id,
+        value)
   {
   }
 
@@ -1836,8 +1839,7 @@ public:
   constant_heap_region2t(
     const type2tc &type,
     const std::vector<expr2tc> &members)
-    : constant_heap_region_expr_methods(
-      type, constant_heap_region_id, members)
+    : constant_heap_region_expr_methods(type, constant_heap_region_id, members)
   {
   }
   constant_heap_region2t(const constant_heap_region2t &ref) = default;
@@ -3222,7 +3224,7 @@ public:
   disjh2t(const disjh2t &ref) = default;
 
   void do_disjh(const expr2tc &heap_term);
-  
+
   static std::string field_names[esbmct::num_type_fields];
 };
 
@@ -3230,7 +3232,11 @@ class points_to2t : public points_to_expr_methods
 {
 public:
   points_to2t(const expr2tc &location, const expr2tc &content)
-    : points_to_expr_methods(get_intheap_type(), points_to_id, location, content)
+    : points_to_expr_methods(
+        get_intheap_type(),
+        points_to_id,
+        location,
+        content)
   {
   }
   points_to2t(const points_to2t &ref) = default;
@@ -3242,7 +3248,7 @@ class uplus2t : public uplus_expr_methods
 {
 public:
   uplus2t(const std::vector<expr2tc> &heap_terms)
-  : uplus_expr_methods(get_intheap_type(), uplus_id, heap_terms)
+    : uplus_expr_methods(get_intheap_type(), uplus_id, heap_terms)
   {
   }
   uplus2t(const uplus2t &ref) = default;
@@ -3254,7 +3260,7 @@ class locadd2t : public locadd_expr_methods
 {
 public:
   locadd2t(const expr2tc &location, const expr2tc &offset)
-  : locadd_expr_methods(get_intloc_type(), locadd_id, location, offset)
+    : locadd_expr_methods(get_intloc_type(), locadd_id, location, offset)
   {
   }
   locadd2t(const locadd2t &ref) = default;
@@ -3270,9 +3276,7 @@ public:
 class heap_region2t : public heap_region_expr_methods
 {
 public:
-  heap_region2t(
-    const type2tc &type,
-    const expr2tc &source_location)
+  heap_region2t(const type2tc &type, const expr2tc &source_location)
     : heap_region_expr_methods(type, heap_region_id, source_location)
   {
   }
@@ -3310,15 +3314,18 @@ public:
 
 class heap_update2t : public heap_update_expr_methods
 {
-public: 
+public:
   heap_update2t(
     const type2tc &type,
     const expr2tc &source_heap,
     const expr2tc &update_field,
     const expr2tc &update_value)
     : heap_update_expr_methods(
-      type, heap_update_id,
-      source_heap, update_field, update_value)
+        type,
+        heap_update_id,
+        source_heap,
+        update_field,
+        update_value)
   {
   }
   heap_update2t(const heap_update2t &ref) = default;
@@ -3329,12 +3336,12 @@ public:
 class heap_append2t : public heap_append_expr_methods
 {
 public:
-  heap_append2t(
-    const expr2tc &source_heap,
-    const expr2tc &heap_term)
-  : heap_append_expr_methods(
-    get_intheap_type(), heap_append_id,
-    source_heap, heap_term)
+  heap_append2t(const expr2tc &source_heap, const expr2tc &heap_term)
+    : heap_append_expr_methods(
+        get_intheap_type(),
+        heap_append_id,
+        source_heap,
+        heap_term)
   {
   }
   heap_append2t(const heap_append2t &ref) = default;
@@ -3345,11 +3352,12 @@ public:
 class heap_delete2t : public heap_delete_expr_methods
 {
 public:
-  heap_delete2t(
-    const expr2tc &source_heap,
-    const expr2tc &location)
+  heap_delete2t(const expr2tc &source_heap, const expr2tc &location)
     : heap_delete_expr_methods(
-      get_intheap_type(), heap_delete_id, source_heap, location)
+        get_intheap_type(),
+        heap_delete_id,
+        source_heap,
+        location)
   {
   }
   heap_delete2t(const heap_delete2t &ref) = default;
@@ -3360,10 +3368,12 @@ public:
 class heap_contain2t : public heap_contain_expr_methods
 {
 public:
-  heap_contain2t(
-    const expr2tc &source_heap, const expr2tc &heap_term)
+  heap_contain2t(const expr2tc &source_heap, const expr2tc &heap_term)
     : heap_contain_expr_methods(
-      get_bool_type(), heap_contain_id, source_heap, heap_term)
+        get_bool_type(),
+        heap_contain_id,
+        source_heap,
+        heap_term)
   {
   }
   heap_contain2t(const heap_contain2t &ref) = default;

@@ -49,8 +49,6 @@ static const std::unordered_map<std::string, solver_creator *> esbmc_solvers = {
 #endif
 };
 
-
-
 static const std::string all_solvers[] = {
   "smtlib",
   "z3",
@@ -127,7 +125,6 @@ smt_convt *create_solver(
   array_iface *array_api = nullptr;
   fp_convt *fp_api = nullptr;
 
-
   solver_creator &factory = pick_solver(solver_name, options);
   smt_convt *ctx = factory(options, ns, &tuple_api, &array_api, &fp_api);
   bool node_flat = options.get_bool_option("tuple-node-flattener");
@@ -162,5 +159,4 @@ smt_convt *create_solver(
     ctx->set_fp_conv(fp_api);
   ctx->smt_post_init();
   return ctx;
-  
 }

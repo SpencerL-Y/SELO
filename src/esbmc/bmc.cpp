@@ -144,10 +144,12 @@ void bmct::generate_smt_from_equation(
 {
   std::string logic;
 
-  if (options.get_bool_option("z3-slhv")) {
+  if (options.get_bool_option("z3-slhv"))
+  {
     logic = "SLHV";
   }
-  else if (!options.get_bool_option("int-encoding")) {
+  else if (!options.get_bool_option("int-encoding"))
+  {
     logic = "bit-vector";
     logic += (!config.ansi_c.use_fixed_for_float) ? "/floating-point " : " ";
     logic += "arithmetic";
@@ -652,7 +654,8 @@ smt_convt::resultt bmct::run_thread(std::shared_ptr<symex_target_equationt> &eq)
       options.get_bool_option("base-case"))
       return multi_property_check(*eq, result.remaining_claims);
 
-    if (options.get_bool_option("show-vcc")) show_vcc(*eq);
+    if (options.get_bool_option("show-vcc"))
+      show_vcc(*eq);
 
     return run_decision_procedure(*runtime_solver, *eq);
   }
@@ -733,7 +736,6 @@ smt_convt::resultt bmct::multi_property_check(
                        &is_fail_fast,
                        &fail_fast_limit,
                        &fail_fast_cnt](const size_t &i) {
-                        
     //"multi-fail-fast n": stop after first n SATs found.
     if (is_fail_fast && fail_fast_cnt >= fail_fast_limit)
       return;
@@ -785,16 +787,14 @@ smt_convt::resultt bmct::multi_property_check(
     fine_timet sat_stop = current_time();
 
     log_status(
-      "Solving claim {} with solver {}",
-        i, runtime_solver->solver_text());
+      "Solving claim {} with solver {}", i, runtime_solver->solver_text());
     log_status(
       "Runtime decision procedure: {}s", time2string(sat_stop - sat_start));
-    
+
     locationt location;
     std::string comment;
-    for (auto it = local_eq.SSA_steps.begin();
-        it != local_eq.SSA_steps.end();
-        it++)
+    for (auto it = local_eq.SSA_steps.begin(); it != local_eq.SSA_steps.end();
+         it++)
       if (it->is_assert() && !it->ignore)
       {
         location = it->source.pc->location;
@@ -803,35 +803,40 @@ smt_convt::resultt bmct::multi_property_check(
       }
 
     std::string property;
-    if (comment.find("invalid free") != std::string::npos ||
-        comment.find("invalid pointer freed") != std::string::npos ||
-        comment.find("Operand of free must have zero pointer offset") !=
-          std::string::npos)
+    if (
+      comment.find("invalid free") != std::string::npos ||
+      comment.find("invalid pointer freed") != std::string::npos ||
+      comment.find("Operand of free must have zero pointer offset") !=
+        std::string::npos)
       property = "INVALID_FREE";
     else if (comment.find("forgotten memory") != std::string::npos)
       property = "MEMORY_LEAK";
     else
       property = "INVALID_DEREF";
-  
+
     log_status(
-      "--------------------------------- Result -----------------------------------");
+      "--------------------------------- Result "
+      "-----------------------------------");
     log_status("Location: {}", location);
     log_status("Comment: {}", comment);
     log_status(
       "Property: {} Result: {} Time: {}s",
       property,
-      result == smt_convt::P_SATISFIABLE ? "sat" :
-        result == smt_convt::P_UNSATISFIABLE ? "unsat" :
-          "error",
+      result == smt_convt::P_SATISFIABLE     ? "sat"
+      : result == smt_convt::P_UNSATISFIABLE ? "unsat"
+                                             : "error",
       time2string(sat_stop - sat_start));
     log_status(
-      "--------------------------------- Result -----------------------------------\n");
+      "--------------------------------- Result "
+      "-----------------------------------\n");
 
     // If an assertion instance is verified to be violated
     if (result == smt_convt::P_SATISFIABLE)
     {
-      if (options.get_bool_option("z3-slhv") ||
-          options.get_bool_option("result-only")) {
+      if (
+        options.get_bool_option("z3-slhv") ||
+        options.get_bool_option("result-only"))
+      {
         final_result = result;
         fail_fast_cnt++;
         return;

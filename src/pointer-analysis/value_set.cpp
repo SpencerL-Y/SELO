@@ -534,7 +534,10 @@ void value_sett::get_value_set_rec(
     // Look up this symbol, with the given suffix to distinguish any arrays or
     // members we've picked out of it at a higher level.
     valuest::const_iterator v_it = values.find(sym.get_symbol_name() + suffix);
-    log_debug("SLHV", "-------------> symbol lookup name: {}", sym.get_symbol_name() + suffix);
+    log_debug(
+      "SLHV",
+      "-------------> symbol lookup name: {}",
+      sym.get_symbol_name() + suffix);
 
     if (sym.rlevel == symbol2t::renaming_level::level1_global)
       assert(sym.level1_num == 0);
@@ -569,17 +572,17 @@ void value_sett::get_value_set_rec(
 
   // SLHV:
 
-
-  if (is_heap_update2t(expr) || is_points_to2t(expr) ||
-      is_heap_region2t(expr) || is_constant_intheap2t(expr) ||
-      is_heap_append2t(expr) || is_heap_delete2t(expr))
+  if (
+    is_heap_update2t(expr) || is_points_to2t(expr) || is_heap_region2t(expr) ||
+    is_constant_intheap2t(expr) || is_heap_append2t(expr) ||
+    is_heap_delete2t(expr))
   {
     log_error("Do not support get_value_set_rec");
     expr->dump();
     abort();
   }
 
-  if (is_constant_intloc2t(expr) )
+  if (is_constant_intloc2t(expr))
   {
     expr2tc null_obj = null_object2tc(get_intloc_type());
     insert(dest, null_obj, BigInt(0));
@@ -655,8 +658,7 @@ void value_sett::get_value_set_rec(
       heap_region,
       dest,
       "::field::" + std::to_string(_field) + "::" + suffix,
-      original_type
-    );
+      original_type);
     return;
   }
 
@@ -1171,7 +1173,7 @@ void value_sett::assign(
       {
         const type2tc &subtype = members[i];
         const irep_idt &name = member_names[i];
-        
+
         // ignore methods
         if (is_code_type(subtype))
           continue;
@@ -1272,14 +1274,14 @@ void value_sett::assign(
       for (unsigned int i = 0; i < const_reg.datatype_members.size(); i++)
       {
         expr2tc rhs_field = const_reg.datatype_members[i];
-        expr2tc lhs_field =
-          field_of2tc(rhs_field->type, lhs, gen_ulong(i));
+        expr2tc lhs_field = field_of2tc(rhs_field->type, lhs, gen_ulong(i));
 
         assign(lhs_field, rhs_field, false);
       }
     }
-    else if ((is_heap_update2t(rhs) || is_symbol2t(rhs))
-        && to_intheap_type(rhs->type).is_region)
+    else if (
+      (is_heap_update2t(rhs) || is_symbol2t(rhs)) &&
+      to_intheap_type(rhs->type).is_region)
     {
       unsigned int _field = -1;
       expr2tc rhs_heap;
@@ -1323,7 +1325,8 @@ void value_sett::assign(
       // copy other fields
       for (unsigned int i = 0; i < _lhs_type.field_types.size(); i++)
       {
-        if (i == _field) continue;
+        if (i == _field)
+          continue;
         if (_lhs_type.field_types[i] != _rhs_type.field_types[i])
         {
           log_error("Type does not match!!!");

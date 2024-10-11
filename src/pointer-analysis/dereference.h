@@ -153,7 +153,6 @@ public:
    *  */
   virtual bool is_live_variable(const expr2tc &sym) = 0;
 
-
   virtual void update_heap_type(const intheap_type2t &type)
   {
     log_error("Do not support");
@@ -470,7 +469,7 @@ private:
     const type2tc &type,
     const guardt &guard,
     modet mode);
-  
+
   // Offset is in word level(parameter) and alignment is
   // in byte level. Alignment is in byte level(not used).
   void check_heap_region_access(
@@ -479,7 +478,7 @@ private:
     const type2tc &type,
     const guardt &guard,
     modet mode);
-  
+
   void
   check_alignment(BigInt minwidth, const expr2tc &offset, const guardt &guard);
   unsigned int static compute_num_bytes_to_extract(
@@ -508,8 +507,8 @@ public:
     const type2tc &type,
     const guardt &guard,
     modet mode,
-    unsigned long alignment = 0
-  );
+    unsigned long alignment = 0);
+
 private:
   void construct_from_const_offset(
     expr2tc &value,

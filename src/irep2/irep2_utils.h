@@ -191,17 +191,11 @@ inline bool is_comp_expr(const expr2tc &expr)
 
 inline bool is_slhv_expr(const expr2tc &expr)
 {
-  return is_constant_intheap2t(expr) ||
-         is_constant_intloc2t(expr) ||
-         is_points_to2t(expr) ||
-         is_locadd2t(expr) ||
-         is_heap_append2t(expr) ||
-         is_heap_contain2t(expr) ||
-         is_heap_delete2t(expr) ||
-         is_heap_region2t(expr) ||
-         is_heap_update2t(expr) ||
-         is_location_of2t(expr) ||
-         is_field_of2t(expr);
+  return is_constant_intheap2t(expr) || is_constant_intloc2t(expr) ||
+         is_points_to2t(expr) || is_locadd2t(expr) || is_heap_append2t(expr) ||
+         is_heap_contain2t(expr) || is_heap_delete2t(expr) ||
+         is_heap_region2t(expr) || is_heap_update2t(expr) ||
+         is_location_of2t(expr) || is_field_of2t(expr);
 }
 
 /** Test if expr is true. First checks whether the expr is a constant bool, and
@@ -296,7 +290,7 @@ inline expr2tc gen_nil()
   return constant_intloc2tc(BigInt(0), true);
 }
 
-inline expr2tc gen_emp() 
+inline expr2tc gen_emp()
 {
   return constant_intheap2tc(expr2tc());
 }
@@ -319,7 +313,6 @@ inline const type2tc &get_base_array_subtype(const type2tc &type)
 
   return subtype;
 }
-
 
 inline bool simplify(expr2tc &expr)
 {

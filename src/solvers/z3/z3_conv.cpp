@@ -89,7 +89,8 @@ smt_convt::resultt z3_convt::dec_solve()
   {
     std::ofstream out(path, std::ios_base::app);
     out << "SMT formulas for VCCs:\n";
-    for(z3::expr expr : solver.assertions()) {
+    for (z3::expr expr : solver.assertions())
+    {
       out << expr.to_string() << '\n';
     }
     out.close();
@@ -1312,7 +1313,9 @@ void z3_smt_ast::dump() const
   std::string ast(Z3_ast_to_string(a.ctx(), a));
   if (messaget::state.modules.count("SLHV") > 0)
     log_status(
-      "{}\nsort is {}", ast, Z3_sort_to_string(a.ctx(), Z3_get_sort(a.ctx(), a)));
+      "{}\nsort is {}",
+      ast,
+      Z3_sort_to_string(a.ctx(), Z3_get_sort(a.ctx(), a)));
 }
 
 void z3_convt::dump_smt()

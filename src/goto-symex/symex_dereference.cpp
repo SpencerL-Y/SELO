@@ -175,15 +175,15 @@ void symex_dereference_statet::update_heap_type(const intheap_type2t &type)
   }
 
   // update value set
-  value_sett& value_set = goto_symex.cur_state->value_set;
+  value_sett &value_set = goto_symex.cur_state->value_set;
   unsigned int n = value_set.object_numbering.size();
-  for(unsigned int i = 0; i < n; i++)
+  for (unsigned int i = 0; i < n; i++)
     update_heap_type_rec(value_set.object_numbering[i], type);
 
   // update eq system
   std::shared_ptr<symex_target_equationt> eq =
     std::dynamic_pointer_cast<symex_target_equationt>(goto_symex.target);
-  for(auto& ssa_step : eq->SSA_steps)
+  for (auto &ssa_step : eq->SSA_steps)
   {
     update_heap_type_rec(ssa_step.guard, type);
     update_heap_type_rec(ssa_step.rhs, type);
@@ -192,22 +192,26 @@ void symex_dereference_statet::update_heap_type(const intheap_type2t &type)
 }
 
 void symex_dereference_statet::update_heap_type_rec(
-  expr2tc &expr, const intheap_type2t &type)
+  expr2tc &expr,
+  const intheap_type2t &type)
 {
-  if (is_nil_expr(expr)) return;
+  if (is_nil_expr(expr))
+    return;
   if (is_intheap_type(expr))
   {
     intheap_type2t &_type = to_intheap_type(expr->type);
 
-    if (is_nil_expr(_type.location)) return;
+    if (is_nil_expr(_type.location))
+      return;
 
-    if (to_symbol2t(_type.location).get_symbol_name() ==
-        to_symbol2t(type.location).get_symbol_name())
+    if (
+      to_symbol2t(_type.location).get_symbol_name() ==
+      to_symbol2t(type.location).get_symbol_name())
       expr->type = intheap_type2tc(type);
   }
   else
   {
-    expr->Foreach_operand([this, &type](expr2tc& e){
+    expr->Foreach_operand([this, &type](expr2tc &e) {
       if (!is_nil_expr(e))
         update_heap_type_rec(e, type);
     });

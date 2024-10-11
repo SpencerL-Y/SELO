@@ -334,7 +334,7 @@ public:
   virtual smt_astt mk_real2int(smt_astt a);
   virtual smt_astt mk_int2real(smt_astt a);
   virtual smt_astt mk_isint(smt_astt a);
-  
+
   /** Create an integer or SBV/UBV sort */
   smt_sortt mk_int_bv_sort(std::size_t width)
   {
@@ -549,8 +549,8 @@ public:
   /** 
    *  @param expr An SLHV expression to convert to an SMT AST.
    *  @return An AST representing the SLHV operation in the expression. */
-  virtual smt_astt 
-  convert_slhv_opts(const expr2tc &expr, const std::vector<smt_astt>& args);
+  virtual smt_astt
+  convert_slhv_opts(const expr2tc &expr, const std::vector<smt_astt> &args);
 
   /** @} */
 

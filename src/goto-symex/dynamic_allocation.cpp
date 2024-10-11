@@ -19,7 +19,8 @@ void goto_symext::default_replace_dynamic_allocation(expr2tc &expr)
   {
     /* alloc */
     // replace with CPROVER_alloc[POINTER_OBJECT(...)]
-    if(use_old_encoding) {
+    if (use_old_encoding)
+    {
       const valid_object2t &obj = to_valid_object2t(expr);
 
       expr2tc obj_expr = pointer_object2tc(pointer_type2(), obj.value);
@@ -29,11 +30,14 @@ void goto_symext::default_replace_dynamic_allocation(expr2tc &expr)
 
       expr2tc index_expr = index2tc(get_bool_type(), alloc_arr_2, obj_expr);
       expr = index_expr;
-    } else {
+    }
+    else
+    {
       const valid_object2t &obj = to_valid_object2t(expr);
       const expr2tc &heap_region = obj.value;
-      if (!is_intheap_type(heap_region->type) ||
-          !to_intheap_type(heap_region->type).is_region)
+      if (
+        !is_intheap_type(heap_region->type) ||
+        !to_intheap_type(heap_region->type).is_region)
       {
         log_error("Wrong object");
         abort();
@@ -52,10 +56,11 @@ void goto_symext::default_replace_dynamic_allocation(expr2tc &expr)
           expr2tc alloced_loc = to_intheap_type(it->type).location;
           cur_state->get_original_name(alloced_loc);
 
-          if (to_symbol2t(loc).get_symbol_name() != 
-              to_symbol2t(alloced_loc).get_symbol_name())
+          if (
+            to_symbol2t(loc).get_symbol_name() !=
+            to_symbol2t(alloced_loc).get_symbol_name())
             continue;
-          
+
           is_in_frame = true;
         }
 
@@ -65,16 +70,15 @@ void goto_symext::default_replace_dynamic_allocation(expr2tc &expr)
         {
           // use alloc_size_heap
           expr2tc alloc_size_heap;
-          migrate_expr(symbol_expr(*ns.lookup(alloc_size_heap_name)), alloc_size_heap);
+          migrate_expr(
+            symbol_expr(*ns.lookup(alloc_size_heap_name)), alloc_size_heap);
 
           unsigned int &nondet_counter = get_nondet_counter();
           nondet_counter++;
-          expr2tc size_sym =
-            symbol2tc(
-              get_int64_type(),
-              std::string("SOME_SIZE_") + std::to_string(nondet_counter)
-            );
- 
+          expr2tc size_sym = symbol2tc(
+            get_int64_type(),
+            std::string("SOME_SIZE_") + std::to_string(nondet_counter));
+
           expr2tc pt = points_to2tc(loc, size_sym);
           expr2tc disj = disjh2tc(alloc_size_heap);
           to_disjh2t(disj).do_disjh(pt);
@@ -129,15 +133,14 @@ void goto_symext::default_replace_dynamic_allocation(expr2tc &expr)
       expr2tc ptr_obj = ptr.ptr_obj;
 
       expr2tc alloc_size_heap;
-      migrate_expr(symbol_expr(*ns.lookup(alloc_size_heap_name)), alloc_size_heap);
+      migrate_expr(
+        symbol_expr(*ns.lookup(alloc_size_heap_name)), alloc_size_heap);
 
       unsigned int &nondet_counter = get_nondet_counter();
       nondet_counter++;
-      expr2tc size_sym =
-        symbol2tc(
-          get_int64_type(),
-          std::string("SOME_SIZE_") + std::to_string(nondet_counter)
-        );
+      expr2tc size_sym = symbol2tc(
+        get_int64_type(),
+        std::string("SOME_SIZE_") + std::to_string(nondet_counter));
 
       expr2tc loc;
       expr2tc extra_eq;
@@ -145,11 +148,9 @@ void goto_symext::default_replace_dynamic_allocation(expr2tc &expr)
         loc = ptr_obj;
       else
       {
-        loc =
-          symbol2tc(
-            get_intloc_type(),
-            std::string("_assigned_loc_") + std::to_string(nondet_counter)
-          );
+        loc = symbol2tc(
+          get_intloc_type(),
+          std::string("_assigned_loc_") + std::to_string(nondet_counter));
         extra_eq = equality2tc(loc, ptr_obj);
       }
 

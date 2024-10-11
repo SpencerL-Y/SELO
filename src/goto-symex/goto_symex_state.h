@@ -473,7 +473,7 @@ public:
   std::map<expr2tc, unsigned> realloc_map;
 
   //slhv debug
-  public:
+public:
   void dump() const;
 };
 

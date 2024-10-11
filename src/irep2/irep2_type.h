@@ -214,8 +214,11 @@ public:
     bool ia,
     bool ic)
     : type2t(id),
-      location(loc), total_bytes(tb),
-      is_region(ir), is_aligned(ia), is_alloced(ic)
+      location(loc),
+      total_bytes(tb),
+      is_region(ir),
+      is_aligned(ia),
+      is_alloced(ic)
   {
   }
   intheap_data(const intheap_data &ref) = default;
@@ -229,14 +232,16 @@ public:
 
   // Hide
   std::vector<unsigned int> pads;
-  
+
   // Type mangling:
   typedef esbmct::field_traits<expr2tc, intheap_data, &intheap_data::location>
     location_field;
-  typedef esbmct::field_traits<std::vector<type2tc>, intheap_data, &intheap_data::field_types>
-    field_types_field;
-  typedef esbmct::field_traits<unsigned int, intheap_data, &intheap_data::total_bytes>
-    total_bytes_field;
+  typedef esbmct::
+    field_traits<std::vector<type2tc>, intheap_data, &intheap_data::field_types>
+      field_types_field;
+  typedef esbmct::
+    field_traits<unsigned int, intheap_data, &intheap_data::total_bytes>
+      total_bytes_field;
   typedef esbmct::field_traits<bool, intheap_data, &intheap_data::is_region>
     is_region_field;
   typedef esbmct::field_traits<bool, intheap_data, &intheap_data::is_aligned>
@@ -249,7 +254,8 @@ public:
     total_bytes_field,
     is_region_field,
     is_aligned_field,
-    is_alloced_field> traits;
+    is_alloced_field>
+    traits;
 };
 
 class pointer_data : public type2t
@@ -337,7 +343,6 @@ public:
   typedef esbmct::type2t_traits<name_field, template_args_field> traits;
 };
 
-
 // Then give them a typedef name
 
 #define irep_typedefs(basename, superclass)                                    \
@@ -413,9 +418,12 @@ public:
     bool is_aligned,
     bool is_alloced)
     : intheap_type_methods(
-      intheap_id,
-      location, total_bytes,
-      is_region, is_aligned, is_alloced)
+        intheap_id,
+        location,
+        total_bytes,
+        is_region,
+        is_aligned,
+        is_alloced)
   {
     if (is_region && this->field_types.empty())
       this->field_types.push_back(empty_type2tc());

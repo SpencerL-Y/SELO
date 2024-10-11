@@ -145,7 +145,7 @@ static type2tc migrate_type0(const typet &type)
 
   if (type.id() == typet::t_empty)
     return get_empty_type();
-  
+
   if (type.id() == typet::t_intheap)
     return get_intheap_type();
 
@@ -2630,17 +2630,15 @@ exprt migrate_expr_back(const expr2tc &ref)
     typet thetype = migrate_type_back(ref->type);
     exprt pt("points_to", thetype);
     pt.copy_to_operands(
-      migrate_expr_back(ref2.location),
-      migrate_expr_back(ref2.content)
-    );
+      migrate_expr_back(ref2.location), migrate_expr_back(ref2.content));
     return pt;
   }
   case expr2t::uplus_id:
   {
-    const uplus2t & ref2 = to_uplus2t(ref);
+    const uplus2t &ref2 = to_uplus2t(ref);
     typet thetype = migrate_type_back(ref->type);
     exprt uplus("uplus", thetype);
-    for(expr2tc op2 : ref2.heap_terms)
+    for (expr2tc op2 : ref2.heap_terms)
       uplus.copy_to_operands(migrate_expr_back(op2));
     return uplus;
   }

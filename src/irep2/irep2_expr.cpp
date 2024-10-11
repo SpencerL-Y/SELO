@@ -500,9 +500,9 @@ void disjh2t::do_disjh(const expr2tc &heap_term)
     abort();
   }
 
-  if (is_symbol2t(heap_term) &&
-      to_symbol2t(source_heap).get_symbol_name() ==
-      to_symbol2t(heap_term).get_symbol_name())
+  if (
+    is_symbol2t(heap_term) && to_symbol2t(source_heap).get_symbol_name() ==
+                                to_symbol2t(heap_term).get_symbol_name())
     return;
 
   other_heaps.push_back(heap_term);

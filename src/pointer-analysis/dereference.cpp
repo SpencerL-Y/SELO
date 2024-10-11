@@ -285,7 +285,8 @@ void dereferencet::dereference_addrof_expr(
   // this has *no* side effect!
   address_of2t &addrof = to_address_of2t(expr);
 
-  if (is_heap_region2t(addrof.ptr_obj)) return;
+  if (is_heap_region2t(addrof.ptr_obj))
+    return;
 
   if (is_dereference2t(addrof.ptr_obj))
   {
@@ -400,13 +401,8 @@ expr2tc dereferencet::dereference_expr_nonscalar(
       is_raw_read(mode) ? dereferencet::RAW_READ : dereferencet::READ;
     dereference_expr(deref.value, guard, read_mod);
 
-    return
-      dereference(
-        deref.value, base->type,
-        guard, mode,
-        offset_to_scalar,
-        deref.type
-      );
+    return dereference(
+      deref.value, base->type, guard, mode, offset_to_scalar, deref.type);
   }
 
   if (is_typecast2t(expr))
@@ -492,14 +488,16 @@ expr2tc dereferencet::dereference(
     log_debug("SLHV", "to type : ");
     to_type->dump();
     log_debug("SLHV", "deref type : {}", !is_nil_type(deref_type));
-    if (!is_nil_type(deref_type)) deref_type->dump();
+    if (!is_nil_type(deref_type))
+      deref_type->dump();
 
     log_debug(
       "SLHV",
       "mode - {}",
-      is_internal(mode) ? "internal" :
-        is_free(mode) ? "free" :
-          is_raw_read(mode) ? "raw_read" : "deref");
+      is_internal(mode)   ? "internal"
+      : is_free(mode)     ? "free"
+      : is_raw_read(mode) ? "raw_read"
+                          : "deref");
   }
   internal_items.clear();
 
@@ -546,10 +544,9 @@ expr2tc dereferencet::dereference(
     if (options.get_bool_option("z3-slhv") && !is_nil_type(deref_type))
     {
       // set intheap type
-      if (!is_free(mode) && !is_internal(mode) &&
-          !is_unknown2t(new_target) &&
-          !is_invalid2t(new_target) &&
-          is_object_descriptor2t(new_target))
+      if (
+        !is_free(mode) && !is_internal(mode) && !is_unknown2t(new_target) &&
+        !is_invalid2t(new_target) && is_object_descriptor2t(new_target))
       {
         object_descriptor2t &o = to_object_descriptor2t(new_target);
         expr2tc &object = o.object;
@@ -639,10 +636,11 @@ bool dereferencet::dereference_type_compare(
   // Test for simple equality
   if (object->type == dereference_type)
     return true;
-  
+
   // intloc is pointer
-  if (is_intloc_type(object->type) && is_pointer_type(dereference_type) ||
-      is_pointer_type(object->type) && is_intloc_type(dereference_type))
+  if (
+    is_intloc_type(object->type) && is_pointer_type(dereference_type) ||
+    is_pointer_type(object->type) && is_intloc_type(dereference_type))
     return true;
 
   // Check for C++ subclasses; we can cast derived up to base safely.
@@ -700,7 +698,8 @@ expr2tc dereferencet::build_reference_to(
     log_debug("SLHV", "with type : ");
     type->dump();
     log_debug("SLHV", "offset - {}", !is_nil_expr(lexical_offset));
-    if (!is_nil_expr(lexical_offset)) lexical_offset->dump();
+    if (!is_nil_expr(lexical_offset))
+      lexical_offset->dump();
     log_debug("SLHV", "|------------------------------------|");
   }
 
@@ -726,7 +725,7 @@ expr2tc dereferencet::build_reference_to(
 
   bool use_old_encoding = !options.get_bool_option("z3-slhv");
 
-  if (is_null_object2t(root_object) &&!is_free(mode) && !is_internal(mode))
+  if (is_null_object2t(root_object) && !is_free(mode) && !is_internal(mode))
   {
     expr2tc pointer_guard;
     type2tc nullptrtype = pointer_type2tc(type);
@@ -745,14 +744,15 @@ expr2tc dereferencet::build_reference_to(
     // solver will only get confused.
     return value;
   }
-  
+
   if (is_null_object2t(root_object) && (is_free(mode) || is_internal(mode)))
   {
     // Freeing NULL is completely legit according to C
     return value;
   }
-  
-  if(use_old_encoding) {
+
+  if (use_old_encoding)
+  {
     value = object;
 
     // Produce a guard that the dereferenced pointer points at this object.
@@ -775,10 +775,10 @@ expr2tc dereferencet::build_reference_to(
 
     // Final offset computations start here
     expr2tc final_offset = o.offset;
-  #if 0
+#if 0
     // FIXME: benchmark this, on tacas.
     dereference_callback.rename(final_offset);
-  #endif
+#endif
 
     // If offset is unknown, or whatever, we have to consider it
     // nondeterministic, and let the reference builders deal with it.
@@ -794,8 +794,8 @@ expr2tc dereferencet::build_reference_to(
         alignment = 1;
       }
 
-      final_offset =
-        pointer_offset2tc(get_int_type(config.ansi_c.address_width), deref_expr);
+      final_offset = pointer_offset2tc(
+        get_int_type(config.ansi_c.address_width), deref_expr);
     }
 
     type2tc offset_type = bitsize_type2();
@@ -854,12 +854,15 @@ expr2tc dereferencet::build_reference_to(
     build_reference_rec(value, final_offset, type, tmp_guard, mode, alignment);
 
     return value;
-  } else {
+  }
+  else
+  {
     value = object;
 
     guardt tmp_guard(guard);
-    if (!is_intheap_type(value) && !is_intloc_type(value) &&
-        !is_scalar_type(value))
+    if (
+      !is_intheap_type(value) && !is_intloc_type(value) &&
+      !is_scalar_type(value))
     {
       log_error("Do not support this tpye");
       value->dump();
@@ -907,8 +910,7 @@ expr2tc dereferencet::build_reference_to(
       final_offset = add2tc(final_offset->type, final_offset, lexical_offset);
     simplify(final_offset);
 
-    if (!is_constant_int2t(final_offset) &&
-        !is_symbol2t(final_offset))
+    if (!is_constant_int2t(final_offset) && !is_symbol2t(final_offset))
     {
       log_error("Wrong offset, support later");
       abort();
@@ -1275,7 +1277,7 @@ void dereferencet::build_deref_slhv(
       log_error("Do not support unaligned access yet!");
       abort();
     }
-    
+
     if (field >= _type.field_types.size() || field < 0)
     {
       // Out of bound
@@ -1292,8 +1294,7 @@ void dereferencet::build_deref_slhv(
   }
 
   log_debug("SLHV", "return dereference ---> {}", !is_nil_expr(value));
-  if (messaget::state.modules.count("SLHV") > 0 &&
-      !is_nil_expr(value))
+  if (messaget::state.modules.count("SLHV") > 0 && !is_nil_expr(value))
     value->dump();
   log_debug("SLHV", " ----------------- build deref slhv ----------------- ");
 }
@@ -2303,15 +2304,16 @@ void dereferencet::valid_check(
     // always "valid", shut up
     return;
   }
-  else if(is_intheap_type(symbol))
+  else if (is_intheap_type(symbol))
   {
-    if (is_internal(mode)) return;
+    if (is_internal(mode))
+      return;
 
     expr2tc not_valid_heap_region = not2tc(valid_object2tc(symbol));
     guardt tmp_guard(guard);
     tmp_guard.add(not_valid_heap_region);
-    std::string foo = is_free(mode) ?  "invalid free pointer"
-                                      : "invalid dereference pointer";
+    std::string foo =
+      is_free(mode) ? "invalid free pointer" : "invalid dereference pointer";
     // deref failure will replace heap region with heap contains
     // that indicates the reigon is avaliable.
     log_debug("SLHV", "add valid check : {}", foo);
@@ -2550,14 +2552,15 @@ void dereferencet::check_heap_region_access(
   const guardt &guard,
   modet mode)
 {
-  if(options.get_bool_option("no-bounds-check")) return;
+  if (options.get_bool_option("no-bounds-check"))
+    return;
 
   // This check is in word-level;
 
   expr2tc offset_cond;
   if (is_intheap_type(value))
   {
-    const heap_region2t& heap_region = to_heap_region2t(value);
+    const heap_region2t &heap_region = to_heap_region2t(value);
     const intheap_type2t &_type = to_intheap_type(heap_region.type);
 
     if (!_type.is_aligned)
@@ -2573,7 +2576,7 @@ void dereferencet::check_heap_region_access(
     }
 
     int _field = to_constant_int2t(offset).value.to_int64();
-    
+
     if (_field < 0 || _field >= _type.field_types.size())
       offset_cond = constant_bool2tc(false);
     else
@@ -2582,7 +2585,7 @@ void dereferencet::check_heap_region_access(
       // Get the highest bit
       for (unsigned int i = 0; i <= _field; i++)
         _offset_bits += _type.field_types[i]->get_width() + _type.pads[i];
-      
+
       expr2tc total_bits = gen_ulong(_type.total_bytes * 8);
       expr2tc offset_bits = gen_ulong(_offset_bits);
 
@@ -2599,10 +2602,7 @@ void dereferencet::check_heap_region_access(
   guardt tmp_guard = guard;
   tmp_guard.add(bound_check);
   dereference_failure(
-    "pointer dereference",
-    "Access of heap out of region",
-    tmp_guard
-  );
+    "pointer dereference", "Access of heap out of region", tmp_guard);
 }
 
 void dereferencet::check_alignment(
@@ -2731,19 +2731,20 @@ expr2tc dereferencet::extract_bits_from_byte_array(
 
 void dereferencet::set_intheap_type(expr2tc &heap_region, const type2tc &ty)
 {
-  if (!is_intheap_type(heap_region)) return;
+  if (!is_intheap_type(heap_region))
+    return;
 
   intheap_type2t &_type = to_intheap_type(heap_region->type);
 
-  if (_type.is_aligned) return;
+  if (_type.is_aligned)
+    return;
 
   if (is_struct_type(ty))
   {
     const struct_type2t &_ty = to_struct_type(ty);
 
     _type.field_types.clear();
-    const std::vector<type2tc> &inner_types = 
-      _ty.get_structure_members();
+    const std::vector<type2tc> &inner_types = _ty.get_structure_members();
     const std::vector<irep_idt> &inner_field_names =
       _ty.get_structure_member_names();
     _type.field_types.push_back(inner_types[0]);
@@ -2753,7 +2754,7 @@ void dereferencet::set_intheap_type(expr2tc &heap_region, const type2tc &ty)
       if (has_prefix(inner_field_names[i], "anon"))
         _type.pads.push_back(inner_types[i]->get_width());
       else
-      {  
+      {
         _type.field_types.push_back(inner_types[i]);
         _type.pads.push_back(0);
       }

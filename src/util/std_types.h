@@ -24,8 +24,7 @@ public:
   }
 };
 
-
-class intheap_typet : public typet 
+class intheap_typet : public typet
 {
 public:
   intheap_typet()
@@ -34,8 +33,7 @@ public:
   }
 };
 
-
-class intloc_typet : public typet 
+class intloc_typet : public typet
 {
 public:
   intloc_typet()
@@ -43,8 +41,6 @@ public:
     id(t_intloc);
   }
 };
-
-
 
 class symbol_typet : public typet
 {

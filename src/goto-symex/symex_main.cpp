@@ -138,7 +138,7 @@ goto_symext::symex_resultt goto_symext::get_symex_result()
   return goto_symext::symex_resultt(target, total_claims, remaining_claims);
 }
 
-#include<iostream>
+#include <iostream>
 
 void goto_symext::symex_step(reachability_treet &art)
 {
@@ -151,7 +151,7 @@ void goto_symext::symex_step(reachability_treet &art)
 
   if (messaget::state.modules.count("SLHV") > 0)
     instruction.dump();
-  
+
   // depth exceeded?
   {
     if (depth_limit != 0 && cur_state->num_instructions > depth_limit)
@@ -191,7 +191,8 @@ void goto_symext::symex_step(reachability_treet &art)
       adapt_to_slhv(tmp);
     replace_nondet(tmp);
 
-    if (messaget::state.modules.count("SLHV") > 0) tmp->dump();
+    if (messaget::state.modules.count("SLHV") > 0)
+      tmp->dump();
 
     dereference(tmp, dereferencet::READ);
     replace_dynamic_allocation(tmp);
@@ -275,8 +276,9 @@ void goto_symext::symex_step(reachability_treet &art)
     replace_nondet(deref_code);
 
     code_function_call2t &call = to_code_function_call2t(deref_code);
-    
-    if (messaget::state.modules.count("SLHV") > 0) call.dump();
+
+    if (messaget::state.modules.count("SLHV") > 0)
+      call.dump();
 
     if (!is_nil_expr(call.ret))
     {
@@ -408,7 +410,7 @@ void goto_symext::symex_assume()
     return;
 
   expr2tc cond = cur_state->source.pc->guard;
-  
+
   if (options.get_bool_option("z3-slhv"))
     adapt_to_slhv(cond);
 
@@ -1191,7 +1193,7 @@ void goto_symext::add_memory_leak_checks()
       };
   }
   bool use_old_encoding = !options.get_bool_option("z3-slhv");
-  if(use_old_encoding)
+  if (use_old_encoding)
   {
     for (auto const &it : dynamic_memory)
     {
@@ -1233,16 +1235,17 @@ void goto_symext::add_memory_leak_checks()
       replace_dynamic_allocation(cond);
       cur_state->rename(cond);
       claim(
-      cond,
-      "dereference failure: forgotten memory: " + get_pretty_name(it.name));
-    } 
+        cond,
+        "dereference failure: forgotten memory: " + get_pretty_name(it.name));
+    }
   }
   else
   {
     for (auto const &it : dynamic_memory)
     {
       // Don't check memory leak if the object is automatically deallocated
-      if (it.auto_deallocd) continue;
+      if (it.auto_deallocd)
+        continue;
 
       expr2tc deallocated = equality2tc(it.obj, gen_emp());
       expr2tc when = it.alloc_guard.as_expr();
@@ -1250,8 +1253,7 @@ void goto_symext::add_memory_leak_checks()
       cur_state->rename(cond);
       claim(
         cond,
-        "dereference failure, forgotten memory: " + get_pretty_name(it.name)
-      );
+        "dereference failure, forgotten memory: " + get_pretty_name(it.name));
     }
   }
 }

@@ -124,15 +124,13 @@ unsigned goto_symext::argument_assignments(
         if (is_struct_type(lhs))
         {
           const struct_type2t &_type = to_struct_type(lhs->type);
-          expr2tc sideeffect = 
-            sideeffect2tc(
-              lhs->type,
-              expr2tc(),
-              expr2tc(),
-              std::vector<expr2tc>(),
-              type2tc(),
-              sideeffect2t::nondet
-            );
+          expr2tc sideeffect = sideeffect2tc(
+            lhs->type,
+            expr2tc(),
+            expr2tc(),
+            std::vector<expr2tc>(),
+            type2tc(),
+            sideeffect2t::nondet);
           // Create a heap region for lhs
           symex_assign(code_assign2tc(lhs, sideeffect));
 
@@ -205,15 +203,13 @@ void goto_symext::symex_function_call(const expr2tc &code)
   if (options.get_bool_option("z3-slhv"))
   {
     const symbol2t &func = to_symbol2t(call.function);
-    if (has_prefix(func.get_symbol_name(), "c:@F@atexit") ||
-        has_prefix(func.get_symbol_name(), "c:@F@pthread") ||
-        has_prefix(func.get_symbol_name(), "c:@F@memcpy") ||
-        has_prefix(func.get_symbol_name(), "c:@F@memset"))
+    if (
+      has_prefix(func.get_symbol_name(), "c:@F@atexit") ||
+      has_prefix(func.get_symbol_name(), "c:@F@pthread") ||
+      has_prefix(func.get_symbol_name(), "c:@F@memcpy") ||
+      has_prefix(func.get_symbol_name(), "c:@F@memset"))
     {
-      log_error(
-        "Do not support function - {}",
-        func.get_symbol_name()
-      );
+      log_error("Do not support function - {}", func.get_symbol_name());
       abort();
     }
   }
@@ -553,7 +549,7 @@ void goto_symext::pop_frame()
 
   if (!cur_state->guard.is_false())
     cur_state->guard = frame.entry_guard;
-  
+
   // free local heap regions
   for (auto const &it : frame.local_heap_regions)
   {
@@ -575,8 +571,9 @@ void goto_symext::pop_frame()
       std::string::npos)
       symex_free(code_free2tc(l1_sym));
 
-    if (options.get_bool_option("z3-slhv") &&
-        it.base_name.as_string().find("return_value$___builtin_alloca") !=
+    if (
+      options.get_bool_option("z3-slhv") &&
+      it.base_name.as_string().find("return_value$___builtin_alloca") !=
         std::string::npos)
       symex_free(code_free2tc(l1_sym));
 
@@ -584,7 +581,6 @@ void goto_symext::pop_frame()
     cur_state->value_set.erase(to_symbol2t(l1_sym).get_symbol_name());
 
     cur_state->level2.remove(it);
-
 
     // Construct an l1 name on the fly - this is a temporary hack for when
     // the value set is storing things in a not-an-irep-idt form.

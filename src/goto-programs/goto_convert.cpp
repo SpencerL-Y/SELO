@@ -217,7 +217,7 @@ void goto_convertt::convert_switch_case(
 void goto_convertt::convert(const codet &code, goto_programt &dest)
 {
   const irep_idt &statement = code.get_statement();
-  
+
   if (statement == "block")
     convert_block(code, dest);
   else if (statement == "decl")

@@ -73,7 +73,7 @@ public:
     const sourcet &source) override;
 
   virtual void convert(smt_convt &smt_conv);
-  
+
   void convert_internal_step(
     smt_convt &smt_conv,
     smt_astt &assumpt_ast,
