@@ -141,6 +141,8 @@ const expr2tc &dereferencet::get_symbol(const expr2tc &expr)
 
 void dereferencet::dereference_expr(expr2tc &expr, guardt &guard, modet mode)
 {
+  log_status("deref expr:");
+  expr->dump();
   if (!has_dereference(expr))
     return;
 
@@ -283,6 +285,8 @@ void dereferencet::dereference_addrof_expr(
   // this has *no* side effect!
   address_of2t &addrof = to_address_of2t(expr);
 
+  if (is_heap_region2t(addrof.ptr_obj)) return;
+
   if (is_dereference2t(addrof.ptr_obj))
   {
     dereference2t &deref = to_dereference2t(addrof.ptr_obj);
@@ -362,6 +366,8 @@ expr2tc dereferencet::dereference_expr_nonscalar(
   modet mode,
   const expr2tc &base)
 {
+  log_status("deref expr nonscalar");
+  expr->dump();
   if (is_dereference2t(expr))
   {
     /* The first expression we're called with is index2t, member2t or non-scalar
