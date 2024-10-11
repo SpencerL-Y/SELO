@@ -73,20 +73,12 @@ public:
     const sourcet &source) override;
 
   virtual void convert(smt_convt &smt_conv);
-  void convert2slhv(z3_slhv_convt& slhv_convt);
   
   void convert_internal_step(
     smt_convt &smt_conv,
     smt_astt &assumpt_ast,
     smt_convt::ast_vec &assertions,
     SSA_stept &s);
-  
-  void convert_internal_step_slhv(
-    z3_slhv_convt& slhv_convt,
-    smt_astt& assumpt_ast,
-    smt_convt::ast_vec& assertions,
-    SSA_stept &s
-  );
 
   void reconstruct_symbolic_expression(expr2tc &expr, bool keep_local_variables)
     const override;
@@ -211,6 +203,8 @@ public:
 
   void push_ctx() override;
   void pop_ctx() override;
+
+  // void reconstruct_cond_expr(expr2tc &expr);
 
 protected:
   const namespacet &ns;

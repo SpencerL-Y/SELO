@@ -203,6 +203,54 @@ public:
       traits;
 };
 
+class intheap_data : public type2t
+{
+public:
+  intheap_data(
+    type2t::type_ids id,
+    const expr2tc &loc,
+    unsigned int tb,
+    bool ir,
+    bool ia,
+    bool ic)
+    : type2t(id),
+      location(loc), total_bytes(tb),
+      is_region(ir), is_aligned(ia), is_alloced(ic)
+  {
+  }
+  intheap_data(const intheap_data &ref) = default;
+
+  expr2tc location;
+  std::vector<type2tc> field_types;
+  unsigned int total_bytes;
+  bool is_region;
+  bool is_aligned;
+  bool is_alloced;
+
+  // Hide
+  std::vector<unsigned int> pads;
+  
+  // Type mangling:
+  typedef esbmct::field_traits<expr2tc, intheap_data, &intheap_data::location>
+    location_field;
+  typedef esbmct::field_traits<std::vector<type2tc>, intheap_data, &intheap_data::field_types>
+    field_types_field;
+  typedef esbmct::field_traits<unsigned int, intheap_data, &intheap_data::total_bytes>
+    total_bytes_field;
+  typedef esbmct::field_traits<bool, intheap_data, &intheap_data::is_region>
+    is_region_field;
+  typedef esbmct::field_traits<bool, intheap_data, &intheap_data::is_aligned>
+    is_aligned_field;
+  typedef esbmct::field_traits<bool, intheap_data, &intheap_data::is_alloced>
+    is_alloced_field;
+  typedef esbmct::type2t_traits<
+    location_field,
+    field_types_field,
+    total_bytes_field,
+    is_region_field,
+    is_aligned_field,
+    is_alloced_field> traits;
+};
 
 class pointer_data : public type2t
 {
@@ -319,7 +367,7 @@ irep_typedefs(fixedbv, fixedbv_data);
 irep_typedefs(floatbv, floatbv_data);
 irep_typedefs(cpp_name, cpp_name_data);
 irep_typedefs(vector, array_data);
-irep_typedefs(intheap, type2t);
+irep_typedefs(intheap, intheap_data);
 irep_typedefs(intloc, type2t);
 #undef irep_typedefs
 
@@ -358,11 +406,24 @@ public:
 class intheap_type2t : public intheap_type_methods
 {
 public:
-  intheap_type2t() : intheap_type_methods(intheap_id)
+  intheap_type2t(
+    const expr2tc &location,
+    unsigned int total_bytes,
+    bool is_region,
+    bool is_aligned,
+    bool is_alloced)
+    : intheap_type_methods(
+      intheap_id,
+      location, total_bytes,
+      is_region, is_aligned, is_alloced)
   {
+    if (is_region && this->field_types.empty())
+      this->field_types.push_back(empty_type2tc());
   }
   intheap_type2t(const intheap_type2t &ref) = default;
   unsigned int get_width() const override;
+
+  bool do_alignment(const type2tc &type);
 
   static std::string field_names[esbmct::num_type_fields];
 };

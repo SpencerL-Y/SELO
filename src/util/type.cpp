@@ -19,6 +19,7 @@ bool is_array_like(const typet &type)
   return type.is_vector() || type.is_array() || type.is_incomplete_array();
 }
 
+irep_idt typet::t_integer = dstring("integer");
 irep_idt typet::t_signedbv = dstring("signedbv");
 irep_idt typet::t_unsignedbv = dstring("unsignedbv");
 irep_idt typet::t_complex = dstring("complex");

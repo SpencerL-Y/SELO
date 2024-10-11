@@ -10,6 +10,25 @@ static bool no_slice(const symbol2t &sym)
 template <bool Add>
 bool symex_slicet::get_symbols(const expr2tc &expr)
 {
+  
+  if (is_heap_region2t(expr)) return false;
+
+  if (is_location_of2t(expr))
+  {
+    const location_of2t &locof = to_location_of2t(expr);
+    if (is_field_of2t(locof.source_heap))
+      return
+        get_symbols<Add>(location_of2tc(
+          to_field_of2t(locof.source_heap).source_heap
+        ));
+    else if (is_intheap_type(locof.source_heap))
+      return
+        get_symbols<Add>(
+          to_intheap_type(locof.source_heap->type).location);
+    else
+      return false;
+  }
+
   bool res = false;
   // Recursively look if any of the operands has a inner symbol
   expr->foreach_operand([this, &res](const expr2tc &e) {
@@ -37,6 +56,41 @@ void symex_slicet::run_on_assert(symex_target_equationt::SSA_stept &SSA_step)
 
 void symex_slicet::run_on_assume(symex_target_equationt::SSA_stept &SSA_step)
 {
+  if (is_disjh2t(SSA_step.cond))
+  {
+    disjh2t &disj = to_disjh2t(SSA_step.cond);
+
+    bool is_sliced = false;
+    if (!get_symbols<false>(disj.source_heap) &&
+        !get_symbols<false>(
+          to_intheap_type(disj.source_heap->type).location))
+      is_sliced = true;
+    else
+    {
+      get_symbols<true>(disj.source_heap);
+      int cnt = 0;
+      for (unsigned int i = 0; i < disj.other_heaps.size(); i++)
+      {
+        const expr2tc &reg = disj.other_heaps[i];
+        if (get_symbols<false>(reg) ||
+            get_symbols<false>(to_intheap_type(reg->type).location))
+        {
+          cnt++;
+          get_symbols<true>(reg);
+          disj.is_sliced[i] = false;
+        }
+      }
+      is_sliced |= (cnt == 0);
+    }
+
+    if (is_sliced)
+    {
+      SSA_step.ignore = true;
+      ++sliced;
+    }
+    return;
+  }
+
   if (!slice_assumes)
   {
     get_symbols<true>(SSA_step.guard);
@@ -65,12 +119,34 @@ void symex_slicet::run_on_assume(symex_target_equationt::SSA_stept &SSA_step)
   }
 }
 
-void symex_slicet::run_on_assignment(
-  symex_target_equationt::SSA_stept &SSA_step)
+void symex_slicet::run_on_assignment(symex_target_equationt::SSA_stept &SSA_step)
 {
   assert(is_symbol2t(SSA_step.lhs));
   // TODO: create an option to ignore nondet symbols (test case generation)
 
+  if (is_intheap_type(SSA_step.lhs) &&
+      !is_nil_expr(to_intheap_type(SSA_step.lhs->type).location))
+  {
+    const symbol2t &sym = to_symbol2t(SSA_step.lhs);
+    const intheap_type2t &ty = to_intheap_type(SSA_step.lhs->type);
+
+    // If we access the location of a heap region, we add the
+    // first variable with ;l2_num = 1' to build the disjointness.
+    if (sym.level2_num == 1 && get_symbols<false>(ty.location) ||
+        get_symbols<false>(SSA_step.lhs))
+    {
+      get_symbols<true>(SSA_step.guard);
+      get_symbols<true>(SSA_step.cond);
+    }
+    else
+    {
+      SSA_step.ignore = true;
+      ++sliced;
+    }
+    return;
+  }
+  
+  
   if (!get_symbols<false>(SSA_step.lhs))
   {
     // Should we add nondet to the dependency list (mostly for test cases)?
@@ -100,7 +176,7 @@ void symex_slicet::run_on_assignment(
 
     // Remove this symbol as we won't be seeing any references to it further
     // into the history.
-    depends.erase(to_symbol2t(SSA_step.lhs).get_symbol_name());
+    // depends.erase(to_symbol2t(SSA_step.lhs).get_symbol_name());
   }
 }
 
@@ -207,6 +283,7 @@ bool claim_slicer::run(symex_target_equationt::SSA_stepst &steps)
 
   return true;
 }
+
 // Recursively try to extract the nondet symbol of an expression
 expr2tc symex_slicet::get_nondet_symbol(const expr2tc &expr)
 {

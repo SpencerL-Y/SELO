@@ -747,6 +747,22 @@ protected:
     expr2tc &full_rhs,
     guardt &guard,
     const bool hidden);
+  
+  /**
+   *  This method is used when we need to assign a value
+   *  to a field of a heap region
+   *  @param lhs field of a region
+   *  @param full_lhs The original assignment symbol
+   *  @param rhs Value to assign to lhs
+   *  @param guard Assignment guard.
+   */
+  void symex_assign_fieldof(
+    const expr2tc &lhs,
+    const expr2tc &full_lhs,
+    expr2tc &rhs,
+    expr2tc &full_rhs,
+    guardt &guard,
+    const bool hidden);
 
   /** Symbolic implementation of malloc. */
   expr2tc symex_malloc(const expr2tc &lhs, const sideeffect2t &code);
@@ -782,6 +798,101 @@ protected:
    *  @param expr Expr to search for nondet symbols.
    */
   void replace_nondet(expr2tc &expr);
+
+  /**
+   *  Replace NULL symbols to constant_intheap or constant_intloc
+   *  @param expr Expr to search for NULL symbols.
+   */
+  void replace_null(expr2tc &expr);
+
+  /**
+   *  Replace member, indexof ... by locadd
+   *  @param expr Expr to a location.
+   */
+  void replace_pointer_airth(expr2tc &expr);
+
+  /**
+   * @brief Replace addressof by location_of
+   * @param expr 
+   */
+  void replace_address_of(expr2tc &expr);
+
+  /**
+   * @brief Eliminate typecast from intloc to pointer and
+   * replace casting from pointer to bool by equation
+   * 
+   * @param expr 
+   */
+  void replace_typecast(expr2tc &expr);
+
+  /**
+   * @brief Replace all struct/array variable by heap variable
+   * @param expr 
+   */
+  void replace_tuple(expr2tc &expr);
+
+  /**
+   * @brief Replace expr and type for SLHV
+   * 
+   * @param expr 
+   */
+  void adapt_to_slhv(expr2tc &expr);
+
+  /**
+   * @brief Create a heap region intloc
+   * 
+   * @param expr 
+   * @return expr2tc 
+   */
+  expr2tc create_heap_region_loc(const expr2tc &expr);
+
+  /**
+   * @brief Create a heap type object
+   * 
+   * @param type 
+   * @param loc 
+   * @return type2tc 
+   */
+  type2tc create_heap_region_type(
+    const type2tc &type,
+    unsigned int bytes,
+    const expr2tc &loc);
+
+  /**
+   * @brief Create a heap region object
+   * 
+   * @param sideeffect 
+   * @param flag
+   * @return expr2tc 
+   */
+  expr2tc create_heap_region(const sideeffect2t &effect, expr2tc &flag);
+
+  /**
+   * @brief Create a constant heap region object
+   * 
+   * @param effect 
+   * @param flag 
+   * @return expr2tc 
+   */
+  expr2tc create_constant_heap_region(
+    const constant_struct2t &effect,
+    expr2tc &flag
+  );
+
+  /**
+   * @brief Encode disjointness among all heap regions
+   * 
+   * @param heap 
+   */
+  void symex_disj_heaps(const expr2tc &heap);
+
+  /**
+   * @brief In SLHV, struct/array are heap variable
+   * 
+   * @param lhs 
+   * @param effect 
+   */
+  void symex_stack_sideeffect(const expr2tc &lhs, const expr2tc &effect);
 
   /**
    *  Fetch reference to global dynamic object counter.
@@ -940,6 +1051,11 @@ protected:
   void
   dump_internal_state(const std::list<struct internal_item> &data) override;
   bool is_live_variable(const expr2tc &sym) override;
+
+  void update_heap_type(const intheap_type2t &type) override;
+  void update_heap_type_rec(expr2tc &expr, const intheap_type2t &type) override;
+  std::string get_nondet_id(std::string prefix = "") override;
+  irep_idt get_alloc_size_heap_name() override;
 };
 
 #endif

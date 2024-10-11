@@ -403,7 +403,7 @@ smt_astt smt_convt::convert_typecast_to_ptr(const typecast2t &cast)
 {
   // First, sanity check -- typecast from one kind of a pointer to another kind
   // is a simple operation. Check for that first.
-  if (is_pointer_type(cast.from))
+  if (is_pointer_type(cast.from) || is_intloc_type(cast.from))
     return convert_ast(cast.from);
 
   // Unpleasentness; we don't know what pointer this integer is going to

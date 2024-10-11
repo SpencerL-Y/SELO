@@ -142,6 +142,8 @@ void smt_convt::smt_post_init()
 {
   boolean_sort = mk_bool_sort();
 
+  if (options.get_bool_option("z3-slhv")) { return; }
+
   init_addr_space_array();
 
   if (int_encoding)
@@ -235,9 +237,6 @@ smt_astt smt_convt::convert_assign(const expr2tc &expr)
 
 smt_astt smt_convt::convert_ast(const expr2tc &expr)
 {
-  log_status("== convert ast ");
-  expr->dump();
-  log_status("====");
   smt_cachet::const_iterator cache_result = smt_cache.find(expr);
   if (cache_result != smt_cache.end())
     return (cache_result->ast);
@@ -324,8 +323,6 @@ smt_astt smt_convt::convert_ast(const expr2tc &expr)
   case expr2t::symbol_id:
   {
     a = convert_terminal(expr);
-    log_status("convert_terminal result: ");
-    a->dump();
     break;
   }
   case expr2t::constant_string_id:
@@ -1247,9 +1244,6 @@ smt_astt smt_convt::convert_ast(const expr2tc &expr)
   struct smt_cache_entryt entry = {expr, a, ctx_level};
   smt_cache.insert(entry);
 
-  log_status("==== converted reuslt: ");
-  a->dump();
-  log_status("====");
   return a;
 }
 
@@ -1269,6 +1263,11 @@ smt_sortt smt_convt::convert_sort(const type2tc &type)
   smt_sortt result = nullptr;
   switch (type->type_id)
   {
+  case type2t::intheap_id:
+  case type2t::intloc_id:
+    result = convert_slhv_sorts(type);
+    break;
+
   case type2t::bool_id:
     result = boolean_sort;
     break;
@@ -1388,8 +1387,6 @@ static std::string fixed_point(const std::string &v, unsigned width)
 
 smt_astt smt_convt::convert_terminal(const expr2tc &expr)
 {
-  log_status("convert terminal: ");
-  expr.get()->dump();
   switch (expr->expr_id)
   {
   case expr2t::constant_int_id:
@@ -3372,5 +3369,18 @@ smt_astt smt_convt::mk_int2real(smt_astt a)
 smt_astt smt_convt::mk_isint(smt_astt a)
 {
   (void)a;
+  abort();
+}
+
+/** Heap sorts and operators */
+
+smt_sortt smt_convt::convert_slhv_sorts(const type2tc &type) {
+  log_error("Chosen solver doesn't support inltoc sorts");
+  abort();
+}
+
+smt_astt smt_convt::convert_slhv_opts(
+  const expr2tc &expr, const std::vector<smt_astt>& args) {
+  log_error("Chosen solver doesn't support inltoc sorts");
   abort();
 }

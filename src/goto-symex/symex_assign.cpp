@@ -136,11 +136,14 @@ void goto_symext::symex_assign(
   const bool hidden,
   const guardt &guard)
 {
-  log_status("xxxxxxxxxxxx symex assign: ");
+  log_debug("SLHV", "xxxxxxxxxxxxxxxxxxxxxx symex assign xxxxxxxxxxxxxxxxxxxxxx");
+  if (messaget::state.modules.count("SLHV") > 0)
+    code_assign->dump();
 
   const code_assign2t &code = to_code_assign2t(code_assign);
   expr2tc assign_target = code.target;
   expr2tc assign_source = code.source;
+
   bool use_old_encoding = !options.get_bool_option("z3-slhv");
   if(!use_old_encoding) {
     if(is_symbol2t(assign_target) &&
@@ -151,22 +154,20 @@ void goto_symext::symex_assign(
           if(
               (to_symbol2t(assign_target).get_symbol_name().compare(alloc_size_arr_name.as_string()) == 0) && 
               is_constant_array_of2t(assign_source)) {
-            // construct the initialization code of allocsize heap in slhv
-            // and do the symbolic execution for it
+            // used to track valid pointer            
             symbolt allocsize_heap;
             allocsize_heap.name = alloc_size_heap_name;
             allocsize_heap.id = alloc_size_heap_name;
             allocsize_heap.lvalue = true;
             allocsize_heap.type = typet(typet::t_intheap);
             new_context.add(allocsize_heap);
-            expr2tc new_lhs = symbol2tc(get_intheap_type(),   allocsize_heap.id);
-            expr2tc new_rhs = constant_intheap2tc(get_intheap_type(), true);
+            expr2tc new_lhs = symbol2tc(get_intheap_type(),  allocsize_heap.id);
+            expr2tc new_rhs = gen_emp();
             symex_assign(code_assign2tc(new_lhs, new_rhs));
           } 
           return;
         }
   }
-  code.dump();
   // Sanity check: if the target has zero size, then we've ended up assigning
   // to/from either a C++ POD class with no fields or an empty C struct or
   // union. The rest of the model checker isn't rated for dealing with this
@@ -184,16 +185,47 @@ void goto_symext::symex_assign(
   expr2tc original_lhs = code.target;
   expr2tc lhs = code.target;
   expr2tc rhs = code.source;
+  if (options.get_bool_option("z3-slhv"))
+  {
+    adapt_to_slhv(lhs);
+    adapt_to_slhv(rhs);
+
+    if (is_sideeffect2t(rhs) &&
+        to_sideeffect2t(rhs).kind == sideeffect2t::nondet ||
+        is_constant_struct2t(rhs))
+    {
+      symex_stack_sideeffect(lhs, rhs);
+      return;
+    }
+  }
+
   replace_nondet(lhs);
   replace_nondet(rhs);
 
+  log_debug("SLHV", "after replace : lhs = rhs");
+  if (messaget::state.modules.count("SLHV") > 0)
+  {
+    lhs->dump();
+    rhs->dump();
+  }
+
   intrinsic_races_check_dereference(lhs);
-  log_status("dereference lhs write");
+  log_debug("SLHV", "dereference lhs write");
   dereference(lhs, dereferencet::WRITE);
-  log_status("dereference rhs read");
+  log_debug("SLHV", "dereference rhs read");
   dereference(rhs, dereferencet::READ);
+  log_debug("SLHV", "replace lhs");
   replace_dynamic_allocation(lhs);
+  log_debug("SLHV", "replace rhs");
   replace_dynamic_allocation(rhs);
+  log_debug("SLHV", "replace done");
+
+  log_debug("SLHV", "after deref : lhs = rhs");
+  if (messaget::state.modules.count("SLHV") > 0)
+  {
+    lhs->dump();
+    rhs->dump();
+  }
 
   // printf expression that has lhs
   if (is_code_printf2t(rhs))
@@ -204,16 +236,21 @@ void goto_symext::symex_assign(
   if (is_sideeffect2t(rhs))
   {
     // check what symex_mem represent
-
-    log_status("is side effect rhs::::::::::::::::: ");
     const sideeffect2t &effect = to_sideeffect2t(rhs);
-    effect.dump();
+    
+    if (options.get_bool_option("z3-slhv") &&
+        effect.kind != sideeffect2t::malloc &&
+        effect.kind != sideeffect2t::alloca)
+    {
+      log_error("Dot not support this type of sedeffect");
+      abort();
+    }
+    
     switch (effect.kind)
     {
     case sideeffect2t::cpp_new:
     case sideeffect2t::cpp_new_arr:
-      log_error("does not support va_arg cpp new");
-      // symex_cpp_new(lhs, effect);
+      symex_cpp_new(lhs, effect);
       break;
     case sideeffect2t::realloc:
       symex_realloc(lhs, effect);
@@ -225,13 +262,11 @@ void goto_symext::symex_assign(
       symex_alloca(lhs, effect);
       break;
     case sideeffect2t::va_arg:
-      log_error("does not support va_arg sideeffect");
-      // symex_va_arg(lhs, effect);
+      symex_va_arg(lhs, effect);
       break;
     case sideeffect2t::printf2:
       // do nothing here
       break;
-    // No nondet side effect?
     default:
       assert(0 && "unexpected side effect");
     }
@@ -253,6 +288,8 @@ void goto_symext::symex_assign(
 
   guardt g(guard); // NOT the state guard!
   symex_assign_rec(lhs, original_lhs, rhs, expr2tc(), g, hidden_ssa);
+
+  log_debug("SLHV", "xxxxxxxxxxxxxxxxxxxxxx symex assign xxxxxxxxxxxxxxxxxxxxxx");
 }
 
 void goto_symext::symex_assign_rec(
@@ -265,58 +302,91 @@ void goto_symext::symex_assign_rec(
 {
   if (is_symbol2t(lhs))
   {
-    log_status("symex_assign_symbol");
+    if (is_intheap_type(lhs) && is_intheap_type(rhs) && is_symbol2t(rhs))
+    {
+      const intheap_type2t &lhs_ty = to_intheap_type(lhs->type);
+      const intheap_type2t &rhs_ty = to_intheap_type(rhs->type);
+      if (lhs_ty.is_alloced)
+      {
+        if (!rhs_ty.is_alloced ||
+            lhs_ty.field_types.size() != rhs_ty.field_types.size())
+        {
+          log_error("Wrong assignment for heap varaible");
+          rhs->dump();
+          abort();
+        }
+
+        std::string lhs_loc = to_symbol2t(lhs_ty.location).get_symbol_name();
+        std::string rhs_loc = to_symbol2t(rhs_ty.location).get_symbol_name();
+
+        // Copy fields of struct/...
+        if (lhs_loc != rhs_loc)
+        {
+          for (unsigned int i = 0; i < lhs_ty.field_types.size(); i++)
+          {
+            if (lhs_ty.field_types[i] != rhs_ty.field_types[i])
+            {
+              log_status("Dismatch type info");
+              abort();
+            }
+
+            expr2tc lhs_field = field_of2tc(lhs_ty.field_types[i], lhs, gen_ulong(i));
+            expr2tc rhs_field = field_of2tc(lhs_ty.field_types[i], rhs, gen_ulong(i));
+
+            symex_assign_rec(lhs_field, lhs, rhs_field, rhs, guard, false);
+          }
+          return;
+        }
+      }
+    }
+
+    log_debug("SLHV", " xxxxxxxxx symex assign symbol xxxxxxxxx ");
     symex_assign_symbol(lhs, full_lhs, rhs, full_rhs, guard, hidden);
-  } 
+    log_debug("SLHV", " xxxxxxxxx symex assign symbol xxxxxxxxx ");
+  }
   else if (is_index2t(lhs))
   {
-    log_status("symex_assign_array");
     symex_assign_array(lhs, full_lhs, rhs, full_rhs, guard, hidden);
   }
   else if (is_member2t(lhs))
   {
-    log_status("symex_assign_member");
     symex_assign_member(lhs, full_lhs, rhs, full_rhs, guard, hidden);
   }
   else if (is_if2t(lhs))
   {
-    log_status("symex_assign_if");
     symex_assign_if(lhs, full_lhs, rhs, full_rhs, guard, hidden);
   }
   else if (is_typecast2t(lhs) || is_bitcast2t(lhs))
   {
-    log_status("symex_assign_typecast");
     symex_assign_typecast(lhs, full_lhs, rhs, full_rhs, guard, hidden);
   }
   else if (is_constant_string2t(lhs) || is_null_object2t(lhs))
   {
-    log_status("is_constant_string2t(lhs) || is_null_object2t(lhs)");
     // ignore
   }
   else if (is_byte_extract2t(lhs))
   {
-    log_status("symex_assign_byte_extract");
     symex_assign_byte_extract(lhs, full_lhs, rhs, full_rhs, guard, hidden);
   }
   else if (is_concat2t(lhs))
   {
-    log_status("symex_assign_concat");
     symex_assign_concat(lhs, full_lhs, rhs, full_rhs, guard, hidden);
   }
   else if (is_constant_struct2t(lhs))
   {
-    log_status("symex_assign_structure");
     symex_assign_structure(lhs, full_lhs, rhs, full_rhs, guard, hidden);
   }
   else if (is_extract2t(lhs))
   {
-    log_status("symex_assign_extract");
     symex_assign_extract(lhs, full_lhs, rhs, full_rhs, guard, hidden);
   }
   else if (is_bitand2t(lhs))
   {
-    log_status("symex_assign_bitfield");
     symex_assign_bitfield(lhs, full_lhs, rhs, full_rhs, guard, hidden);
+  }
+  else if (is_field_of2t(lhs))
+  {
+    symex_assign_fieldof(lhs, full_lhs, rhs, full_rhs, guard, hidden);
   }
   else
   {
@@ -337,8 +407,13 @@ void goto_symext::symex_assign_symbol(
   if (!guard.is_true())
     rhs = if2tc(rhs->type, guard.as_expr(), rhs, lhs);
 
+  expr2tc org_rhs = rhs;
+
   cur_state->rename(rhs);
   do_simplify(rhs);
+
+  log_debug("SLHV", "after rename rhs");
+  if(messaget::state.modules.count("SLHV") > 0) rhs->dump();
 
   if (!is_nil_expr(full_rhs))
   {
@@ -347,11 +422,8 @@ void goto_symext::symex_assign_symbol(
   }
 
   expr2tc renamed_lhs = lhs;
-  log_status("ranamed lhs: ");
-  renamed_lhs->dump();
-  log_status("renamed rhs: ");
-  rhs->dump();
   cur_state->rename_type(renamed_lhs);
+
   cur_state->assignment(renamed_lhs, rhs);
 
   // Special case when the lhs is an array access, we need to get the
@@ -852,11 +924,36 @@ void goto_symext::symex_assign_bitfield(
   return symex_assign_rec(val, full_lhs, new_rhs, full_rhs, guard, hidden);
 }
 
+void goto_symext::symex_assign_fieldof(
+  const expr2tc &lhs,
+  const expr2tc &full_lhs,
+  expr2tc &rhs,
+  expr2tc &full_rhs,
+  guardt &guard,
+  const bool hidden)
+{
+  assert(is_scalar_type(rhs));
+
+  const field_of2t& field_of = to_field_of2t(lhs);
+  expr2tc heap_region = field_of.source_heap;
+  // make sure it is l1 name
+  cur_state->level2.get_original_name(heap_region);
+  const expr2tc &field = field_of.operand;
+
+  expr2tc update_heap =
+    heap_update2tc(heap_region->type, heap_region, field, rhs);
+
+  symex_assign_rec(heap_region, full_lhs, update_heap, full_rhs, guard, hidden);
+
+  // symex_disj_heaps(heap_region);
+}
+
 void goto_symext::replace_nondet(expr2tc &expr)
 {
   if (
     is_sideeffect2t(expr) && to_sideeffect2t(expr).kind == sideeffect2t::nondet)
   {
+
     unsigned int &nondet_count = get_dynamic_counter();
     expr =
       symbol2tc(expr->type, "nondet$symex::nondet" + i2string(nondet_count++));
@@ -868,4 +965,124 @@ void goto_symext::replace_nondet(expr2tc &expr)
         replace_nondet(e);
     });
   }
+}
+
+void goto_symext::replace_null(expr2tc &expr)
+{
+  if (is_nil_expr(expr)) return;
+  if (is_symbol2t(expr))
+  {
+    if (to_symbol2t(expr).get_symbol_name() != "NULL") return;
+    expr = is_intheap_type(expr) ? gen_emp() : gen_nil();
+  }
+  else
+  {
+    expr->Foreach_operand([this](expr2tc &e) {
+      if (!is_nil_expr(e))
+        replace_null(e);
+    });
+  }
+}
+
+void goto_symext::replace_pointer_airth(expr2tc &expr)
+{
+  if (is_nil_expr(expr)) return;
+
+  expr->Foreach_operand([this](expr2tc &e) { replace_pointer_airth(e); });
+
+  if (is_add2t(expr) || is_sub2t(expr))
+  {
+    if (!is_pointer_type(expr) && !is_intloc_type(expr)) return;
+
+    expr2tc side_1 = is_add2t(expr) ? to_add2t(expr).side_1 : to_sub2t(expr).side_1;
+    expr2tc side_2 = is_add2t(expr) ? to_add2t(expr).side_2 : to_sub2t(expr).side_2;
+    
+    if (is_pointer_type(side_2) || is_intloc_type(side_2))
+      std::swap(side_1, side_2);
+    
+    if (is_pointer_type(side_2) || is_intloc_type(side_2))
+    {
+      log_error("Wrong pointer arithmetic");
+      abort();
+    }
+
+    if (is_sub2t(expr)) side_2 = neg2tc(side_2->type, side_2);
+
+    expr2tc locadd = locadd2tc(side_1, side_2);
+    do_simplify(locadd);
+
+    expr = locadd;
+  }
+
+  if (is_member2t(expr))
+  {
+    // replaced by field_of
+    const member2t &member = to_member2t(expr);
+
+    const struct_type2t &struct_type = to_struct_type(member.source_value->type);
+
+    unsigned int idx = struct_type.get_component_number(member.member);
+    unsigned int count_pad = 0;
+    for (unsigned int i = 0; i < idx; i++)
+      count_pad += has_prefix(struct_type.member_names[i], "anon");
+    idx -= count_pad;
+
+    expr2tc field = gen_ulong(idx);
+    expr = field_of2tc(member.type, member.source_value, field);
+  }
+}
+
+void goto_symext::replace_address_of(expr2tc &expr)
+{
+  if (is_nil_expr(expr)) return;
+
+  expr->Foreach_operand([this](expr2tc &e) { replace_address_of(e); });
+
+  if (is_address_of2t(expr))
+    expr = location_of2tc(to_address_of2t(expr).ptr_obj);
+}
+
+void goto_symext::replace_typecast(expr2tc &expr)
+{
+  if (is_nil_expr(expr)) return;
+
+  expr->Foreach_operand([this](expr2tc &e) { replace_typecast(e); });
+
+  if (is_typecast2t(expr))
+  {
+    const typecast2t &typecast = to_typecast2t(expr);
+
+    // Only replace bool typecast
+    if ((is_pointer_type(typecast.from) || is_intloc_type(typecast.from))
+        && is_bool_type(typecast.type))
+      expr = notequal2tc(typecast.from, gen_nil());
+  }
+}
+
+void goto_symext::replace_tuple(expr2tc &expr)
+{
+  if (is_nil_expr(expr)) return;
+
+  expr->Foreach_operand([this](expr2tc &e) { replace_tuple(e); });
+
+  if (is_symbol2t(expr) && is_struct_type(expr->type))
+  {
+    unsigned int bytes = type_byte_size(expr->type, &ns).to_uint64();
+    
+    // use l1 name and suffix "loc" to create base loc
+    expr2tc base_loc = create_heap_region_loc(expr);
+
+    expr->type = create_heap_region_type(expr->type, bytes, base_loc);
+    to_intheap_type(expr->type).is_alloced = true;
+  }
+}
+
+
+void goto_symext::adapt_to_slhv(expr2tc &expr)
+{
+  replace_null(expr);
+  replace_pointer_airth(expr);
+  replace_address_of(expr);
+  replace_tuple(expr);
+  replace_typecast(expr);
 }

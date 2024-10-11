@@ -201,6 +201,9 @@ public:
     /** Set of local variable l1 names. */
     variable_name_sett local_variables;
 
+    /** Set of local heap region for struct/... */
+    std::vector<expr2tc> local_heap_regions;
+
     /** Record the first va_args index used in this function call, if any,
      *  otherwise UINT_MAX
      */

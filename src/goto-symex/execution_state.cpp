@@ -201,8 +201,6 @@ void execution_statet::symex_step(reachability_treet &art)
   statet &state = get_active_state();
   const goto_programt::instructiont &instruction = *state.source.pc;
   last_insn = &instruction;
-  // log_status("#### current symex_step instruction:");
-  // instruction.dump();
 
   merge_gotos();
   if (break_insn != 0 && break_insn == instruction.location_number)
@@ -250,7 +248,6 @@ void execution_statet::symex_step(reachability_treet &art)
   switch (instruction.type)
   {
   case END_FUNCTION:
-    log_status("type: END_FUNCTION");
     if (instruction.function == "__ESBMC_main")
     {
       end_thread();
@@ -277,17 +274,14 @@ void execution_statet::symex_step(reachability_treet &art)
     }
     break;
   case ATOMIC_BEGIN:
-    log_status("type: ATOMIC_BEGIN");
     state.source.pc++;
     increment_active_atomic_number();
     break;
   case ATOMIC_END:
-    log_status("type: ATOMIC_END");
     decrement_active_atomic_number();
     state.source.pc++;
     break;
   case RETURN:
-    log_status("type: RETURN");
     if (
       !state.guard.is_false() ||
       !is_cur_state_guard_false(state.guard.as_expr()))

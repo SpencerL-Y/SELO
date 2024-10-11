@@ -563,7 +563,6 @@ goto_symext::symex_resultt reachability_treet::get_next_formula()
   (*cur_state_it)->add_memory_leak_checks();
 
   has_complete_formula = false;
-  log_status("cur state symex result returned");
 
   return get_cur_state().get_symex_result();
 }

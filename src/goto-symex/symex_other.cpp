@@ -7,6 +7,10 @@
 void goto_symext::symex_other(const expr2tc code)
 {
   expr2tc code2 = code;
+
+  if (options.get_bool_option("z3-slhv"))
+    adapt_to_slhv(code2);
+
   if (is_code_expression2t(code2))
   {
     // Represents an expression that gets evaluated, but does not have any
@@ -46,10 +50,12 @@ void goto_symext::symex_other(const expr2tc code)
 
 void goto_symext::symex_decl(const expr2tc code)
 {
-  log_status("symex decl");
   assert(is_code_decl2t(code));
-  code->dump();
   expr2tc code2 = code;
+
+  if (options.get_bool_option("z3-slhv"))
+    replace_null(code2);
+    
   replace_dynamic_allocation(code2);
   replace_nondet(code2);
   dereference(code2, dereferencet::READ);
@@ -131,6 +137,42 @@ void goto_symext::symex_dead(const expr2tc code)
   // Call free on alloca'd objects
   if (identifier.as_string().find("return_value$_alloca") != std::string::npos)
     symex_free(code_free2tc(l1_sym));
+
+  if (options.get_bool_option("z3-slhv"))
+  {
+    // Call free on alloca'd objects
+    if (identifier.as_string().find("return_value$__builtin_alloca")
+        != std::string::npos)
+      symex_free(code_free2tc(l1_sym));
+    
+    if (is_struct_type(code2))
+    {      
+      std::vector<expr2tc>::const_iterator it;
+      for (it = cur_state->top().local_heap_regions.begin();
+           it != cur_state->top().local_heap_regions.end(); ++it)
+      {
+        expr2tc l1_reg = *it;
+        cur_state->top().level1.get_ident_name(l1_reg);
+        if (to_symbol2t(l1_sym).get_symbol_name() ==
+            to_symbol2t(l1_reg).get_symbol_name())
+          break;
+      }
+      if (it == cur_state->top().local_heap_regions.end())
+      {
+        log_error(
+          "Do not record this stack struct ? - {}",
+          identifier.as_string()  
+        );
+        abort();
+      }
+      
+      expr2tc l1_loc = location_of2tc(l1_sym);
+      replace_tuple(l1_loc);
+      symex_free(code_free2tc(l1_loc));
+
+      cur_state->top().local_heap_regions.erase(it);
+    }
+  }
 
   // Erase from level 1 propagation
   cur_state->value_set.erase(to_symbol2t(l1_sym).get_symbol_name());

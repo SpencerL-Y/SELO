@@ -1,0 +1,3 @@
+/home/clexma/Desktop/fox3/tests/CMakeFiles/cpp_example.dir
+/home/clexma/Desktop/fox3/tests/CMakeFiles/edit_cache.dir
+/home/clexma/Desktop/fox3/tests/CMakeFiles/rebuild_cache.dir

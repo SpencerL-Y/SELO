@@ -61,7 +61,7 @@ void bmct::show_vcc(const symex_target_equationt &eq)
   }
   else
   {
-    std::ofstream out(filename.c_str());
+    std::ofstream out(filename.c_str(), std::ofstream::app);
     if (!out)
       log_error("failed to open {}", filename);
     else

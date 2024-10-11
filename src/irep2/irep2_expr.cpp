@@ -13,6 +13,7 @@ static const char *expr_names[] = {
   "constant_int",
   "constant_intloc",
   "constant_intheap",
+  "constant_heap_region",
   "constant_fixedbv",
   "constant_floatbv",
   "constant_bool",
@@ -74,13 +75,17 @@ static const char *expr_names[] = {
   "with",
   "member",
   "index",
+  "disjh",
   "points_to",
   "uplus",
   "locadd",
-  "pointer_with_region",
-  "heap_load",
+  "heap_region",
+  "location_of",
+  "field_of",
   "heap_update",
-  "heap_contains",
+  "heap_append",
+  "heap_delete",
+  "heap_contain",
   "isnan",
   "overflow",
   "overflow_cast",
@@ -254,6 +259,22 @@ long constant_int2t::as_long() const
 {
   // XXXjmorse - add assertion that we don't exceed machine word width?
   return value.to_int64();
+}
+
+unsigned long constant_intloc2t::as_ulong() const
+{
+  assert(!value.is_negative());
+  return value.to_uint64();
+}
+
+bool constant_intloc2t::is_nil() const
+{
+  return is_nil_loc;
+}
+
+bool constant_intheap2t::is_emp() const
+{
+  return is_nil_expr(value);
 }
 
 bool constant_bool2t::is_true() const
@@ -430,6 +451,8 @@ const expr2tc &object_descriptor2t::get_root_object() const
       tmp = &to_member2t(*tmp).source_value;
     else if (is_index2t(*tmp))
       tmp = &to_index2t(*tmp).source_value;
+    else if (is_field_of2t(*tmp))
+      tmp = &to_field_of2t(*tmp).source_heap;
     else
       return *tmp;
   } while (1);
@@ -466,4 +489,37 @@ arith_2ops::arith_2ops(
   }
   // TODO: Add consistency checks for vectors
 #endif
+}
+
+void disjh2t::do_disjh(const expr2tc &heap_term)
+{
+  if (!is_intheap_type(heap_term))
+  {
+    log_error("Wrong object");
+    heap_term->dump();
+    abort();
+  }
+
+  if (is_symbol2t(heap_term) &&
+      to_symbol2t(source_heap).get_symbol_name() ==
+      to_symbol2t(heap_term).get_symbol_name())
+    return;
+
+  other_heaps.push_back(heap_term);
+  is_sliced.push_back(false);
+}
+
+expr2tc locadd2t::get_base_location() const
+{
+  if (is_locadd2t(location))
+    return to_locadd2t(location).get_base_location();
+  return location;
+}
+
+expr2tc locadd2t::get_offset() const
+{
+  expr2tc off = offset;
+  if (is_locadd2t(location))
+    off = add2tc(off->type, off, to_locadd2t(location).get_offset());
+  return off;
 }

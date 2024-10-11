@@ -12,7 +12,7 @@ std::string empty_type2t::field_names[esbmct::num_type_fields] =
 std::string intloc_type2t::field_names[esbmct::num_type_fields] =
   {"", "", "", "", ""};
 std::string intheap_type2t::field_names[esbmct::num_type_fields] =
-  {"", "", "", "", ""};
+  {"location", "field_types", "total_bytes", "is_region", "is_aligned", "is_alloced"};
 std::string symbol_type2t::field_names[esbmct::num_type_fields] =
   {"symbol_name", "", "", "", ""};
 std::string struct_type2t::field_names[esbmct::num_type_fields] =
@@ -42,8 +42,12 @@ std::string cpp_name_type2t::field_names[esbmct::num_type_fields] =
 
 std::string constant_int2t::field_names[esbmct::num_type_fields] =
   {"value", "", "", "", ""};
-std::string constant_intloc2t::field_names[esbmct::num_type_fields] = {"value" , "", "", "", ""};
-std::string constant_intheap2t::field_names[esbmct::num_type_fields] = {"is_emp" , "", "", "", ""};
+std::string constant_intloc2t::field_names[esbmct::num_type_fields] =
+  {"value", "is_nil", "", "", ""};
+std::string constant_intheap2t::field_names[esbmct::num_type_fields] =
+  {"value", "", "", "", ""};
+std::string constant_heap_region2t::field_names[esbmct::num_type_fields] =
+  {"members", "", "", "", ""};
 std::string constant_fixedbv2t::field_names[esbmct::num_type_fields] =
   {"value", "", "", "", ""};
 std::string constant_floatbv2t::field_names[esbmct::num_type_fields] =
@@ -160,20 +164,28 @@ std::string member2t::field_names[esbmct::num_type_fields] =
   {"source_value", "member_name", "", "", ""};
 std::string index2t::field_names[esbmct::num_type_fields] =
   {"source_value", "index", "", "", ""};
-std::string uplus2t::field_names[esbmct::num_type_fields] = 
-{"uplus_members", "uplus_num", "", "", ""};
+std::string disjh2t::field_names[esbmct::num_type_fields] = 
+  {"source_heap", "other_heaps", "", "", ""};
 std::string points_to2t::field_names[esbmct::num_type_fields] = 
-{"addr", "content", "is_loc", "", ""};
+  {"location", "content", "", "", ""};
+std::string uplus2t::field_names[esbmct::num_type_fields] = 
+  {"heap_terms", "", "", "", ""};
 std::string locadd2t::field_names[esbmct::num_type_fields] = 
-{"baseaddr", "added_num", "", "", ""};
-std::string pointer_with_region2t::field_names[esbmct::num_type_fields] = 
-{"loc_ptr", "region", "", "", ""};
-std::string heap_load2t::field_names[esbmct::num_type_fields] = 
-{"src_heap", "start_addr", "byte_len", "", ""};
+  {"location", "offset", "", "", ""};
+std::string heap_region2t::field_names[esbmct::num_type_fields] = 
+  {"source_location", "", "", "", ""};
+std::string location_of2t::field_names[esbmct::num_type_fields] =
+  {"source_region", "", "", "", ""};
+std::string field_of2t::field_names[esbmct::num_type_fields] =
+  {"heap_region", "field", "", "", ""};
 std::string heap_update2t::field_names[esbmct::num_type_fields] = 
-{"src_heap", "start_addr", "updated_val", "byte_len", ""};
-std::string heap_contains2t::field_names[esbmct::num_type_fields] = 
-{"heapvar", "start_loc", "byte_len", "", ""};
+  {"source_region", "update_field", "update_val", "", ""};
+std::string heap_append2t::field_names[esbmct::num_type_fields] = 
+  {"source_heap", "heap_term", "", "",  ""};
+std::string heap_delete2t::field_names[esbmct::num_type_fields] = 
+  {"source_heap", "location", "",  "", ""};
+std::string heap_contain2t::field_names[esbmct::num_type_fields] = 
+  {"source_heap", "heap_term", "", "", ""};
 std::string isnan2t::field_names[esbmct::num_type_fields] =
   {"value", "", "", "", ""};
 std::string overflow2t::field_names[esbmct::num_type_fields] =

@@ -229,6 +229,7 @@ static inline guardt merge_state_guards(
     (!goto_state.guard.is_false() && !state.guard.is_false()) ||
     state.guard.disjunction_may_simplify(goto_state.guard))
   {
+    // return state.guard | goto_state.guard;
     state.guard |= goto_state.guard;
     return state.guard;
   }
@@ -280,6 +281,7 @@ void goto_symext::merge_gotos()
     }
 
     cur_state->guard = std::move(new_guard);
+    // cur_state->guard = merge_state_guards(goto_state, *cur_state);
   }
 
   // clean up to save some memory

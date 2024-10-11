@@ -15,9 +15,9 @@ typedef smt_convt *(solver_creator)(
   fp_convt **fp_api);
 
 // slhv added
-typedef smt_convt *(slhv_solver_creator)(
-  const optionst &options,
-  const namespacet &ns);
+// typedef smt_convt *(slhv_solver_creator)(
+//   const optionst &options,
+//   const namespacet &ns);
 
 smt_convt *create_solver(
   std::string solver_name,

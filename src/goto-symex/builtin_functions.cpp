@@ -110,16 +110,12 @@ expr2tc goto_symext::symex_mem(
   const expr2tc &lhs,
   const sideeffect2t &code)
 {
-  log_status("symex_mem start: ");
   if (is_nil_expr(lhs))
     return expr2tc(); // ignore
 
   // size
   type2tc type = code.alloctype;
   expr2tc size = code.size;
-  log_status("alloc size: ");
-  size->dump();
-  // TODO slhv: need to do the constant propagation here 
   bool size_is_one = false;
 
   if (is_nil_type(type))
@@ -129,11 +125,10 @@ expr2tc goto_symext::symex_mem(
     size_is_one = true;
   else
   {
-    cur_state->rename(size);
+    cur_state->rename(size); // rename will do constant propagation
     BigInt i;
     if (is_constant_int2t(size))
     {
-      log_status("is constant");
       uint64_t v = to_constant_int2t(size).value.to_uint64();
       if (v == 1)
         size_is_one = true;
@@ -145,8 +140,8 @@ expr2tc goto_symext::symex_mem(
   unsigned int &dynamic_counter = get_dynamic_counter();
   dynamic_counter++;
 
-  bool is_old_encoding = !options.get_bool_option("z3-slhv");
-  if (is_old_encoding) {
+  bool use_old_encoding = !options.get_bool_option("z3-slhv");
+  if (use_old_encoding) {
     symbolt symbol;
 
     symbol.name = "dynamic_" + i2string(dynamic_counter) +
@@ -232,7 +227,6 @@ expr2tc goto_symext::symex_mem(
 
     cur_state->rename(rhs);
     expr2tc rhs_copy(rhs);
-    log_status("symex assign  in symex_mem: lhs = &allocated_array[index0]");
     symex_assign(code_assign2tc(lhs, rhs), true);
 
     expr2tc ptr_obj = pointer_object2tc(pointer_type2(), ptr_rhs);
@@ -243,124 +237,44 @@ expr2tc goto_symext::symex_mem(
     return to_address_of2t(rhs_addrof).ptr_obj;
     
   } else {
-    log_status("create heap symbol for allocation");
-    unsigned int &dynamic_counter = get_dynamic_counter();
-    dynamic_counter++;
-
-    // value
+    // create a intheap symbol for heap region
     symbolt symbol;
     symbol.name = "dynamic_heap_"+ i2string(dynamic_counter);
-    
     symbol.id = std::string("symex_dynamic::") + (!is_malloc ?    "alloca::" : "") +
                 id2string(symbol.name);
     symbol.lvalue = true;
-
     symbol.type = typet(typet::t_intheap);
-    symbol.type.size(migrate_expr_back(size));
-
     symbol.type.dynamic(true);
     symbol.mode = "C";
-    log_status("new_context.add(symbol);");
     new_context.add(symbol);
 
-    type2tc heap_type = get_intheap_type();
-    expr2tc allocated_heap = symbol2tc(heap_type, symbol.id);
-    std::vector<expr2tc> pts;
-    expr2tc size_simplified;
-    if(!is_constant_int2t(size)) {
-      size_simplified = size.simplify();
-    } else {
-      size_simplified = size;
-    }
-    guardt alloc_guard = cur_state->guard;
-    // TODO SLHV: add size simplification later
-    if(!is_constant_int2t(size_simplified)) {
-      log_error("Currently does not support constant size");
-      assert(false);
-    }
-    log_status("dump alloc size: ");
-    size_simplified->dump();
-    constant_int2t constant_size = to_constant_int2t(size_simplified);
-    unsigned usize = constant_size.as_ulong();
-    log_status("Unsiged size: {}", usize);
+    expr2tc rhs_heap = symbol2tc(get_intheap_type(), symbol.id);
+    expr2tc rhs_region = create_heap_region(code, rhs_heap);
+    expr2tc rhs_base_loc = to_heap_region2t(rhs_region).source_location;
+    guardt rhs_guard = cur_state->guard;
+    
+    symex_assign(code_assign2tc(rhs_heap, rhs_region));
 
-    expr2tc alloc_base_addr = lhs;
-    expr2tc heaplet;
-    bool need_heap_assignment = false;
-    if(usize == 0) {
-      log_status("zero size");
-      // We can do nothing
-      expr2tc null_loc = constant_intloc2tc(get_intloc_type(), BigInt(0));
-
-      
-    } else if(usize == 1) {
-      log_status("single byte points_to");
-      need_heap_assignment = true;
-      expr2tc addr = alloc_base_addr;
-      expr2tc fresh_data_symbol =  sideeffect2tc(
-        get_int8_type(),
-        expr2tc(),
-        expr2tc(),
-        std::vector<expr2tc>(),
-        type2tc(),
-        sideeffect2t::nondet);
-      heaplet = points_to2tc(get_intheap_type(), addr, fresh_data_symbol, false);
-    } else {  
-      std::vector<expr2tc> pt_vec;
-      expr2tc first_addr = alloc_base_addr;
-      expr2tc first_fresh_data =  sideeffect2tc(
-        get_int8_type(),
-        expr2tc(),
-        expr2tc(),
-        std::vector<expr2tc>(),
-        type2tc(),
-        sideeffect2t::nondet);
-      expr2tc first_pt = points_to2tc(get_intheap_type(), first_addr, first_fresh_data, false);
-      pt_vec.push_back(first_pt);
-      for(unsigned i = 1; i < usize; i ++) {
-        expr2tc offset = constant_int2tc(int_type2(), BigInt(i));
-        expr2tc addr_i = locadd2tc(get_intloc_type(), first_addr, offset);
-        expr2tc fresh_data_i = sideeffect2tc(
-        get_int8_type(),
-        expr2tc(),
-        expr2tc(),
-        std::vector<expr2tc>(),
-        type2tc(),
-        sideeffect2t::nondet);
-        expr2tc pt_i = points_to2tc(get_intheap_type(), addr_i, fresh_data_i, false);
-        pt_vec.push_back(pt_i);
-      }
-
-      heaplet = uplus2tc(get_intheap_type(), pt_vec);
-      log_status("multi byte points_to");
-      need_heap_assignment = true;
-    }
-    expr2tc origin_base_addr( alloc_base_addr);
-    cur_state->rename(alloc_base_addr);
-    expr2tc alloc_base_addr_copy(alloc_base_addr);
-    if(need_heap_assignment) {
-      log_status("symex assign in symex_mem: allocated_heap = heaplet");
-      symex_assign(code_assign2tc(allocated_heap, heaplet));
-    }
-    log_status("create valueset base addr symbol and assign");
-    expr2tc base_value_symbol = symbol2tc(get_intloc_type(), to_symbol2t(origin_base_addr).get_symbol_name());
-    expr2tc base_pointer_region_object = pointer_with_region2tc(get_intloc_type(), base_value_symbol, allocated_heap);
-    symex_assign(code_assign2tc(origin_base_addr, typecast2tc(origin_base_addr->type, base_pointer_region_object)));
-
-    // TODO: modify the pointer object here, maybe to wrap the intloc symbol directly
-    expr2tc ptr_obj = pointer_object2tc(get_intloc_type(), alloc_base_addr);
-    track_new_pointer(ptr_obj, get_intheap_type(), size_simplified);
+    // only used for invalid pointer, link pointer variable and heap variable
+    track_new_pointer(
+      rhs_base_loc,
+      get_intheap_type(),
+      gen_ulong(to_intheap_type(rhs_region->type).total_bytes));
+    
+    symex_disj_heaps(rhs_heap);
+    
     dynamic_memory.emplace_back(
-      allocated_heap,
-      alloc_guard,
+      rhs_heap,
+      rhs_guard,
       !is_malloc,
-      symbol.name.as_string()
+      to_symbol2t(rhs_heap).get_symbol_name()
     );
+
+    cur_state->rename(rhs_heap);
+    symex_assign(code_assign2tc(lhs, location_of2tc(rhs_heap)));
 
     return expr2tc();
   }
-
-  
 }
 
 void goto_symext::track_new_pointer(
@@ -368,11 +282,11 @@ void goto_symext::track_new_pointer(
   const type2tc &new_type,
   const expr2tc &size)
 {
-  bool is_old_encoding = !options.get_bool_option("z3-slhv");
+  bool use_old_encoding = !options.get_bool_option("z3-slhv");
   // Also update all the accounting data.
 
   // Mark that object as being dynamic, in the __ESBMC_is_dynamic array
-  if(is_old_encoding) {
+  if(use_old_encoding) {
     type2tc sym_type = array_type2tc(get_bool_type(), expr2tc (), true);
     expr2tc sym = symbol2tc(sym_type, dyn_info_arr_name);
 
@@ -394,30 +308,27 @@ void goto_symext::track_new_pointer(
 
     symex_assign(code_assign2tc(sz_index_expr, object_size_exp), true);
   } else {
-    type2tc allocsize_heap_type = get_intheap_type();
-    allocsize_heap_type->dump();
-    expr2tc allocsize_symbol = symbol2tc(allocsize_heap_type, alloc_size_heap_name);
+    expr2tc allocsize_symbol = symbol2tc(get_intheap_type(), alloc_size_heap_name);
     // TODO SLHV: add non-constant size later
     assert(is_constant_int2t(size));
 
-    expr2tc updated_heap = heap_update2tc(allocsize_heap_type, allocsize_symbol, ptr_obj, size, 4);
+    expr2tc updated_heap =
+      heap_append2tc(allocsize_symbol, points_to2tc(ptr_obj, size));
     symex_assign(code_assign2tc(allocsize_symbol, updated_heap), true);
   }
 }
 
 void goto_symext::symex_free(const expr2tc &expr)
 {
-  log_status("xxxxxxx symex free");
+  log_debug("SLHV", "xxxxxxx symex free");
   const auto &code = static_cast<const code_expression_data &>(*expr);
 
   // Trigger 'free'-mode dereference of this pointer. Should generate various
   // dereference failure callbacks.
   expr2tc tmp = code.operand;
-  log_status("tmp before dereference FREE mode: ");
-  tmp->dump();
+  log_debug("SLHV", "tmp before dereference FREE mode: ");
+  if (messaget::state.modules.count("SLHV") > 0) tmp->dump();
   dereference(tmp, dereferencet::FREE);
-  log_status("tmp after dereference FREE mode:");
-  tmp->dump();
   // Don't rely on the output of dereference in free mode; instead fetch all
   // the internal dereference state for pointed at objects, and creates claims
   // that if pointed at, their offset is zero.
@@ -426,9 +337,10 @@ void goto_symext::symex_free(const expr2tc &expr)
 
   // Create temporary, dummy, dereference
   tmp = dereference2tc(get_uint8_type(), tmp);
-  log_status("tmp before dereference INTERNAL mode: ");
-  tmp->dump();
   dereference(tmp, dereferencet::INTERNAL);
+
+  bool use_old_encoding = !options.get_bool_option("z3-slhv");
+
   // Only add assertions to check pointer offset if pointer check is enabled
   if (!options.get_bool_option("no-pointer-check"))
   {
@@ -440,10 +352,6 @@ void goto_symext::symex_free(const expr2tc &expr)
 
     for (auto const &item : internal_deref_items)
     {
-      log_status("internal deref item: ");
-      item.object->dump();
-      log_status("offset: ");
-      item.offset->dump();
       guardt g = cur_state->guard;
       g.add(item.guard);
 
@@ -452,6 +360,8 @@ void goto_symext::symex_free(const expr2tc &expr)
       expr2tc eq = equality2tc(offset, gen_ulong(0));
       g.guard_expr(eq);
       claim(eq, "Operand of free must have zero pointer offset");
+
+      if (!use_old_encoding) break;
 
       // Check if we are not freeing an dynamic object allocated using alloca
       for (auto const &a : allocad)
@@ -479,8 +389,7 @@ void goto_symext::symex_free(const expr2tc &expr)
     }
   }
 
-  bool is_old_encoding = !options.get_bool_option("z3-slhv");
-  if(is_old_encoding){  
+  if(use_old_encoding){  
     // Clear the alloc bit.
     type2tc sym_type = array_type2tc(get_bool_type(), expr2tc(), true);
     expr2tc ptr_obj = pointer_object2tc(pointer_type2(), code.operand);
@@ -491,62 +400,34 @@ void goto_symext::symex_free(const expr2tc &expr)
     expr2tc falsity = gen_false_expr();
     symex_assign(code_assign2tc(valid_index_expr, falsity), true);
   } else {
-    bool is_definite_free = true;
-    for(auto const& item : internal_deref_items) {
-      expr2tc deref_object = item.object;
-      assert(is_pointer_with_region2tA(deref_object));
-      expr2tc simplified_offset = item.offset.simplify();
-      log_status("simplified offset: ");
-      simplified_offset->dump();
-      if(is_constant_int2t(simplified_offset)) {
-        const constant_int2t& const_offset = to_constant_int2t(simplified_offset);
-        BigInt val = const_offset.value;
-        int offsetint = val.to_uint64();
-        log_status("equal to 0: {}", offsetint == 0);
-        if(offsetint == 0) {
-          log_status("free target definite");
-          const pointer_with_region2t& pwr = to_pointer_with_region2t(item.object);
-          expr2tc reg = pwr.region;
-          expr2tc emp_heap = constant_intheap2tc(get_intheap_type(), true);
-          symex_assign(code_assign2tc(reg, emp_heap));
-          expr2tc alloc_size_heap_symbol = symbol2tc(get_intheap_type(), alloc_size_heap_name);
-          // clear the alloc size position value
-          expr2tc updated_heap = heap_update2tc(get_intheap_type(), alloc_size_heap_symbol, pwr.loc_ptr, constant_int2tc(get_int32_type(), BigInt(0)), 4);
-          symex_assign(code_assign2tc(alloc_size_heap_symbol, updated_heap));
-          return;
-        }
-      }
-    }
-    is_definite_free = false;
-    // Clear the alloc heapsize.
-    // expr2tc ptr_obj = dereference2tc(get_uint8_type(), code.operand);
-    if(!is_definite_free) {
-      expr2tc alloc_size_heap_symbol = symbol2tc(get_intheap_type(), alloc_size_heap_name);
-      expr2tc next_alloc_size_heap = alloc_size_heap_symbol;
-      for (auto const &item : internal_deref_items) {
-        // find which internal deref item is the freed one
-        // if not found, do nothing
-        expr2tc g = item.guard;
-        expr2tc deref_object = item.object;
-        assert(is_pointer_with_region2t(deref_object));
-        const pointer_with_region2t& pwr = to_pointer_with_region2t (deref_object);
-        log_status("loc_ptr: ");
-        pwr.loc_ptr->dump();
-        expr2tc offset = item.offset;
-        expr2tc eq = equality2tc(offset, gen_ulong(0));
-        g = and2tc(eq, g);
-        expr2tc curr_region = pwr.region;
-        log_status("curr region: ");
-        curr_region->dump();
-        code_assign2tc(curr_region, if2tc(get_intheap_type(), g, constant_intheap2tc(get_intheap_type(), true), curr_region));
-        expr2tc updated_heap = heap_update2tc(get_intheap_type(), alloc_size_heap_symbol, pwr.loc_ptr, constant_int2tc(get_int32_type(), BigInt(0)), 4);
-        next_alloc_size_heap = if2tc(get_intheap_type(), g, updated_heap, next_alloc_size_heap);
-      }
-      symex_assign(code_assign2tc(alloc_size_heap_symbol, next_alloc_size_heap));
-    }
-    
+    expr2tc free_ptr = code.operand;
+    dereference(free_ptr, dereferencet::RAW_READ);
 
+    expr2tc when = gen_false_expr();
+    for(auto const& item : internal_deref_items)
+    {
+      if (!is_intheap_type(item.object))
+      {
+        log_error("Wrong object to be freed");
+        item.object->dump();
+        abort();
+      }
+
+      // Maybe not ok to set emp for a freed object
+      guardt g; g.add(item.guard);
+      symex_assign(code_assign2tc(item.object, gen_emp()), false, g);
+
+      // collect guards for deleting heap alloc size
+      when = or2tc(when, item.guard);
+    }
+    // only used for invalid pointer
+    // delete the pointer in alloc_size heap
+    expr2tc alloc_size_heap = symbol2tc(get_intheap_type(), alloc_size_heap_name);
+    expr2tc new_heap = heap_delete2tc(alloc_size_heap, free_ptr);
+    guardt g; g.add(when);
+    symex_assign(code_assign2tc(alloc_size_heap, new_heap), false, g);
   }
+  log_debug("SLHV", "xxxxxxx symex free done");
 }
 
 void goto_symext::symex_printf(const expr2tc &lhs, expr2tc &rhs)
@@ -1907,4 +1788,212 @@ bool goto_symext::run_builtin(
   }
 
   return false;
+}
+
+// Builtin SLHV function
+expr2tc goto_symext::create_heap_region_loc(const expr2tc &expr)
+{
+  if (!is_symbol2t(expr))
+  {
+    log_error("Wrong symbol");
+    abort();
+  }
+  expr2tc l1_sym = expr;
+  cur_state->top().level1.get_ident_name(l1_sym);
+
+  symbolt loc_sym;
+  loc_sym.name =
+    id2string(to_symbol2t(l1_sym).get_symbol_name()) + std::string("_loc");
+  loc_sym.id = std::string("symex_location::") + id2string(loc_sym.name);
+  loc_sym.lvalue = true;
+  loc_sym.type = typet(typet::t_intloc);
+  loc_sym.mode = "C";
+  new_context.add(loc_sym);
+
+  expr2tc base_loc = symbol2tc(get_intloc_type(), loc_sym.id);
+  return base_loc;
+}
+
+type2tc goto_symext::create_heap_region_type(
+  const type2tc &type,
+  unsigned int bytes,
+  const expr2tc &loc)
+{
+  log_debug("SLHV", "Create heap region with type : ");
+  if (messaget::state.modules.count("SLHV") > 0) type->dump();
+
+  type2tc heap_type = get_intheap_type();
+  intheap_type2t &_heap_type = to_intheap_type(heap_type);
+  _heap_type.location = loc;
+  _heap_type.total_bytes = bytes;
+  _heap_type.is_region = true;
+
+  if (is_struct_type(type))
+  {
+    _heap_type.is_aligned = true;
+    _heap_type.total_bytes = bytes;
+    const struct_type2t &_type = to_struct_type(type);
+    _heap_type.field_types.clear();
+    const std::vector<type2tc> &inner_types =
+      _type.get_structure_members();
+    const std::vector<irep_idt> &inner_field_names =
+      _type.get_structure_member_names();
+    _heap_type.field_types.push_back(inner_types[0]);
+    for (unsigned int i = 1; i < inner_field_names.size(); i++)
+    {
+      if (has_prefix(inner_field_names[i], "anon"))
+        _heap_type.pads.push_back(inner_types[i]->get_width());
+      else
+      {  
+        _heap_type.field_types.push_back(inner_types[i]);
+        _heap_type.pads.push_back(0);
+      }
+    }
+    if (!has_prefix(inner_field_names.back(), "anon"))
+      _heap_type.pads.push_back(0);
+  }
+  else
+    _heap_type.field_types.push_back(empty_type2tc());
+
+  return heap_type;
+}
+
+expr2tc goto_symext::create_heap_region(
+  const sideeffect2t &effect, expr2tc &flag)
+{
+  type2tc type;
+  if (effect.kind == sideeffect2t::nondet)
+  {
+    // alloc a heap region in stack
+    type = effect.type;
+  }
+  else
+  {
+    // malloc a heap region
+    type = effect.alloctype;
+    if (is_nil_type(type)) type = char_type2();
+  }
+  
+  unsigned int bytes;
+  if (is_struct_type(type))
+  {
+    bytes = type_byte_size(type, &ns).to_uint64();
+  }
+  else
+  {
+    expr2tc op = effect.operand;
+    cur_state->rename(op);
+    do_simplify(op);
+    if (!is_constant_int2t(op))
+    {
+      log_error("Do not support dynamic size");
+      abort();
+    }
+    bytes = to_constant_int2t(op).value.to_uint64();
+  }
+
+  expr2tc base_loc = create_heap_region_loc(flag);
+  type2tc heap_type = create_heap_region_type(type, bytes, base_loc);
+
+  if (effect.kind == sideeffect2t::nondet)
+    to_intheap_type(heap_type).is_alloced = true;
+  flag->type = heap_type;
+
+  return heap_region2tc(heap_type, base_loc);
+}
+
+expr2tc goto_symext::create_constant_heap_region(
+  const constant_struct2t &effect,
+  expr2tc &flag)
+{
+  type2tc type = effect.type;
+  unsigned int bytes = type_byte_size(type, &ns).to_uint64();
+
+  expr2tc base_loc = create_heap_region_loc(flag);
+  type2tc heap_type = create_heap_region_type(type, bytes, base_loc);
+  to_intheap_type(heap_type).is_alloced = true;
+  flag->type = heap_type;
+
+  std::vector<expr2tc> members;
+  const struct_type2t &_type = to_struct_type(type);
+  const std::vector<irep_idt> &inner_field_names =
+    _type.get_structure_member_names();
+  for (unsigned int i = 0; i < inner_field_names.size(); i++)
+  {
+    if (!has_prefix(inner_field_names[i], "anon"))
+      members.push_back(effect.datatype_members[i]);
+  }
+
+  return constant_heap_region2tc(heap_type, members);
+}
+
+void goto_symext::symex_disj_heaps(const expr2tc &heap)
+{
+  if (!is_symbol2t(heap) || !is_intheap_type(heap))
+  {
+    log_error("Wrong heap region");
+    abort();
+  }
+
+  expr2tc l0_heap = heap;
+  cur_state->get_original_name(l0_heap);
+  expr2tc disj = disjh2tc(l0_heap);
+  
+  for (auto const& frame : cur_state->call_stack)
+    for (auto const &it : frame.local_heap_regions)
+      to_disjh2t(disj).do_disjh(it);
+
+  for (auto const &it : dynamic_memory)
+    to_disjh2t(disj).do_disjh(it.obj);
+  
+  if (to_disjh2t(disj).other_heaps.size() == 0)
+    return;
+
+  cur_state->rename(disj);
+  target->assumption(
+    cur_state->guard.as_expr(),
+    disj,
+    cur_state->source,
+    first_loop
+  );
+}
+
+void goto_symext::symex_stack_sideeffect(const expr2tc &lhs, const expr2tc &effect)
+{  
+  expr2tc new_lhs = lhs;
+  expr2tc new_rhs = effect;
+
+  if (is_sideeffect2t(effect))
+  {
+    const sideeffect2t &_effect = to_sideeffect2t(effect);
+
+    if (_effect.kind == sideeffect2t::nondet &&
+        !is_struct_type(_effect.type))
+      replace_nondet(new_rhs);
+    else
+      new_rhs = create_heap_region(to_sideeffect2t(effect), new_lhs);
+  }
+  else
+  {
+    // constan struct
+    const constant_struct2t &_struct = to_constant_struct2t(effect);
+    new_rhs = create_constant_heap_region(_struct, new_lhs);
+  }
+
+  symex_assign(code_assign2tc(new_lhs, new_rhs));
+
+  if (is_intheap_type(new_lhs->type))
+  {
+    const intheap_type2t &_type = to_intheap_type(new_lhs->type);
+
+    track_new_pointer(
+      _type.location,
+      get_intheap_type(),
+      gen_ulong(_type.total_bytes));
+      
+    symex_disj_heaps(new_lhs);
+
+    cur_state->get_original_name(new_lhs);
+    cur_state->top().local_heap_regions.push_back(new_lhs);
+  }
 }

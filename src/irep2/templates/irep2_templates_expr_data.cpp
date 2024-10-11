@@ -1,8 +1,6 @@
 #include <irep2/irep2_templates_expr.h>
 
 expr_typedefs1(constant_int, constant_int_data);
-expr_typedefs1(constant_intloc, constant_intloc_data);
-expr_typedefs2(constant_intheap, constant_intheap_data);
 expr_typedefs1(constant_fixedbv, constant_fixedbv_data);
 expr_typedefs1(constant_floatbv, constant_floatbv_data);
 expr_typedefs1(constant_struct, constant_datatype_data);
@@ -29,13 +27,6 @@ expr_typedefs4(byte_update, byte_update_data);
 expr_typedefs3(with, with_data);
 expr_typedefs2(member, member_data);
 expr_typedefs2(index, index_data);
-expr_typedefs3(points_to, points_to_data);
-expr_typedefs2(uplus, uplus_data);
-expr_typedefs2(locadd, locadd_data);
-expr_typedefs2(pointer_with_region, pointer_with_region_data);
-expr_typedefs3(heap_load, heap_load_data);
-expr_typedefs4(heap_update, heap_update_data);
-expr_typedefs3(heap_contains, heap_contains_data);
 expr_typedefs2(overflow_cast, overflow_cast_data);
 expr_typedefs3(dynamic_object, dynamic_object_data);
 expr_typedefs2(dereference, dereference_data);
@@ -62,3 +53,13 @@ expr_typedefs2(code_cpp_throw, code_cpp_throw_data);
 expr_typedefs2(code_cpp_throw_decl, code_cpp_throw_decl_data);
 expr_typedefs1(code_cpp_throw_decl_end, code_cpp_throw_decl_data);
 expr_typedefs3(extract, extract_data);
+
+
+expr_typedefs2(constant_intloc, constant_intloc_data);
+expr_typedefs1(constant_intheap, constant_intheap_data);
+expr_typedefs1(constant_heap_region, constant_datatype_data);
+expr_typedefs1(disjh, disjh_data);
+expr_typedefs2(points_to, points_to_data);
+expr_typedefs1(uplus, uplus_data);
+expr_typedefs2(locadd, locadd_data);
+expr_typedefs2(heap_region, heap_region_data);

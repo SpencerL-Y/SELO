@@ -1,0 +1,1 @@
+/usr/bin/c++ CMakeFiles/cpp_example.dir/example.cpp.o -o cpp_example  -Wl,-rpath,/usr/local/lib /usr/local/lib/libz3.so.4.12.2.0 

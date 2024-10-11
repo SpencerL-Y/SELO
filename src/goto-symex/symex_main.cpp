@@ -138,13 +138,20 @@ goto_symext::symex_resultt goto_symext::get_symex_result()
   return goto_symext::symex_resultt(target, total_claims, remaining_claims);
 }
 
-void goto_symext:: symex_step(reachability_treet &art)
+#include<iostream>
+
+void goto_symext::symex_step(reachability_treet &art)
 {
-  log_status("    ======= goto_symext symex_step");
+  log_debug(
+    "SLHV",
+    ">>>>>>>>>>>>>>>>>>>>>>>>>>>> SYMEX_STEP >>>>>>>>>>>>>>>>>>>>>>>>>>>>");
   assert(!cur_state->call_stack.empty());
 
   const goto_programt::instructiont &instruction = *cur_state->source.pc;
-  instruction.dump();
+
+  if (messaget::state.modules.count("SLHV") > 0)
+    instruction.dump();
+  
   // depth exceeded?
   {
     if (depth_limit != 0 && cur_state->num_instructions > depth_limit)
@@ -161,26 +168,30 @@ void goto_symext:: symex_step(reachability_treet &art)
   {
   case SKIP:
   case LOCATION:
-    log_status("    ======= goto symex: LOCATION");
     // really ignore
     cur_state->source.pc++;
     break;
 
   case END_FUNCTION:
-    log_status("    ======= goto symex: END_FUNCTION");
+    log_debug("SLHV", "    >>>>>>>> goto symex: END_FUNCTION");
+
     symex_end_of_function();
 
     // Potentially skip to run another function ptr target; if not,
     // continue
     if (!run_next_function_ptr_target(false))
       cur_state->source.pc++;
-    break;
 
+    break;
   case GOTO:
   {
-    log_status("    ======= goto symex: GOTO");
+    log_debug("SLHV", "    >>>>>>>> goto symex: GOTO");
     expr2tc tmp(instruction.guard);
+    if (options.get_bool_option("z3-slhv"))
+      adapt_to_slhv(tmp);
     replace_nondet(tmp);
+
+    if (messaget::state.modules.count("SLHV") > 0) tmp->dump();
 
     dereference(tmp, dereferencet::READ);
     replace_dynamic_allocation(tmp);
@@ -190,19 +201,19 @@ void goto_symext:: symex_step(reachability_treet &art)
   break;
 
   case ASSUME:
-    log_status("    ======= goto symex: ASSUME");
+    log_debug("SLHV", "    >>>>>>>> goto symex: ASSUME");
     symex_assume();
     cur_state->source.pc++;
     break;
 
   case ASSERT:
-    log_status("    ======= goto symex: ASSERT");
+    log_debug("SLHV", "    >>>>>>>> goto symex: ASSERT");
     symex_assert();
     cur_state->source.pc++;
     break;
 
   case RETURN:
-    log_status("    ======= goto symex: RETURN");
+    log_debug("SLHV", "    >>>>>>>> goto symex: RETURN");
     if (!cur_state->guard.is_false())
     {
       expr2tc thecode = instruction.code, assign;
@@ -211,6 +222,9 @@ void goto_symext:: symex_step(reachability_treet &art)
         goto_symext::symex_assign(assign);
       }
 
+      if (options.get_bool_option("z3-slhv"))
+        adapt_to_slhv(thecode);
+
       symex_return(thecode);
     }
 
@@ -218,7 +232,7 @@ void goto_symext:: symex_step(reachability_treet &art)
     break;
 
   case ASSIGN:
-    log_status("    ======= goto symex: ASSIGN");
+    log_debug("SLHV", "    >>>>>>>> goto symex: ASSIGN");
     if (!cur_state->guard.is_false())
     {
       code_assign2t deref_code = to_code_assign2t(instruction.code); // copy
@@ -252,11 +266,17 @@ void goto_symext:: symex_step(reachability_treet &art)
 
   case FUNCTION_CALL:
   {
-    log_status("    ======= goto symex: FUNCTION_CALL");
+    log_debug("SLHV", "    >>>>>>>> goto symex: FUNCTION_CALL");
     expr2tc deref_code = instruction.code;
+
+    if (options.get_bool_option("z3-slhv"))
+      adapt_to_slhv(deref_code);
+
     replace_nondet(deref_code);
 
     code_function_call2t &call = to_code_function_call2t(deref_code);
+    
+    if (messaget::state.modules.count("SLHV") > 0) call.dump();
 
     if (!is_nil_expr(call.ret))
     {
@@ -318,33 +338,29 @@ void goto_symext:: symex_step(reachability_treet &art)
   break;
 
   case DECL:
-    log_status("    ======= goto symex: DECL");
     if (!cur_state->guard.is_false())
       symex_decl(instruction.code);
     cur_state->source.pc++;
     break;
 
   case DEAD:
-    log_status("    ======= goto symex: DEAD");
     if (!cur_state->guard.is_false())
       symex_dead(instruction.code);
     cur_state->source.pc++;
     break;
 
   case OTHER:
-    log_status("    ======= goto symex: OTHER");
+    log_debug("SLHV", "    >>>>>>>> goto symex: OTHER");
     if (!cur_state->guard.is_false())
       symex_other(instruction.code);
     cur_state->source.pc++;
     break;
 
   case CATCH:
-    log_status("    ======= goto symex: CATCH");
     symex_catch();
     break;
 
   case THROW:
-    log_status("    ======= goto symex: THROW");
     if (!cur_state->guard.is_false())
     {
       if (symex_throw())
@@ -357,13 +373,11 @@ void goto_symext:: symex_step(reachability_treet &art)
     break;
 
   case THROW_DECL:
-    log_status("    ======= goto symex: THROW DECL");
     symex_throw_decl();
     cur_state->source.pc++;
     break;
 
   case THROW_DECL_END:
-    log_status("    ======= goto symex: THROW DECL END");
     // When we reach THROW_DECL_END, we must clear any throw_decl
     if (stack_catch.size())
     {
@@ -383,7 +397,9 @@ void goto_symext:: symex_step(reachability_treet &art)
       fmt::underlying(instruction.type));
     abort();
   }
-
+  log_debug(
+    "SLHV",
+    "<<<<<<<<<<<<<<<<<<<<<<<<<<<< SYMEX_STEP <<<<<<<<<<<<<<<<<<<<<<<<<<<<");
 }
 
 void goto_symext::symex_assume()
@@ -392,6 +408,9 @@ void goto_symext::symex_assume()
     return;
 
   expr2tc cond = cur_state->source.pc->guard;
+  
+  if (options.get_bool_option("z3-slhv"))
+    adapt_to_slhv(cond);
 
   replace_nondet(cond);
   dereference(cond, dereferencet::READ);
@@ -417,6 +436,9 @@ void goto_symext::symex_assert()
   const goto_programt::instructiont &instruction = *cur_state->source.pc;
 
   expr2tc tmp = instruction.guard;
+  if (options.get_bool_option("z3-slhv"))
+    adapt_to_slhv(tmp);
+
   replace_nondet(tmp);
 
   intrinsic_races_check_dereference(tmp);
@@ -1168,11 +1190,12 @@ void goto_symext::add_memory_leak_checks()
         return is_any ? is_any : gen_false_expr();
       };
   }
-  bool is_old_encoding = !options.get_bool_option("z3-slhv");
-  if(is_old_encoding) {
+  bool use_old_encoding = !options.get_bool_option("z3-slhv");
+  if(use_old_encoding)
+  {
     for (auto const &it : dynamic_memory)
     {
-      // Don't check memory leak if the object is automatically   deallocated
+      // Don't check memory leak if the object is automatically deallocated
       if (it.auto_deallocd)
       {
         log_debug(
@@ -1180,44 +1203,48 @@ void goto_symext::add_memory_leak_checks()
         continue;
       }
 
-        // Assert that the allocated object was freed.
-        expr2tc deallocd = deallocated_obj2tc(it.obj);
+      // Assert that the allocated object was freed.
+      expr2tc deallocd = deallocated_obj2tc(it.obj);
 
-        // For each dynamic object we generate a condition checking
-        // whether it has been deallocated.
-        expr2tc eq = equality2tc(deallocd, gen_true_expr());
+      // For each dynamic object we generate a condition checking
+      // whether it has been deallocated.
+      expr2tc eq = equality2tc(deallocd, gen_true_expr());
 
-        expr2tc when = it.alloc_guard.as_expr();
+      expr2tc when = it.alloc_guard.as_expr();
 
-        if (no_reachable_memleak)
-        {
-          expr2tc obj = get_base_object(it.obj);
-          expr2tc adr = obj;
-          if (!is_if2t(obj))
-            adr = address_of2tc(obj->type, obj);
-          expr2tc targeted = maybe_global_target(adr);
-          when = and2tc(when, not2tc(targeted));
-        }
+      if (no_reachable_memleak)
+      {
+        expr2tc obj = get_base_object(it.obj);
+        expr2tc adr = obj;
+        if (!is_if2t(obj))
+          adr = address_of2tc(obj->type, obj);
+        expr2tc targeted = maybe_global_target(adr);
+        when = and2tc(when, not2tc(targeted));
+      }
 
-        // Additionally, we need to make sure that we check the above     condition
-        // only for dynamic objects that were created from successful
-        // memory allocations. This is because we always create a   dynamic  object for
-        // each dynamic allocation, and the allocation success status
-        // is described by a separate "allocation_guard".
-        // (see "symex_mem" method in "goto-symex/builtin_functions.  cpp").
-        expr2tc cond = implies2tc(when, eq);
+      // Additionally, we need to make sure that we check the above     condition
+      // only for dynamic objects that were created from successful
+      // memory allocations. This is because we always create a   dynamic  object for
+      // each dynamic allocation, and the allocation success status
+      // is described by a separate "allocation_guard".
+      // (see "symex_mem" method in "goto-symex/builtin_functions.  cpp").
+      expr2tc cond = implies2tc(when, eq);
 
-        replace_dynamic_allocation(cond);
-        cur_state->rename(cond);
-        claim(
-        cond,
-        "dereference failure: forgotten memory: " + get_pretty_name(it.name));
-      } 
-  } else {
-    log_status("memleak encoding");
-    for (auto const &it : dynamic_memory){
-      log_status("allocated object {}: ",  it.name );
-      expr2tc deallocated = notequal2tc(it.obj, constant_intheap2tc(get_intheap_type(), true));
+      replace_dynamic_allocation(cond);
+      cur_state->rename(cond);
+      claim(
+      cond,
+      "dereference failure: forgotten memory: " + get_pretty_name(it.name));
+    } 
+  }
+  else
+  {
+    for (auto const &it : dynamic_memory)
+    {
+      // Don't check memory leak if the object is automatically deallocated
+      if (it.auto_deallocd) continue;
+
+      expr2tc deallocated = equality2tc(it.obj, gen_emp());
       expr2tc when = it.alloc_guard.as_expr();
       expr2tc cond = implies2tc(when, deallocated);
       cur_state->rename(cond);
@@ -1225,7 +1252,6 @@ void goto_symext::add_memory_leak_checks()
         cond,
         "dereference failure, forgotten memory: " + get_pretty_name(it.name)
       );
-
     }
   }
 }

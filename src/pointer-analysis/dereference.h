@@ -152,6 +152,31 @@ public:
    *  @return True if variable is alive
    *  */
   virtual bool is_live_variable(const expr2tc &sym) = 0;
+
+
+  virtual void update_heap_type(const intheap_type2t &type)
+  {
+    log_error("Do not support");
+    abort();
+  }
+
+  virtual void update_heap_type_rec(expr2tc &expr, const intheap_type2t &type)
+  {
+    log_error("Do not support");
+    abort();
+  }
+
+  virtual std::string get_nondet_id(std::string prefix = "")
+  {
+    log_error("Do not support");
+    abort();
+  }
+
+  virtual irep_idt get_alloc_size_heap_name()
+  {
+    log_error("Do not support");
+    abort();
+  }
 };
 
 /** Class containing expression dereference logic.
@@ -197,7 +222,8 @@ public:
       WRITE,    /// The result of the expression will be written to.
       FREE,     /// The referred to object will be freed.
       INTERNAL, /// Calling code only wants the internal value-set data.
-    } op : 2;
+      RAW_READ, /// The dereference will not generate assertions.
+    } op : 3;
 
     /**
      * Whether the access is performed in a non-standard, known-unaligned way
@@ -230,12 +256,18 @@ public:
     {
       return m.op == INTERNAL;
     }
+
+    friend bool is_raw_read(const modet &m)
+    {
+      return m.op == RAW_READ;
+    }
   };
 
   static const constexpr modet READ = {modet::READ, false};
   static const constexpr modet WRITE = {modet::WRITE, false};
   static const constexpr modet FREE = {modet::FREE, false};
   static const constexpr modet INTERNAL = {modet::INTERNAL, false};
+  static const constexpr modet RAW_READ = {modet::RAW_READ, false};
 
   /** Take an expression and dereference it.
    *  This will descend through the whole of the expression given, and
@@ -257,7 +289,8 @@ public:
     const type2tc &type,
     const guardt &guard,
     modet mode,
-    const expr2tc &extra_offset);
+    const expr2tc &extra_offset,
+    const type2tc &deref_type = type2tc());
 
   /** Does the given expression have a dereference in it somewhere?
    *  @param expr The expression to check for existance of a dereference.
@@ -403,7 +436,6 @@ private:
     const type2tc &type,
     const guardt &guard);
   void valid_check(const expr2tc &expr, const guardt &guard, modet mode);
-  void valid_check_slhv(const expr2tc &expr, const guardt &guard, modet mode);
   std::vector<expr2tc> extract_bytes(
     const expr2tc &object,
     unsigned int bytes,
@@ -438,12 +470,16 @@ private:
     const type2tc &type,
     const guardt &guard,
     modet mode);
-  void check_pointer_with_region_access(
+  
+  // Offset is in word level(parameter) and alignment is
+  // in byte level. Alignment is in byte level(not used).
+  void check_heap_region_access(
     const expr2tc &value,
     const expr2tc &offset,
     const type2tc &type,
     const guardt &guard,
     modet mode);
+  
   void
   check_alignment(BigInt minwidth, const expr2tc &offset, const guardt &guard);
   unsigned int static compute_num_bytes_to_extract(
@@ -462,7 +498,11 @@ public:
     const guardt &guard,
     modet mode,
     unsigned long alignment = 0);
-  void build_reference_slhv(
+
+  // SLHV does not have references in symbolic execution.
+  // Offset is in word level(parameter) and alignment is
+  // in byte level. Alignment is in byte level(not used).
+  void build_deref_slhv(
     expr2tc &value,
     const expr2tc &offset,
     const type2tc &type,
@@ -533,6 +573,9 @@ private:
     const guardt &guard,
     modet mode,
     unsigned long alignment = 0);
+
+  // SLHV - set intheap type
+  void set_intheap_type(expr2tc &heap_region, const type2tc &ty);
 
 public:
   void set_block_assertions(void)

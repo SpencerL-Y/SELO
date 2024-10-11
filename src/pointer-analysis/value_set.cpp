@@ -212,11 +212,8 @@ void value_sett::get_value_set_rec(
   const type2tc &original_type,
   bool under_deref) const
 {
-  log_status("get value set rec for: ");
-  expr->dump();
   if (is_unknown2t(expr) || is_invalid2t(expr))
   {
-    log_status("is unknown expr or invalid expr");
     // Unknown / invalid exprs mean we just point at something unknown (and
     // potentially invalid).
     insert(dest, unknown2tc(original_type), BigInt(0));
@@ -301,7 +298,6 @@ void value_sett::get_value_set_rec(
     // of things it refers to, rather than the value set (of things it points
     // to).
     const address_of2t &addrof = to_address_of2t(expr);
-    log_status("get address of reference set");
     get_reference_set(addrof.ptr_obj, dest);
     return;
   }
@@ -361,7 +357,6 @@ void value_sett::get_value_set_rec(
 
   if (is_typecast2t(expr))
   {
-    log_status("get typecast value set");
     // Push straight through typecasts.
     const typecast2t &cast = to_typecast2t(expr);
     get_value_set_rec(cast.from, dest, suffix, original_type);
@@ -519,7 +514,6 @@ void value_sett::get_value_set_rec(
 
   if (is_symbol2t(expr))
   {
-    log_status("get value for symbol");
     // This is a symbol, and if it's a pointer then this expression might
     // evalutate to what it points at. So, return this symbols value set.
     const symbol2t &sym = to_symbol2t(expr);
@@ -537,12 +531,10 @@ void value_sett::get_value_set_rec(
       return;
     }
 
-
     // Look up this symbol, with the given suffix to distinguish any arrays or
     // members we've picked out of it at a higher level.
     valuest::const_iterator v_it = values.find(sym.get_symbol_name() + suffix);
-    log_status("ssssss symbol lookup name: {}", sym.get_symbol_name() + suffix);
-
+    log_debug("SLHV", "-------------> symbol lookup name: {}", sym.get_symbol_name() + suffix);
 
     if (sym.rlevel == symbol2t::renaming_level::level1_global)
       assert(sym.level1_num == 0);
@@ -559,15 +551,112 @@ void value_sett::get_value_set_rec(
     if (v_it != values.end())
     {
       make_union(dest, v_it->second.object_map);
+      log_debug("SLHV", "points to somthing");
+      if (messaget::state.modules.count("SLHV") > 0)
+      {
+        int i = 0;
+        for (auto obj : dest)
+        {
+          log_debug("SLHV", "item - {} : ", i++);
+          object_numbering[obj.first]->dump();
+        }
+      }
       return;
     }
+    else
+      log_debug("SLHV", "nothing");
   }
+
   // SLHV:
-  if(is_pointer_with_region2t(expr)) {
-    log_status("get value rec: is pointer with region2t");
-    assert(is_intloc_type(expr));
-    expr2tc new_loc_object = expr;
-    insert(dest, new_loc_object, BigInt(0));
+
+
+  if (is_heap_update2t(expr) || is_points_to2t(expr) ||
+      is_heap_region2t(expr) || is_constant_intheap2t(expr) ||
+      is_heap_append2t(expr) || is_heap_delete2t(expr))
+  {
+    log_error("Do not support get_value_set_rec");
+    expr->dump();
+    abort();
+  }
+
+  if (is_constant_intloc2t(expr) )
+  {
+    expr2tc null_obj = null_object2tc(get_intloc_type());
+    insert(dest, null_obj, BigInt(0));
+    return;
+  }
+
+  if (is_locadd2t(expr))
+  {
+    const locadd2t &locadd = to_locadd2t(expr);
+
+    bool is_const = false;
+    BigInt off;
+    if (is_constant_int2t(locadd.offset))
+    {
+      off = to_constant_int2t(locadd.offset).value;
+      is_const = true;
+    }
+
+    object_mapt pointer_expr_set;
+    get_value_set_rec(locadd.location, pointer_expr_set, suffix, original_type);
+
+    for (const auto &it : pointer_expr_set)
+    {
+      objectt object = it.second;
+
+      // TODO : Do more analysis
+
+      if (is_const && object.offset_is_set)
+        object.offset += off;
+      else if (!is_const)
+        object.offset_is_set = false;
+
+      // Once updated, store object reference into destination map.
+      insert(dest, it.first, object);
+    }
+
+    return;
+  }
+
+  if (is_location_of2t(expr))
+  {
+    // TODO : maybe we should introduce reference
+    const location_of2t &locof = to_location_of2t(expr);
+    expr2tc new_obj = locof.source_heap;
+    BigInt off(0);
+
+    if (is_field_of2t(locof.source_heap))
+    {
+      const field_of2t &fieldof = to_field_of2t(locof.source_heap);
+      new_obj = fieldof.source_heap;
+      off = to_constant_int2t(fieldof.operand).value;
+    }
+
+    insert(dest, new_obj, off);
+    return;
+  }
+
+  if (is_field_of2t(expr))
+  {
+    const field_of2t &field_of = to_field_of2t(expr);
+    const expr2tc &heap_region = field_of.source_heap;
+    expr2tc field = field_of.operand;
+
+    if (!is_constant_int2t(field))
+    {
+      log_error("Do not support dynamic offset yet");
+      abort();
+    }
+
+    unsigned int _field = to_constant_int2t(field).value.to_uint64();
+
+    get_value_set_rec(
+      heap_region,
+      dest,
+      "::field::" + std::to_string(_field) + "::" + suffix,
+      original_type
+    );
     return;
   }
 
@@ -749,7 +838,6 @@ void value_sett::get_value_set_rec(
     get_expr_id(expr),
     get_type_id(expr->type));
   expr2tc tmp = unknown2tc(original_type);
-  expr->dump();
   insert(dest, tmp, BigInt(0));
 }
 
@@ -815,7 +903,6 @@ void value_sett::get_reference_set_rec(const expr2tc &expr, object_mapt &dest)
     if (is_symbol2t(expr))
     {
       const symbolt *sym = ns.lookup(to_symbol2t(expr).thename);
-      log_status("get reference set rec is_symbol: {}", to_symbol2t(expr).thename);
       assert(sym);
       const irept &a = sym->type.find("alignment");
       if (a.is_not_nil())
@@ -844,7 +931,6 @@ void value_sett::get_reference_set_rec(const expr2tc &expr, object_mapt &dest)
 
   if (is_index2t(expr))
   {
-    log_status("get reference set is_index");
     // This index may be dereferencing a pointer. So, get the reference set of
     // the source value, and store a reference to all those things.
     const index2t &index = to_index2t(expr);
@@ -880,8 +966,6 @@ void value_sett::get_reference_set_rec(const expr2tc &expr, object_mapt &dest)
     for (const auto &a_it : array_references)
     {
       expr2tc object = object_numbering[a_it.first];
-      log_status("print object");
-      object->dump();
 
       if (is_unknown2t(object))
       {
@@ -1046,7 +1130,6 @@ void value_sett::assign(
 
   if (is_if2t(rhs))
   {
-    log_status("value set assign: rhs is_if2t");
     // If the rhs could be either side of this if, perform the assigment of
     // either side. In case it refers to itself, assign to a temporary first,
     // then assign back.
@@ -1071,7 +1154,6 @@ void value_sett::assign(
 
   if (is_struct_type(lhs_type) || is_union_type(lhs_type))
   {
-    log_status("value set assign: lhs struct or union");
     if (lhs_type->type_id == rhs->type->type_id)
     {
       /* either both union or both struct */
@@ -1133,7 +1215,6 @@ void value_sett::assign(
 
   if (is_array_type(lhs_type))
   {
-    log_status("value set assign: lhs is_array_type");
     const array_type2t &arr_type = to_array_type(lhs_type);
     expr2tc unknown = unknown2tc(
       arr_type.array_size ? arr_type.array_size->type : index_type2());
@@ -1180,9 +1261,88 @@ void value_sett::assign(
     return;
   }
 
+  if (is_intheap_type(lhs_type))
+  {
+    // Heap varialbes perform as array variable.
+    // We only update its fields that are pointers
+
+    if (is_constant_heap_region2t(rhs))
+    {
+      const constant_heap_region2t &const_reg = to_constant_heap_region2t(rhs);
+      for (unsigned int i = 0; i < const_reg.datatype_members.size(); i++)
+      {
+        expr2tc rhs_field = const_reg.datatype_members[i];
+        expr2tc lhs_field =
+          field_of2tc(rhs_field->type, lhs, gen_ulong(i));
+
+        assign(lhs_field, rhs_field, false);
+      }
+    }
+    else if ((is_heap_update2t(rhs) || is_symbol2t(rhs))
+        && to_intheap_type(rhs->type).is_region)
+    {
+      unsigned int _field = -1;
+      expr2tc rhs_heap;
+      type2tc rhs_type;
+
+      if (is_heap_update2t(rhs))
+      {
+        const heap_update2t &heap_upd = to_heap_update2t(rhs);
+        rhs_heap = heap_upd.source_heap;
+        rhs_type = rhs_heap->type;
+        const expr2tc &upd_field = heap_upd.operand_1;
+        const expr2tc &upd_value = heap_upd.operand_2;
+
+        if (!is_constant_int2t(upd_field))
+        {
+          log_error("Do not support dynamic field");
+          abort();
+        }
+
+        _field = to_constant_int2t(upd_field).value.to_uint64();
+        const intheap_type2t &_type = to_intheap_type(rhs_type);
+        expr2tc lhs_field =
+          field_of2tc(_type.field_types[_field], rhs_heap, upd_field);
+
+        assign(lhs_field, upd_value, false);
+      }
+      else if (is_symbol2t(rhs))
+      {
+        rhs_heap = rhs;
+        rhs_type = rhs->type;
+      }
+      else
+      {
+        log_error("Some wrong");
+        abort();
+      }
+
+      const intheap_type2t &_lhs_type = to_intheap_type(lhs->type);
+      const intheap_type2t &_rhs_type = to_intheap_type(rhs_type);
+
+      // copy other fields
+      for (unsigned int i = 0; i < _lhs_type.field_types.size(); i++)
+      {
+        if (i == _field) continue;
+        if (_lhs_type.field_types[i] != _rhs_type.field_types[i])
+        {
+          log_error("Type does not match!!!");
+          abort();
+        }
+
+        expr2tc lhs_field =
+          field_of2tc(_lhs_type.field_types[i], lhs, gen_ulong(i));
+        expr2tc rhs_field =
+          field_of2tc(_rhs_type.field_types[i], rhs_heap, gen_ulong(i));
+
+        assign(lhs_field, rhs_field, false);
+      }
+    }
+    return;
+  }
+
   // basic type
   object_mapt values_rhs;
-  log_status("get rhs value set");
   get_value_set(rhs, values_rhs);
   assign_rec(lhs, values_rhs, "", add_to_sets);
 }
@@ -1330,6 +1490,29 @@ void value_sett::assign_rec(
       to_member2t(lhs).source_value,
       values_rhs,
       "." + component_name + suffix,
+      add_to_sets);
+  }
+  else if (is_field_of2t(lhs))
+  {
+    const field_of2t &field_of = to_field_of2t(lhs);
+
+    expr2tc field = field_of.operand;
+    if (!is_constant_int2t(field))
+    {
+      log_error("Do not support dynamic offset yet");
+      abort();
+    }
+
+    unsigned int _field = to_constant_int2t(field).value.to_uint64();
+    const expr2tc &heap_region = field_of.source_heap;
+    const intheap_type2t &_type = to_intheap_type(heap_region->type);
+
+    // TODO : fix
+    // use location to encoding field
+    assign_rec(
+      heap_region,
+      values_rhs,
+      "::field::" + std::to_string(_field) + "::" + suffix,
       add_to_sets);
   }
   else if (

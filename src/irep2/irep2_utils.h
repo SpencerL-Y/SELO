@@ -189,6 +189,21 @@ inline bool is_comp_expr(const expr2tc &expr)
          expr->expr_id == expr2t::notequal_id;
 }
 
+inline bool is_slhv_expr(const expr2tc &expr)
+{
+  return is_constant_intheap2t(expr) ||
+         is_constant_intloc2t(expr) ||
+         is_points_to2t(expr) ||
+         is_locadd2t(expr) ||
+         is_heap_append2t(expr) ||
+         is_heap_contain2t(expr) ||
+         is_heap_delete2t(expr) ||
+         is_heap_region2t(expr) ||
+         is_heap_update2t(expr) ||
+         is_location_of2t(expr) ||
+         is_field_of2t(expr);
+}
+
 /** Test if expr is true. First checks whether the expr is a constant bool, and
  *  then whether it's true-valued. If these are both true, return true,
  *  otherwise return false.
@@ -271,15 +286,19 @@ inline expr2tc gen_slong(signed long val)
   return constant_int2tc(get_int_type(config.ansi_c.word_size), BigInt(val));
 }
 
+inline expr2tc gen_intloc_constant(unsigned long val)
+{
+  return constant_intloc2tc(BigInt(val), false);
+}
+
+inline expr2tc gen_nil()
+{
+  return constant_intloc2tc(BigInt(0), true);
+}
 
 inline expr2tc gen_emp() 
 {
-  return constant_intheap2tc(get_intheap_type(), true);
-}
-
-inline expr2tc gen_intloc_constant(unsigned long val)
-{
-  return constant_intloc2tc(get_intloc_type(), BigInt(val));
+  return constant_intheap2tc(expr2tc());
 }
 
 inline const type2tc &get_array_subtype(const type2tc &type)

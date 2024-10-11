@@ -206,6 +206,13 @@ guardt &operator|=(guardt &g1, const guardt &g2)
   return g1;
 }
 
+guardt operator|(const guardt &g1, const guardt &g2)
+{
+  guardt new_g = g1;
+  new_g |= g2;
+  return new_g;
+}
+
 void guardt::dump() const
 {
   for (auto const &it : guard_list)

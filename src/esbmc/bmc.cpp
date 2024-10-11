@@ -40,6 +40,7 @@
 #include <util/cache.h>
 #include <atomic>
 #include <goto-symex/witnesses.h>
+#include <iostream>
 
 bmct::bmct(goto_functionst &funcs, optionst &opts, contextt &_context)
   : options(opts), context(_context), ns(context)
@@ -141,11 +142,12 @@ void bmct::generate_smt_from_equation(
   smt_convt &smt_conv,
   symex_target_equationt &eq)
 {
-  log_status("generate smt from equation");
   std::string logic;
 
-  if (!options.get_bool_option("int-encoding"))
-  {
+  if (options.get_bool_option("z3-slhv")) {
+    logic = "SLHV";
+  }
+  else if (!options.get_bool_option("int-encoding")) {
     logic = "bit-vector";
     logic += (!config.ansi_c.use_fixed_for_float) ? "/floating-point " : " ";
     logic += "arithmetic";
@@ -154,7 +156,6 @@ void bmct::generate_smt_from_equation(
     logic = "integer/real arithmetic";
 
   log_status("Encoding remaining VCC(s) using {}", logic);
-  log_status("Equations: ");
   fine_timet encode_start = current_time();
   eq.convert(smt_conv);
   fine_timet encode_stop = current_time();
@@ -162,18 +163,9 @@ void bmct::generate_smt_from_equation(
     "Encoding to solver time: {}s", time2string(encode_stop - encode_start));
 }
 
-std::string bmct::generate_slhv_smt_from_equation(z3_slhv_convt& slhv_converter, symex_target_equationt &eq) {
-  log_status("generate slhv formula from equation");
-  std::string result;
-  eq.convert2slhv(slhv_converter);
-  log_status("here");
-  return result;
-}
-
 smt_convt::resultt
 bmct::run_decision_procedure(smt_convt &smt_conv, symex_target_equationt &eq)
 {
-  log_status("run decision procedure");
   generate_smt_from_equation(smt_conv, eq);
 
   if (
@@ -197,8 +189,6 @@ bmct::run_decision_procedure(smt_convt &smt_conv, symex_target_equationt &eq)
 
   return dec_result;
 }
-
-
 
 void bmct::report_success()
 {
@@ -631,8 +621,11 @@ smt_convt::resultt bmct::run_thread(std::shared_ptr<symex_target_equationt> &eq)
 
     if (options.get_bool_option("show-vcc"))
     {
-      show_vcc(*eq);
-      return smt_convt::P_SMTLIB;
+      // show_vcc(*eq);
+      // return smt_convt::P_SMTLIB;
+      const std::string &output_file = options.get_option("output");
+      if (!output_file.empty() && output_file != "-")
+        truncate(output_file.c_str(), 0);
     }
 
     if (result.remaining_claims == 0)
@@ -648,27 +641,18 @@ smt_convt::resultt bmct::run_thread(std::shared_ptr<symex_target_equationt> &eq)
       return smt_convt::P_UNSATISFIABLE;
     }
 
-    if (!options.get_bool_option("smt-during-symex") && !options.get_bool_option("z3-slhv"))
+    if (!options.get_bool_option("smt-during-symex"))
     {
       runtime_solver =
         std::unique_ptr<smt_convt>(create_solver("", ns, options));
-      log_status("smt_convt created");
-    }
-
-    if (!options.get_bool_option("smt-during-symex") && options.get_bool_option("z3-slhv")) {
-
-      log_status("enter branch dealing with slhv encoding");
-      z3_slhv_convt* slhv_conv = new z3_slhv_convt(ns, options);
-      slhv_converter = std::unique_ptr<z3_slhv_convt>(slhv_conv);
-      ;
-      std::string smt_str = generate_slhv_smt_from_equation(*slhv_converter, *eq);
-      return smt_convt::P_SMTLIB;
     }
 
     if (
       options.get_bool_option("multi-property") &&
       options.get_bool_option("base-case"))
       return multi_property_check(*eq, result.remaining_claims);
+
+    if (options.get_bool_option("show-vcc")) show_vcc(*eq);
 
     return run_decision_procedure(*runtime_solver, *eq);
   }
@@ -749,6 +733,7 @@ smt_convt::resultt bmct::multi_property_check(
                        &is_fail_fast,
                        &fail_fast_limit,
                        &fail_fast_cnt](const size_t &i) {
+                        
     //"multi-fail-fast n": stop after first n SATs found.
     if (is_fail_fast && fail_fast_cnt >= fail_fast_limit)
       return;
@@ -784,27 +769,74 @@ smt_convt::resultt bmct::multi_property_check(
 
     // Slice
     symex_slicet slicer(options);
-    slicer.run(local_eq.SSA_steps);
+    if (!options.get_bool_option("no-slice"))
+      slicer.run(local_eq.SSA_steps);
+
+    if (options.get_bool_option("show-vcc"))
+      show_vcc(local_eq);
 
     // Initialize a solver
     std::unique_ptr<smt_convt> runtime_solver(create_solver("", ns, options));
     // Save current instance
     generate_smt_from_equation(*runtime_solver, local_eq);
 
-    log_status(
-      "Solving claim '{}' with solver {}",
-      claim.claim_msg,
-      runtime_solver->solver_text());
-
     fine_timet sat_start = current_time();
     smt_convt::resultt result = runtime_solver->dec_solve();
     fine_timet sat_stop = current_time();
+
+    log_status(
+      "Solving claim {} with solver {}",
+        i, runtime_solver->solver_text());
     log_status(
       "Runtime decision procedure: {}s", time2string(sat_stop - sat_start));
+    
+    locationt location;
+    std::string comment;
+    for (auto it = local_eq.SSA_steps.begin();
+        it != local_eq.SSA_steps.end();
+        it++)
+      if (it->is_assert() && !it->ignore)
+      {
+        location = it->source.pc->location;
+        comment = it->comment;
+        break;
+      }
+
+    std::string property;
+    if (comment.find("invalid free") != std::string::npos ||
+        comment.find("invalid pointer freed") != std::string::npos ||
+        comment.find("Operand of free must have zero pointer offset") !=
+          std::string::npos)
+      property = "INVALID_FREE";
+    else if (comment.find("forgotten memory") != std::string::npos)
+      property = "MEMORY_LEAK";
+    else
+      property = "INVALID_DEREF";
+  
+    log_status(
+      "--------------------------------- Result -----------------------------------");
+    log_status("Location: {}", location);
+    log_status("Comment: {}", comment);
+    log_status(
+      "Property: {} Result: {} Time: {}s",
+      property,
+      result == smt_convt::P_SATISFIABLE ? "sat" :
+        result == smt_convt::P_UNSATISFIABLE ? "unsat" :
+          "error",
+      time2string(sat_stop - sat_start));
+    log_status(
+      "--------------------------------- Result -----------------------------------\n");
 
     // If an assertion instance is verified to be violated
     if (result == smt_convt::P_SATISFIABLE)
     {
+      if (options.get_bool_option("z3-slhv") ||
+          options.get_bool_option("result-only")) {
+        final_result = result;
+        fail_fast_cnt++;
+        return;
+      }
+
       bool is_compact_trace = true;
       if (
         options.get_bool_option("no-slice") &&

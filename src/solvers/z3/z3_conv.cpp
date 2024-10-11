@@ -43,7 +43,6 @@ smt_convt *create_new_z3_solver(
   *tuple_api = static_cast<tuple_iface *>(conv);
   *array_api = static_cast<array_iface *>(conv);
   *fp_api = static_cast<fp_convt *>(conv);
-  log_status("z3 solver created");
   return conv;
 }
 
@@ -85,6 +84,17 @@ void z3_convt::pop_ctx()
 
 smt_convt::resultt z3_convt::dec_solve()
 {
+  const std::string &path = options.get_option("output");
+  if (options.get_bool_option("show-vcc") && path != "-")
+  {
+    std::ofstream out(path, std::ios_base::app);
+    out << "SMT formulas for VCCs:\n";
+    for(z3::expr expr : solver.assertions()) {
+      out << expr.to_string() << '\n';
+    }
+    out.close();
+  }
+
   pre_solve();
 
   z3::check_result result = solver.check();
@@ -924,7 +934,6 @@ smt_astt z3_convt::mk_array_symbol(
 
 smt_astt z3_convt::mk_smt_symbol(const std::string &name, const smt_sort *s)
 {
-  log_status("make_smt_symbol: {}", name);
   return new_ast(
     z3_ctx.constant(name.c_str(), to_solver_smt_sort<z3::sort>(s)->s), s);
 }
@@ -1301,8 +1310,9 @@ expr2tc z3_convt::tuple_get_array_elem(
 void z3_smt_ast::dump() const
 {
   std::string ast(Z3_ast_to_string(a.ctx(), a));
-  log_status(
-    "{}\nsort is {}", ast, Z3_sort_to_string(a.ctx(), Z3_get_sort(a.ctx(), a)));
+  if (messaget::state.modules.count("SLHV") > 0)
+    log_status(
+      "{}\nsort is {}", ast, Z3_sort_to_string(a.ctx(), Z3_get_sort(a.ctx(), a)));
 }
 
 void z3_convt::dump_smt()

@@ -187,7 +187,7 @@ public:
    *
    *  @param expr The expression to convert into the SMT solver
    *  @return The resulting handle to the SMT value. */
-  smt_astt convert_ast(const expr2tc &expr);
+  virtual smt_astt convert_ast(const expr2tc &expr);
 
   /** Interface to specifig SMT conversion.
    *  Takes one expression, and converts it into the underlying SMT solver,
@@ -204,7 +204,7 @@ public:
     smt_astt const *args,
     struct expr_op_convert ops);
 
-  smt_astt convert_assign(const expr2tc &expr);
+  virtual smt_astt convert_assign(const expr2tc &expr);
 
   smt_astt make_n_ary_and(const ast_vec &v);
   smt_astt make_n_ary_or(const ast_vec &v);
@@ -334,7 +334,7 @@ public:
   virtual smt_astt mk_real2int(smt_astt a);
   virtual smt_astt mk_int2real(smt_astt a);
   virtual smt_astt mk_isint(smt_astt a);
-
+  
   /** Create an integer or SBV/UBV sort */
   smt_sortt mk_int_bv_sort(std::size_t width)
   {
@@ -535,6 +535,22 @@ public:
    *  @param expr with2tc operation to convert to SMT.
    *  @return AST representing the result of evaluating expr. */
   virtual smt_astt convert_array_store(const expr2tc &expr);
+
+  /** @} */
+
+  /** @{
+   *  @name SLHV operations solver-converter API. */
+
+  /** 
+   *  @param expr An SLHV sort expression to convert to an SMT AST.
+   *  @return An AST representing the sort in the expression. */
+  virtual smt_sortt convert_slhv_sorts(const type2tc &type);
+
+  /** 
+   *  @param expr An SLHV expression to convert to an SMT AST.
+   *  @return An AST representing the SLHV operation in the expression. */
+  virtual smt_astt 
+  convert_slhv_opts(const expr2tc &expr, const std::vector<smt_astt>& args);
 
   /** @} */
 

@@ -23,6 +23,10 @@ expr2tc expr2t::simplify() const
     if (expr_id == address_of_id) // unlikely
       return expr2tc();
 
+    // Similar to addressof
+    if (expr_id == location_of_id)
+      return expr2tc();
+
     // And overflows too. We don't wish an add to distribute itself, for example,
     // when we're trying to work out whether or not it's going to overflow.
     if (expr_id == overflow_id)
@@ -1060,6 +1064,27 @@ expr2tc index2t::do_simplify() const
   return expr2tc();
 }
 
+expr2tc locadd2t::do_simplify() const
+{
+  expr2tc src_loc = location;
+  expr2tc off = offset;
+
+  while(is_locadd2t(src_loc))
+  {
+    off = add2tc(off->type, off, to_locadd2t(src_loc).offset);
+    src_loc = to_locadd2t(src_loc).location;
+  }
+
+  if (!is_constant_int2t(off))
+    off = off->simplify();
+
+  if (src_loc != location &&
+      off != offset && !is_nil_expr(off))
+    return locadd2tc(src_loc, off);
+
+  return expr2tc();
+}
+
 expr2tc not2t::do_simplify() const
 {
   expr2tc simp = try_simplification(value);
@@ -1602,7 +1627,8 @@ expr2tc bitcast2t::do_simplify() const
 expr2tc typecast2t::do_simplify() const
 {
   // Follow approach of old irep, i.e., copy it
-  if (type == from->type)
+  if (type == from->type ||
+      (is_intloc_type(from->type) && is_pointer_type(type)))
   {
     // Typecast to same type means this can be eliminated entirely
     return from;
@@ -1858,6 +1884,23 @@ static expr2tc simplify_relations(
   const expr2tc &side_1,
   const expr2tc &side_2)
 {
+  // SLHV constant simply
+
+  if (is_constant_intloc2t(side_1) && is_constant_intloc2t(side_2))
+  {
+    if (to_constant_intloc2t(side_1).as_ulong() != to_constant_intloc2t(side_2).as_ulong())
+      return gen_true_expr();
+    else
+      return gen_false_expr(); // Fix
+  }
+  if (is_constant_intheap2t(side_1) && is_constant_intheap2t(side_2))
+  {
+    if (to_constant_intheap2t(side_1).is_emp() && to_constant_intheap2t(side_2).is_emp())
+      return gen_false_expr();
+    else
+      return gen_true_expr(); // Fix
+  }
+
   if (!is_number_type(type))
     return expr2tc();
 

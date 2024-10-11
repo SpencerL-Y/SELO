@@ -75,7 +75,7 @@ struct messaget
       (void)file;
       (void)line;
     }
-  } state = {VerbosityLevel::Status, {}, stderr};
+  } state = {VerbosityLevel::Status, {}, stdout};
 };
 
 #define log_error(fmt, ...)                                                    \

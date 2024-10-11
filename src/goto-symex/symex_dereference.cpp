@@ -1,5 +1,6 @@
 #include <goto-symex/goto_symex.h>
 #include <goto-symex/reachability_tree.h>
+#include <goto-symex/symex_target_equation.h>
 #include <langapi/language_util.h>
 #include <pointer-analysis/dereference.h>
 #include <irep2/irep2.h>
@@ -163,6 +164,65 @@ bool symex_dereference_statet::is_live_variable(const expr2tc &symbol)
   // There were no stack frames where that variable existed and had the correct
   // level1 num: it's dead Jim.
   return false;
+}
+
+void symex_dereference_statet::update_heap_type(const intheap_type2t &type)
+{
+  if (is_nil_expr(to_intheap_type(type).location))
+  {
+    log_error("Wrong type!!!!");
+    abort();
+  }
+
+  // update value set
+  value_sett& value_set = goto_symex.cur_state->value_set;
+  unsigned int n = value_set.object_numbering.size();
+  for(unsigned int i = 0; i < n; i++)
+    update_heap_type_rec(value_set.object_numbering[i], type);
+
+  // update eq system
+  std::shared_ptr<symex_target_equationt> eq =
+    std::dynamic_pointer_cast<symex_target_equationt>(goto_symex.target);
+  for(auto& ssa_step : eq->SSA_steps)
+  {
+    update_heap_type_rec(ssa_step.guard, type);
+    update_heap_type_rec(ssa_step.rhs, type);
+    update_heap_type_rec(ssa_step.cond, type);
+  }
+}
+
+void symex_dereference_statet::update_heap_type_rec(
+  expr2tc &expr, const intheap_type2t &type)
+{
+  if (is_nil_expr(expr)) return;
+  if (is_intheap_type(expr))
+  {
+    intheap_type2t &_type = to_intheap_type(expr->type);
+
+    if (is_nil_expr(_type.location)) return;
+
+    if (to_symbol2t(_type.location).get_symbol_name() ==
+        to_symbol2t(type.location).get_symbol_name())
+      expr->type = intheap_type2tc(type);
+  }
+  else
+  {
+    expr->Foreach_operand([this, &type](expr2tc& e){
+      if (!is_nil_expr(e))
+        update_heap_type_rec(e, type);
+    });
+  }
+}
+
+std::string symex_dereference_statet::get_nondet_id(std::string prefix)
+{
+  unsigned int nondet_counter = goto_symex.get_nondet_counter();
+  return prefix + std::to_string(++nondet_counter);
+}
+
+irep_idt symex_dereference_statet::get_alloc_size_heap_name()
+{
+  return goto_symex.alloc_size_heap_name;
 }
 
 void goto_symext::dereference(expr2tc &expr, dereferencet::modet mode)

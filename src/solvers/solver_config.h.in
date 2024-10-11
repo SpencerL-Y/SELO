@@ -29,3 +29,7 @@
 #if @ESBMC_ENABLE_smtlib@
 #define SMTLIB
 #endif
+
+#if @ESBMC_ENABLE_z3_slhv@
+#define Z3_SLHV
+#endif

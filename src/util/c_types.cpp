@@ -394,9 +394,9 @@ type2tc get_empty_type()
   return empty_type;
 }
 
-type2tc get_intheap_type() {
-  static type2tc intheap_type = intheap_type2tc();
-  return intheap_type;
+type2tc get_intheap_type(unsigned int sz)
+{
+  return intheap_type2tc(expr2tc(), sz, false, false, false);
 }
 
 type2tc get_intloc_type() {

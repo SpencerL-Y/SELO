@@ -66,9 +66,26 @@ void goto_symex_statet::initialize(
 
 bool goto_symex_statet::constant_propagation(const expr2tc &expr) const
 {
-  if(is_intheap_type(expr)) {
-    return false;
+  // SLHV propagation
+  if (is_constant_intheap2t(expr) || is_constant_intloc2t(expr))
+    return true;
+
+  if (is_locadd2t(expr))
+  {
+    locadd2t locadd = to_locadd2t(expr);
+    return constant_propagation(locadd.location) &&
+      constant_propagation(locadd.offset);
   }
+
+  if (is_location_of2t(expr))
+  {
+    // Similar to address_of
+    if (is_symbol2t(to_location_of2t(expr).source_heap))
+      return true; // always return true
+    
+    // TODO
+  }
+
   if (is_array_type(expr))
   {
     array_type2t arr = to_array_type(expr->type);
@@ -204,11 +221,6 @@ void goto_symex_statet::assignment(expr2tc &lhs, const expr2tc &rhs)
     // update value sets
     expr2tc l1_rhs = rhs; // rhs is const; Rename into new container.
     level2.get_original_name(l1_rhs);
-    log_status("##### begin value set assignment from");
-    l1_rhs->dump();
-    log_status("##### to");
-    l1_lhs->dump();
-    log_status("#####");
     value_set.assign(l1_lhs, l1_rhs);
   }
 }
@@ -235,6 +247,13 @@ void goto_symex_statet::rename_type(expr2tc &expr)
     });
   }
 
+  if (is_intheap_type(type))
+  {
+    intheap_type2t &ty = to_intheap_type(type);
+    if (!is_nil_expr(ty.location))
+      rename(ty.location);
+  }
+
   /* All subexpressions' types should also be renamed, this is in line with
    * how goto_convert_functionst::rename_types() is defined */
   expr->Foreach_operand([this](expr2tc &expr) { rename_type(expr); });
@@ -243,9 +262,7 @@ void goto_symex_statet::rename_type(expr2tc &expr)
 void goto_symex_statet::rename(expr2tc &expr)
 {
   // rename all the symbols with their last known value
-
-  if (is_nil_expr(expr))
-    return;
+  if (is_nil_expr(expr)) return;
 
   rename_type(expr);
 
@@ -260,6 +277,12 @@ void goto_symex_statet::rename(expr2tc &expr)
   {
     address_of2t &addrof = to_address_of2t(expr);
     rename_address(addrof.ptr_obj);
+  }
+  else if (is_location_of2t(expr))
+  {
+    location_of2t &locof = to_location_of2t(expr);
+    rename_address(locof.source_heap);
+    rename_type(locof.source_heap);
   }
   else
   {
@@ -316,6 +339,8 @@ void goto_symex_statet::fixup_renamed_type(
   }
   if (is_pointer_type(orig_type))
   {
+    if (is_intloc_type(expr)) return;
+
     assert(is_pointer_type(expr));
 
     // Grab pointer types
@@ -468,22 +493,14 @@ std::vector<stack_framet> goto_symex_statet::gen_stack_trace() const
 
 void 
 goto_symex_statet::dump() const {
-  log_status("    [XXXXXX state dump XXXXXX");
-  log_status("    ------ thread num: ");
   std::cout << this->source.thread_nr << std::endl;
-  log_status("    ------ source pc: ");
   (*this->source.pc).dump();
-  log_status("    ------ current state guard: ");
   // this->guard.dump();
   this->guard.as_expr().get()->dump();
-  log_status("    ------ level2: ");
   this->level2.dump();
-  log_status("    ------ value set: ");
   this->value_set.dump();
-  log_status("    ------ call stack");
   for(auto item : call_stack) {
     std::string call_num = item.function_identifier.as_string();
     std::cout << call_num << std::endl;
   }
-  log_status("    XXXXXXXXXXXXXXXXXXXXXXXX]");
 }
