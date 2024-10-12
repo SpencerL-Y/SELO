@@ -4,7 +4,7 @@ SELO is a bounded model checking framework for checking memory safety properties
 It inherits the architecture of [ESBMC](https://github.com/esbmc/esbmc) and components needed for BMC upon  Seperation Logic with Heap Variables(SLHV) are added into the framework.
 SELO encodes verification conditions(VCs) in SLHV and such VC will be fed to [Z3-SLHV](https://anonymous.4open.science/r/Z3-SLHV) to solve.
 
-## Building SELO
+#### Configuring CMake for SELO
 
 SELO shares the same building method with ESBMC, one can refer to ESBMC for detailed information. 
 For convenience, we give some scripts and commands to compile the target.
@@ -26,7 +26,7 @@ ESBMC_STATIC=OFF
 #### Setting up solvers
 referring to [Z3-SLHV](https://anonymous.4open.science/r/Z3-SLHV)
 
-#### Compile SELO
+#### Configuring CMake for SELO
 Before running the following commands, make sure ```your_z3_lib_path``` and ```your_release_path``` are configured in the script file ```mk_make.py```.
 ```
 mkdir build
@@ -53,3 +53,6 @@ Before running the following commands, make sure ```your_z3_lib_path``` and ```y
 mkdir build
 python3 mk_make.py --static
 ```
+
+### Build SELO
+TDB: add complation scripts
