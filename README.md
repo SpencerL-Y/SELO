@@ -16,7 +16,6 @@ sudo apt-get update && sudo apt-get install build-essential git gperf libgmp-dev
 CMake > 3.22
 
 ### Alternative 1: Building with shared library
-#### preparing Clang
 **Preparing distributed Clang (recommended for a shared build)**
 For shared builds, it is recommended to use the system's LLVM/Clang, which on Ubuntu can be obtained by:
 ```
@@ -36,7 +35,6 @@ python3 mk_make.py --shared
 
 ### Alternative 2: Building with static library
 
-#### preparing Clang
 **Preparing external standard Clang (recommended for a static build)**
 
 You can either download and unpack a release manually:
