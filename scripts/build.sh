@@ -34,15 +34,18 @@ ubuntu_setup () {
         mkdir deps
     fi
     cd deps
+    DEPS_ROOT=$PWD
 
+    
     if [ -z "$STATIC" ]; then
-        STATIC=static
+        STATIC=ON
+        echo "Static building"
     else
-        STATIC=shared
+        echo "Shared building"
     fi
 
-    echo "Configuring Clang-$CLANG_VERSION: $STATIC"
-    if [ $STATIC = shared ]; then
+    echo "Configuring Clang-$CLANG_VERSION"
+    if [ $STATIC = OFF ]; then
         PKGS="$PKGS \
             llvm-$CLANG_VERSION-dev \
             libclang-$CLANG_VERSION-dev \
@@ -62,7 +65,7 @@ ubuntu_setup () {
     fi
 
 
-    echo "Configuring Z3_SLHV: $STATIC"
+    echo "Configuring Z3_SLHV"
     if [ ! -d "Z3-SLHV" ]; then
         git clone https://github.com/SpencerL-Y/Z3-SLHV.git
     fi
@@ -71,6 +74,7 @@ ubuntu_setup () {
         rm -r build && python3 mk_${STATIC}_cmake.py
         cd build && ninja install
     fi
+    cd $DEPS_ROOT/Z3-SLHV
     BASE_ARGS="$BASE_ARGS -DBUILD_STATIC=$STATIC"
     SOLVER_FLAGS="$SOLVER_FLAGS \
         -DZ3_DIR=$PWD/z3_slhv_lib \
