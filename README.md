@@ -11,7 +11,7 @@ For convenience, we give some scripts and commands to compile the target.
 
 ### Using script(recommended)
 
-We provide a script `./scripts/build.sh` to automatically configure LLVM and Z3_SLHV and compile SELO.
+We provide a script `./scripts/build.sh` to automatically configure LLVM and Z3-SLHV and compile SELO.
 ```sh
 ./scripts/build.sh
 ```
