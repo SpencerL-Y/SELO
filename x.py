@@ -20,11 +20,9 @@ aht_plt_file = os.path.join(output_root, "aht_fig.svg")
 
 
 def compile():
-  os.system(f"cd {selo_build } && cmake --build .")
+  os.system(f"cd {selo_build} && cmake --build .")
 
 def help():
-  os.system(f"{selo} -h")
-
   cmds = {
     "--compile" : ('',"Compile esbmc"),
     "--run" : ("file extra_args","Only test a single file 'file'"),
@@ -35,10 +33,11 @@ def help():
   args = {
     "--esbmc" : "Disable SLHV and use default esbmc with solver Z3",
     "--debug" : "Output debug info of SLHV",
-    "--std-out" : "Output info in std::out"
+    "--std-out" : "Output info in std::out",
+    "--vcc" : "Save VCC in output",
   }
 
-  print("Commands for x.py:")
+  print("Args for x.py:")
   for cmd in cmds.items():
     cmdline = [cmd[0] + ' ' + cmd[1][0], cmd[1][1]]
     print(" {:<35} {:<50}".format(*cmdline))
@@ -57,8 +56,6 @@ def collect_one_assert(info, aht):
     location = info[0].split(' ')
     res["Line"] = location[4]
     res["Column"] = location[6]
-
-
 
   # Property
   prt = info[2].split(" ")
@@ -112,7 +109,6 @@ def run_on(cprog, extra_args):
   cprog_name = os.path.basename(cprog)
   print(f"Verifying program: {cprog_name}")
 
-  # TODO: add more extra args
   args = [
     selo,
     cprog,
@@ -120,9 +116,6 @@ def run_on(cprog, extra_args):
     "--force-malloc-success",
     "--memory-leak-check",
     "--result-only",
-    "--show-vcc",
-    "--output",
-    vcc_log,
     "--multi-property",
   ]
 
@@ -130,6 +123,9 @@ def run_on(cprog, extra_args):
     args.append("--z3")
   else:
     args.append("--z3-slhv")
+  
+  if "--vcc" in extra_args:
+    args += ["--show-vcc", "--output", vcc_log]
 
   if "--debug" in extra_args:
     args.append("--verbosity SLHV:8")
@@ -151,6 +147,11 @@ def run_on(cprog, extra_args):
   return result
 
 def collect_results(cprog):
+  if not os.path.exists(log_root):
+    os.mkdir(log_root)
+  if not os.path.exists(vcc_log):  
+    os.mkdir(vcc_root)
+
   cprog_name = cprog.split('.')[0]
 
   log_file = cprog_name + "_log.log"
@@ -320,7 +321,7 @@ def run_expriment_on(benchmark_root, extra_args):
   results = {}
   for cprog in cprogs:
     cprog_path = os.path.join(benchmark_root, cprog)
-    results[cprog] = run_on(cprog_path, extra_args)
+    results[cprog] = run_on(cprog_path, extra_args + ["--vcc"])
     collect_results(cprog)
 
   generate_csv(results)
@@ -330,14 +331,10 @@ def run_expriment_on(benchmark_root, extra_args):
 if __name__ == '__main__':
   if not os.path.exists(output_root):
     os.mkdir(output_root)
-  if not os.path.exists(log_root):
-    os.mkdir(log_root)
-  if not os.path.exists(vcc_log):  
-    os.mkdir(vcc_root)
 
   if "--esbmc" in sys.argv:
     csv_file = os.path.join(output_root, "results_esbmc.csv")
-  
+
   if sys.argv[1] == "--compile":
     compile()
   elif sys.argv[1] == "--run":

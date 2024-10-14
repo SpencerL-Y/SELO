@@ -96,7 +96,7 @@ We also provide a simple script `x.py`. We can easily to run SELO on a single fi
 ```sh
 ./x.py --run ./benchmark/tests/case_1.c
 ```
-Mor details can be found by `./x.py --help`
+Output of SELO will be stored in `./output/t.log`. More details can be found by `./x.py --help`
 
 ### TODO
 Adjust the script later.
