@@ -5,9 +5,9 @@ import sys
 import csv
 import matplotlib.pyplot as plt
 
-esbmc_slhv_root = "./esbmc"
-esbmc_slhv_build = os.path.join(esbmc_slhv_root, "build")
-esbmc_slhv = os.path.join(esbmc_slhv_build, "src", "esbmc", "esbmc")
+selo_root = "./"
+selo_build = os.path.join(selo_root, "build")
+selo = os.path.join(selo_build, "src", "esbmc", "esbmc")
 
 output_root = "./output"
 log_root = os.path.join(output_root, "Logs")
@@ -20,12 +20,13 @@ aht_plt_file = os.path.join(output_root, "aht_fig.svg")
 
 
 def compile():
-  os.system(f"cd {esbmc_slhv_build } && cmake --build .")
+  os.system(f"cd {selo_build } && cmake --build .")
 
 def help():
-  os.system(f"{esbmc_slhv} -h")
+  os.system(f"{selo} -h")
 
   cmds = {
+    "--init" : ('', "Init output directory"),
     "--compile" : ('',"Compile esbmc"),
     "--run" : ("file extra_args","Only test a single file 'file'"),
     "--experiment": ("path extra_args", "Run on a benchmark 'path'"),
@@ -112,8 +113,9 @@ def run_on(cprog, extra_args):
   cprog_name = os.path.basename(cprog)
   print(f"Verifying program: {cprog_name}")
 
+  # TODO: add more extra args
   args = [
-    esbmc_slhv,
+    selo,
     cprog,
     "--no-library",
     "--force-malloc-success",
@@ -123,7 +125,6 @@ def run_on(cprog, extra_args):
     "--output",
     vcc_log,
     "--multi-property",
-    # "--no-slice"
   ]
 
   if "--esbmc" in extra_args:
@@ -328,17 +329,17 @@ def run_expriment_on(benchmark_root, extra_args):
 
 
 if __name__ == '__main__':
-  if not os.path.exists(output_root):
-    os.mkdir(output_root)
-  if not os.path.exists(log_root):
-    os.mkdir(log_root)
-  if not os.path.exists(vcc_log):  
-    os.mkdir(vcc_root)
-  
   if "--esbmc" in sys.argv:
     csv_file = os.path.join(output_root, "results_esbmc.csv")
 
-  if sys.argv[1] == "--compile":
+  if sys.argv[1] == "--init":
+    if not os.path.exists(output_root):
+      os.mkdir(output_root)
+    if not os.path.exists(log_root):
+      os.mkdir(log_root)
+    if not os.path.exists(vcc_log):  
+      os.mkdir(vcc_root)
+  elif sys.argv[1] == "--compile":
     compile()
   elif sys.argv[1] == "--run":
     run_on(sys.argv[2], sys.argv[3:])
