@@ -6,7 +6,8 @@ SELO encodes verification conditions(VCs) in SLHV and such VC will be fed to [Z3
 
 ## Building
 
-SELO shares the same building method with ESBMC, one can refer to ESBMC for detailed information. 
+SELO shares the same building method with ESBMC, one can refer to [BUILDING](./docs/ESBMC_BUILDING.md) of ESBMC for detailed information.
+
 For convenience, we give some scripts and commands to compile the target.
 
 ### Using script(recommended)
@@ -96,7 +97,8 @@ We also provide a simple script `x.py`. We can easily to run SELO on a single fi
 ```sh
 ./x.py --run ./benchmark/tests/case_1.c
 ```
-Output of SELO will be stored in `./output/t.log`. More details can be found by `./x.py --help`
+Output of SELO will be stored in `./output/t.log`. More details can be found by `./x.py --help`.
 
-### TODO
-Adjust the script later.
+## Open source and License
+
+SELO is open-source software mainly distributed under the Apache License 2.0. It is based on ESBMC. Most of codes of ESBMC is preserved. However, please take a look at the COPYING file to explain who owns what and under what terms it is distributed. The files BUILDING, CITATION, CREDITS and COPYING are preserved in `docs`. Thanks for the contributions of the authors of ESBMC.
