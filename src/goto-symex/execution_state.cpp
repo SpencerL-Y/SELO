@@ -1,3 +1,8 @@
+/**
+ * @author Term SELO
+ * @brief Modified by from ESBMC
+ */
+
 #include <goto-symex/execution_state.h>
 #include <goto-symex/reachability_tree.h>
 #include <langapi/language_ui.h>

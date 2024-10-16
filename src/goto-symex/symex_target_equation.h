@@ -1,3 +1,8 @@
+/**
+ * @author Term SELO
+ * @brief Modified by from ESBMC
+ */
+
 #ifndef CPROVER_BASIC_SYMEX_EQUATION_H
 #define CPROVER_BASIC_SYMEX_EQUATION_H
 

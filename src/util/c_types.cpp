@@ -1,3 +1,8 @@
+/**
+ * @author Term SELO
+ * @brief Modified by from ESBMC
+ */
+
 #include <util/c_types.h>
 #include <util/config.h>
 #include <util/std_types.h>

@@ -1,3 +1,8 @@
+/**
+ * @author Term SELO
+ * @brief Modified by from ESBMC
+ */
+
 #include <cassert>
 #include <langapi/language_util.h>
 #include <pointer-analysis/value_set.h>

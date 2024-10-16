@@ -1,3 +1,8 @@
+/**
+ * @author Term SELO
+ * @brief Modified by from ESBMC
+ */
+
 #ifndef CPROVER_GOTO_SYMEX_GOTO_SYMEX_STATE_H
 #define CPROVER_GOTO_SYMEX_GOTO_SYMEX_STATE_H
 

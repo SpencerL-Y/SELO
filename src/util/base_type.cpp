@@ -1,3 +1,8 @@
+/**
+ * @author Term SELO
+ * @brief Modified by from ESBMC
+ */
+
 #include <util/base_type.h>
 #include <irep2/irep2_utils.h>
 #include <util/std_types.h>

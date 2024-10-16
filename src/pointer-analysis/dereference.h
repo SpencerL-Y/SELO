@@ -1,3 +1,8 @@
+/**
+ * @author Term SELO
+ * @brief Modified by from ESBMC
+ */
+
 #ifndef CPROVER_POINTER_ANALYSIS_DEREFERENCE_H
 #define CPROVER_POINTER_ANALYSIS_DEREFERENCE_H
 

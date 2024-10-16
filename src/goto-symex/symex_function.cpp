@@ -1,3 +1,8 @@
+/**
+ * @author Term SELO
+ * @brief Modified by from ESBMC
+ */
+
 #include <algorithm>
 #include <cassert>
 #include <goto-symex/execution_state.h>

@@ -1,3 +1,8 @@
+/**
+ * @author Term SELO
+ * @brief Modified by from ESBMC
+ */
+
 #include <cassert>
 #include <goto-symex/dynamic_allocation.h>
 #include <goto-symex/execution_state.h>

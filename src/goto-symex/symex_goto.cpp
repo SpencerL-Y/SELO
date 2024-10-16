@@ -1,3 +1,8 @@
+/**
+ * @author Term SELO
+ * @brief Modified by from ESBMC
+ */
+
 #include <cassert>
 #include <fstream>
 #include <goto-symex/goto_symex.h>

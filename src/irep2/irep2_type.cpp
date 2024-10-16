@@ -1,3 +1,8 @@
+/**
+ * @author Term SELO
+ * @brief Modified by from ESBMC
+ */
+
 #include <memory>
 #include <boost/functional/hash.hpp>
 #include <util/fixedbv.h>

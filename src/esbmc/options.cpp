@@ -1,3 +1,8 @@
+/**
+ * @author Term SELO
+ * @brief Modified by from ESBMC
+ */
+
 #include <esbmc/esbmc_parseoptions.h>
 #include <fstream>
 #include <solvers/solver_config.h>

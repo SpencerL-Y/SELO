@@ -1,3 +1,8 @@
+/**
+ * @author Term SELO
+ * @brief Modified by from ESBMC
+ */
+
 #ifndef SOLVERS_SMT_SMT_SORT_H_
 #define SOLVERS_SMT_SMT_SORT_H_
 

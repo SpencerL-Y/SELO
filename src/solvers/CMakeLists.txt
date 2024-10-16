@@ -1,3 +1,7 @@
+#############################
+#   Modified by term SELO   #
+#############################
+
 set (ESBMC_ENABLE_z3 0)
 set (ESBMC_ENABLE_minisat 0)
 set (ESBMC_ENABLE_boolector 0)

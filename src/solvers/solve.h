@@ -1,3 +1,8 @@
+/**
+ * @author Term SELO
+ * @brief Modified by from ESBMC
+ */
+
 #ifndef _ESBMC_SOLVERS_SOLVE_H_
 #define _ESBMC_SOLVERS_SOLVE_H_
 
@@ -13,11 +18,6 @@ typedef smt_convt *(solver_creator)(
   tuple_iface **tuple_api,
   array_iface **array_api,
   fp_convt **fp_api);
-
-// slhv added
-// typedef smt_convt *(slhv_solver_creator)(
-//   const optionst &options,
-//   const namespacet &ns);
 
 smt_convt *create_solver(
   std::string solver_name,

@@ -1,3 +1,8 @@
+/**
+ * @author Term SELO
+ * @brief Modified by from ESBMC
+ */
+
 #include <solvers/smt/smt_conv.h>
 #include <sstream>
 #include <util/base_type.h>

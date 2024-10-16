@@ -1,3 +1,8 @@
+/**
+ * @author Term SELO
+ * @brief Modified by from ESBMC
+ */
+
 #ifndef IREP2_TYPE_H_
 #define IREP2_TYPE_H_
 

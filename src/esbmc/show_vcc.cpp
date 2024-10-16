@@ -1,3 +1,8 @@
+/**
+ * @author Term SELO
+ * @brief Modified by from ESBMC
+ */
+
 #include <esbmc/bmc.h>
 #include <fmt/format.h>
 #include <iostream>

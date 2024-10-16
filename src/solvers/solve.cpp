@@ -1,3 +1,8 @@
+/**
+ * @author Term SELO
+ * @brief Modified by from ESBMC
+ */
+
 #include <solve.h>
 #include <solver_config.h>
 #include <solvers/smt/array_conv.h>
@@ -5,7 +10,6 @@
 #include <solvers/smt/smt_array.h>
 #include <solvers/smt/tuple/smt_tuple_node.h>
 #include <solvers/smt/tuple/smt_tuple_sym.h>
-// #include <solvers/z3-slhv/z3_slhv_conv.h>
 
 #include <unordered_map>
 

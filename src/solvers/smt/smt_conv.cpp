@@ -1,3 +1,8 @@
+/**
+ * @author Term SELO
+ * @brief Modified by from ESBMC
+ */
+
 #include <iomanip>
 #include <set>
 #include <solvers/prop/literal.h>

@@ -1,3 +1,8 @@
+/**
+ * @author Term SELO
+ * @brief Modified by from ESBMC
+ */
+
 #include <goto-symex/slice.h>
 
 #include <util/prefix.h>

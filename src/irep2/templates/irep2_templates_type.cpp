@@ -1,3 +1,8 @@
+/**
+ * @author Term SELO
+ * @brief Modified by from ESBMC
+ */
+
 #include <irep2/irep2_templates_types.h>
 
 type_typedefs_empty(bool_type, type2t);

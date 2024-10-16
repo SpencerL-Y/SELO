@@ -1,6 +1,6 @@
-#################################
-# Modules                       #
-#################################
+#############################
+#   Modified by term SELO   #
+#############################
 
 include_directories(${CMAKE_SOURCE_DIR}/src)
 add_subdirectory (util)

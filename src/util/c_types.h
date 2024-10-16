@@ -1,3 +1,8 @@
+/**
+ * @author Term SELO
+ * @brief Modified by from ESBMC
+ */
+
 #ifndef CPROVER_C_TYPES_H
 #define CPROVER_C_TYPES_H
 

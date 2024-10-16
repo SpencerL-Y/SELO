@@ -1,3 +1,8 @@
+/**
+ * @author Term SELO
+ * @brief Modified by from ESBMC
+ */
+
 /* Byte order includes, for context switch checkpoint files */
 #ifndef _WIN32
 #include <arpa/inet.h>

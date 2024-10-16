@@ -1,3 +1,8 @@
+/**
+ * @author Term SELO
+ * @brief Modified by from ESBMC
+ */
+
 #include <irep2/irep2_templates_expr.h>
 
 expr_typedefs1(constant_int, constant_int_data);

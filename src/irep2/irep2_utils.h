@@ -1,3 +1,8 @@
+/**
+ * @author Term SELO
+ * @brief Modified by from ESBMC
+ */
+
 #ifndef UTIL_IREP2_UTILS_H_
 #define UTIL_IREP2_UTILS_H_
 

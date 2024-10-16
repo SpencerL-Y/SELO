@@ -1,3 +1,8 @@
+/**
+ * @author Term SELO
+ * @brief Modified by from ESBMC
+ */
+
 #include <goto-symex/goto_symex.h>
 #include <goto-symex/reachability_tree.h>
 #include <goto-symex/symex_target_equation.h>

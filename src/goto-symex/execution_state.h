@@ -1,3 +1,8 @@
+/**
+ * @author Term SELO
+ * @brief Modified by from ESBMC
+ */
+
 #ifndef EXECUTION_STATE_H_
 #define EXECUTION_STATE_H_
 

@@ -1,3 +1,8 @@
+/**
+ * @author Term SELO
+ * @brief Modified by from ESBMC
+ */
+
 #include <cassert>
 #include <iostream> /* std::cout */
 #include <z3_conv.h>
