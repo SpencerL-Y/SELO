@@ -3,11 +3,11 @@ SELO is based on ESBMC, which is distributed under the terms of Apache License
 complex. Our modifications are distributed under the terms of the Apache 2.0
 license.
 
-For ESBMC, we keep the COPYING, CITATION and CREDITS in 'docs' by prefixing
-'ESBMC_'.
+For ESBMC, we keep the BUILSING, COPYING, CITATION and CREDITS in 'docs' by
+prefixing 'ESBMC_'.
 
 For the SMT solver, we only use Z3-SLHV as a backend solver, which is based on
-Z3. Z3-SLHV used MIT license.
+Z3. Z3-SLHV uses MIT license.
 
 -------------------------------------------------------------------------------
 

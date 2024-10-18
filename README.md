@@ -1,7 +1,7 @@
 # SELO
 
 SELO is a bounded model checking framework for checking memory safety properties in heap-manipulating C programs.
-It inherits the architecture of [ESBMC](https://github.com/esbmc/esbmc) and components needed for BMC upon  Seperation Logic with Heap Variables(SLHV) are added into the framework.
+It inherits the architecture of [ESBMC](https://github.com/esbmc/esbmc) and components needed for BMC upon  Separation Logic with Heap Variables(SLHV) are added into the framework.
 SELO encodes verification conditions(VCs) in SLHV and such VC will be fed to [Z3-SLHV](https://anonymous.4open.science/r/Z3-SLHV).
 
 ## Building
@@ -16,7 +16,7 @@ We provide a script `./scripts/build.sh` to automatically configure LLVM and Z3-
 ```sh
 ./scripts/build.sh
 ```
-More detail can be found by `-h` arguement.
+More detail can be found by `-h`.
 
 *Notice: the script must be executed in root of SELO.*
 
@@ -75,7 +75,7 @@ cmake .. -GNinja -DClang_DIR=<path_to_cmake/clang-11>
   -DENABLE_Z3_SLHV=On \
   -DZ3_DIR=<path_to_Z3-SLHV>/z3_slhv_lib
 ```
-Note that all `path_to_*` must be configured correctlly. More details can be found in ESBMC.
+Note that all `path_to_*` must be configured correctly. More details can be found in ESBMC.
 
 #### Compile SELO
 
@@ -93,12 +93,14 @@ To run SELO, the following arguments must be included.
 ```
 `--z3-slhv` is a must to enable SELO using SLHV for encoding and using Z3-SLHV for backend solver.
 
-We also provide a simple script `x.py`. We can easily to run SELO on a single file. For example, we run SELO on "case_1.c" in our benchmark bu the follwing command.
+We also provide a simple script `x.py`. We can easily to run SELO on a single file. For example, we run SELO on "case_1.c" in our benchmark bu the following command.
 ```sh
 ./x.py --run ./benchmark/tests/case_1.c
 ```
 Output of SELO will be stored in `./output/t.log`. More details can be found by `./x.py --help`.
 
+For further utilizing, we recommend that a new working directory should be created and `x.py` should be copied into the directory. Moreover, the root of SELO in the scripts must be set correctly
+
 ## Open source and License
 
-SELO is open-source software mainly distributed under the Apache License 2.0. It is based on ESBMC. Most of codes of ESBMC is preserved. However, please take a look at the COPYING file to explain who owns what and under what terms it is distributed. The files BUILDING, CITATION, CREDITS and COPYING are preserved in `docs`. Thanks for the contributions of the authors of ESBMC.
+SELO is an open-source software mainly distributed under the Apache License 2.0. It is based on ESBMC. Most of codes of ESBMC are preserved. Please take a look at the COPYING file to explain who owns what and under what terms it is distributed. The files BUILDING, CITATION, CREDITS and COPYING are preserved in `docs`. Thanks for the contributions of the authors of ESBMC.
