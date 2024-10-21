@@ -1,7 +1,7 @@
 # SELO
 
 SELO is a bounded model checking framework for checking memory safety properties in heap-manipulating C programs.
-It inherits the architecture of [ESBMC](https://github.com/esbmc/esbmc) and components needed for BMC upon  Separation Logic with Heap Variables(SLHV) are added into the framework.
+It inherits the architecture of [ESBMC](https://github.com/esbmc/esbmc) and components needed for BMC upon Separation Logic with Heap Variable(SLHV) are added into the framework.
 SELO encodes verification conditions(VCs) in SLHV and such VC will be fed to [Z3-SLHV](https://anonymous.4open.science/r/Z3-SLHV).
 
 ## Building
@@ -85,7 +85,7 @@ cd build && cmake --build .
 If compiler can not find `z3++.h`, appending arg `
  -DCMAKE_CXX_FLAGS="-I<path_to_Z3-SLHV>/z3_slhv_lib/include"` solves the issue.
 
-## Running SELO
+## Running
 
 To run SELO, the following arguments must be included.
 ```sh
@@ -93,7 +93,7 @@ To run SELO, the following arguments must be included.
 ```
 `--z3-slhv` is a must to enable SELO using SLHV for encoding and using Z3-SLHV for backend solver.
 
-We also provide a simple script `x.py`. We can easily to run SELO on a single file. For example, we run SELO on "case_1.c" in our benchmark bu the following command.
+We also provide a simple script `x.py`. We can easily to run SELO on a single file. For example, we run SELO on "case_1.c" in our benchmark by the following command.
 ```sh
 ./x.py --run ./benchmark/tests/case_1.c
 ```
