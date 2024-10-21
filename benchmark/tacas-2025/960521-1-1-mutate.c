@@ -8,8 +8,8 @@ int main ()
   b = malloc (n * sizeof(*b));
   *b++ = 0;
   if (b[-1])
-  { free(a); free(b); } // invalid free
-  else
   { free(a); free(b); }
+  else
+  { free(a); free(b); } // invalid free
   return 0;
 }
