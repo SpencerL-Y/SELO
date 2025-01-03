@@ -26,6 +26,7 @@ ubuntu_setup () {
         libboost-all-dev ninja-build python3-setuptools \
         libtinfo-dev pkg-config python3-pip python3-toml \
         openjdk-11-jdk \
+        libbz2-dev liblzma-dev libzstd-dev \
     "
 
     # Create deps for Clang and Z3_SLHV
@@ -71,7 +72,14 @@ ubuntu_setup () {
     fi
     cd Z3-SLHV
     if [ ! -d "z3_slhv_lib" ]; then
-        rm -r build && python3 mk_${STATIC}_cmake.py
+        if [ -d "build" ]; then
+            rm -rf build/
+        fi
+        if [ $STATIC = ON ]; then
+            python3 mk_static_cmake.py
+        else
+            python3 mk_shared_cmake.py
+        fi
         cd build && ninja install
     fi
     cd $DEPS_ROOT/Z3-SLHV
